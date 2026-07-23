@@ -1,65 +1,35 @@
+import { Activity, CheckCircle2, Sparkles } from "lucide-react";
 import Image from "next/image";
+import { redirect } from "next/navigation";
+import { LoginForm } from "@/components/auth/login-form";
+import { readSession } from "@/lib/auth/session";
+import logo from "@/assets/png.png";
 
-export default function Home() {
+export default async function Home() {
+  const session = await readSession();
+  if (session) redirect(session.role === "coach" ? "/coach" : "/client");
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="login-page">
+      <section className="login-story">
+        <div className="login-brand"><Image src={logo} alt="SoFit" priority /></div>
+        <div className="story-copy">
+          <span className="story-kicker"><Sparkles size={14} /> Personal coaching, beautifully organized</span>
+          <h2>Build strength.<br />Keep life in balance.</h2>
+          <p>Plans, progress, and the conversations that keep every next step clear.</p>
+          <div className="story-points">
+            <span><CheckCircle2 size={17} /> Clear weekly direction</span>
+            <span><CheckCircle2 size={17} /> Progress you can see</span>
+            <span><CheckCircle2 size={17} /> Your coach, close by</span>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <div className="story-quote"><Activity size={20} /><blockquote>Consistency gets easier when every next step feels clear.</blockquote><span>THE SOFIT METHOD</span></div>
+      </section>
+      <section className="login-panel">
+        <div className="mobile-login-brand"><Image src={logo} alt="SoFit" priority /></div>
+        <LoginForm />
+        <p className="login-footer">? 2026 SoFit Coaching</p>
+      </section>
+    </main>
   );
 }

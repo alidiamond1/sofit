@@ -1,0 +1,72 @@
+/* Package builder and assignment */
+.package-workspace{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:16px;align-items:start}.package-builder-form{display:grid;gap:20px}.package-service-picker{padding:0;border:0}.package-service-picker legend{font-size:11px;font-weight:700}.package-service-picker>p{margin:5px 0 12px;color:var(--muted);font-size:9px}.package-service-picker>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.package-service-option{display:grid;grid-template-columns:auto 1fr 58px;align-items:center;gap:9px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);cursor:pointer}.package-service-option>input[type=checkbox]{width:15px;height:15px;accent-color:var(--primary)}.package-service-option span{min-width:0}.package-service-option strong,.package-service-option small{display:block}.package-service-option strong{font-size:10px}.package-service-option small{margin-top:2px;color:var(--muted);font-size:8px;text-transform:capitalize}.package-service-option .package-quantity{width:58px;min-height:34px;padding:7px;text-align:center}.package-assignment-card{position:sticky;top:82px}.package-assignment-form{display:grid;gap:13px}.package-assignment-form label>span{display:block;margin-bottom:6px;font-size:9px;font-weight:650}.package-assignment-form select{width:100%}.package-assignment-form .button{justify-content:center}.package-assignment-form .form-message{margin:0}.form-message{padding:10px 12px;border-radius:10px;font-size:9px}.form-message.error{color:#ad3d3d;background:#fff0f0}.form-message.success{color:#247c45;background:var(--green-soft)}.package-section-row{margin-top:30px}.package-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.package-card{display:flex;min-height:310px;flex-direction:column}.package-card-head{display:flex;align-items:center;justify-content:space-between}.package-symbol{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;background:var(--primary-soft);color:var(--primary)}.package-card h2{margin:18px 0 6px;font-size:18px}.package-card>p{min-height:42px;margin:0 0 15px;color:var(--muted);font-size:10px;line-height:1.55}.package-inclusions{display:grid;gap:7px;padding:12px;border-radius:11px;background:var(--surface-soft)}.package-inclusions>div{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:9px}.package-inclusions strong{color:var(--primary)}.package-card-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;padding-top:16px;margin-top:auto;border-top:1px solid var(--line)}.package-card-foot>div strong,.package-card-foot>div span{display:block}.package-card-foot>div strong{font-size:20px}.package-card-foot>div span,.package-card-foot small{color:var(--muted);font-size:8px}.client-package-summary{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.8fr) auto;align-items:center;gap:22px;margin-bottom:16px}.client-package-summary h2{margin:7px 0 5px;font-size:21px}.client-package-summary p{margin:0;color:var(--muted);font-size:10px}.client-package-services{display:flex;flex-wrap:wrap;gap:7px}.client-package-services span{padding:7px 9px;border-radius:8px;background:var(--surface-soft);font-size:8px}.client-package-price{text-align:right}.client-package-price strong,.client-package-price>span{display:block}.client-package-price strong{margin-top:8px;font-size:20px}.client-package-price>span{color:var(--muted);font-size:8px}
+
+@media (max-width:1100px){.package-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.package-workspace{grid-template-columns:1fr}.package-assignment-card{position:static}.client-package-summary{grid-template-columns:1fr auto}.client-package-services{grid-column:1/-1;grid-row:2}}
+@media (max-width:700px){.package-grid,.package-service-picker>div{grid-template-columns:1fr}.package-card{min-height:auto}.client-package-summary{grid-template-columns:1fr}.client-package-services{grid-column:auto;grid-row:auto}.client-package-price{text-align:left}.package-service-option{grid-template-columns:auto 1fr 52px}.package-service-option .package-quantity{width:52px}}
+
+/* Library-first package workspace */
+.package-library-toolbar{margin-bottom:20px}
+.package-modal-panel>header h2{font-size:24px}
+.package-modal-panel>header p{max-width:640px;font-size:11px}
+.package-builder-form{gap:22px}
+.package-service-picker{
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--surface-soft);
+}
+.package-service-picker legend{padding:0 7px;font-size:12px;color:var(--ink)}
+.package-service-picker>p{margin:2px 0 14px;font-size:10px}
+.package-service-option{
+  min-height:62px;
+  padding:11px 12px;
+  border-radius:12px;
+  background:#fff;
+  transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.package-service-option:hover{transform:translateY(-1px);border-color:#c5d9e7;box-shadow:0 8px 20px rgba(20,66,101,.06)}
+.package-service-option strong{font-size:11px}.package-service-option small{font-size:9px}
+.package-service-option .package-quantity{min-height:38px;border-radius:9px}
+.package-assign-modal{width:min(560px,100%)}
+.package-assignment-form{gap:17px}
+.package-assignment-form label>span{margin-bottom:7px;color:#4f6376;font-size:12px}
+.package-assignment-form select{
+  width:100%;
+  min-height:46px;
+  padding:11px 13px;
+  border:1px solid var(--line-strong);
+  border-radius:12px;
+  outline:none;
+  background:#fff;
+  font-size:13px;
+}
+.package-assignment-form select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(31,117,185,.1)}
+.package-assignment-form .button{min-height:44px;margin-top:2px}
+.package-section-row{margin-top:28px}
+.package-grid{gap:18px}
+.package-card{
+  min-height:300px;
+  padding:22px;
+  border-top:3px solid rgba(31,117,185,.72);
+}
+.package-card.category-intermediate,.package-card.category-business{border-top-color:rgba(39,173,85,.75)}
+.package-card.category-athlete{border-top-color:#163f60}
+.package-card-head{gap:14px}
+.package-symbol{width:44px;height:44px;border-radius:13px}
+.category-intermediate .package-symbol,.category-business .package-symbol{background:var(--green-soft);color:var(--green)}
+.category-athlete .package-symbol{background:#e9f0f5;color:#163f60}
+.package-card h2{margin:19px 0 7px;font-size:20px;letter-spacing:-.03em}
+.package-card>p{min-height:46px;margin-bottom:17px;font-size:11px;line-height:1.6}
+.package-inclusions{gap:0;padding:5px 13px;border:1px solid #e7edf2;border-radius:13px;background:#f8fafc}
+.package-inclusions>div{min-height:37px;border-top:1px solid #e7edf2;font-size:10px}
+.package-inclusions>div:first-child{border-top:0}
+.package-inclusions span{color:#526b7f}.package-inclusions strong{font-family:var(--font-geist-mono),monospace}
+.package-card-foot{padding-top:18px;margin-top:18px}
+.package-card-foot>div strong{font-family:var(--font-geist-mono),monospace;font-size:22px;letter-spacing:-.04em}
+.package-card-foot>div span,.package-card-foot small{font-size:9px}
+
+@media(max-width:700px){
+  .package-library-toolbar>div:last-child{grid-template-columns:1fr 1fr}
+  .package-service-picker{padding:13px}
+  .package-modal-panel>header h2{font-size:22px}
+}
