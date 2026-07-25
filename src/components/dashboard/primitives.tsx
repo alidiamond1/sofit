@@ -1,4 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, MoreHorizontal } from "lucide-react";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { MiniSparkline } from "./charts";
 
@@ -126,10 +127,18 @@ export function ProgressBar({ value, label }: { value: number; label?: string })
 export function Avatar({
   name,
   tone = 0,
+  src,
+  className = "",
 }: {
   name: string;
   tone?: number;
+  src?: string | null;
+  className?: string;
 }) {
   const initials = name.split(" ").map((part) => part[0]).slice(0, 2).join("");
-  return <span className={`avatar tone-${tone % 5}`}>{initials}</span>;
+  return (
+    <span className={`avatar tone-${tone % 5} ${className}`.trim()}>
+      {src ? <Image src={src} alt={`${name} profile photo`} fill sizes="96px" unoptimized={src.startsWith("blob:")} /> : initials}
+    </span>
+  );
 }

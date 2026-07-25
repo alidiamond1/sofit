@@ -8,5 +8,9 @@
 @import "../styles/plans.css";
 @import "../styles/responsive.css";
 @import "../styles/pro-dashboard.css";
+@import "../styles/clients-invites.css";
+@import "../styles/account-center.css";
+@import "../styles/settings-enhancements.css";
+@import "../styles/analytics-dashboard.css";
 
 /* Shared portal styles load in dependency order above. */

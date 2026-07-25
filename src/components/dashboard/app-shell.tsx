@@ -16,26 +16,32 @@ import {
   Mail,
   Menu,
   MessageCircle,
+  Moon,
   Package as PackageIcon,
   PanelLeftClose,
   Search,
   Settings,
   Sparkles,
+  Sun,
   UserRound,
   Users,
-  Utensils,
   X,
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, useTransition, type ReactNode } from "react";
 import { logoutAction } from "@/app/actions/auth";
+import { markNotificationReadAction } from "@/app/actions/notifications";
+import { updateThemeAction } from "@/app/actions/profile";
 import logo from "@/assets/png.png";
 import logoIcon from "@/assets/icon.png";
+import { Avatar } from "./primitives";
+import { ThemeSync, type ThemePreference } from "./theme-sync";
 
-type NavItem = { label: string; href: string; icon: LucideIcon; section: string };
+type NavItem = { label: string; mobileLabel?: string; href: string; icon: LucideIcon; section: string };
+type ShellNotification = { id: number; title: string; message: string; createdLabel: string; isRead: boolean; senderName: string };
 
 const coachNav: NavItem[] = [
   { label: "Overview", href: "/coach", icon: Home, section: "Workspace" },
@@ -51,18 +57,21 @@ const coachNav: NavItem[] = [
   { label: "Payments", href: "/coach/payments", icon: CreditCard, section: "Business" },
   { label: "Messages", href: "/coach/messages", icon: MessageCircle, section: "Business" },
   { label: "Analytics", href: "/coach/analytics", icon: BarChart3, section: "Business" },
-  { label: "Settings", href: "/coach/settings", icon: Settings, section: "System" },
+  { label: "Profile", href: "/coach/profile", icon: UserRound, section: "Account" },
+  { label: "Settings", href: "/coach/settings", icon: Settings, section: "Account" },
 ];
 
 const clientNav: NavItem[] = [
   { label: "Home", href: "/client", icon: Home, section: "Today" },
-  { label: "My plans", href: "/client/plans", icon: Utensils, section: "My coaching" },
-  { label: "My sessions", href: "/client/sessions", icon: CalendarDays, section: "My coaching" },
+  { label: "Diet plan", href: "/client/diet-plan", icon: Apple, section: "My coaching" },
+  { label: "Workout plan", href: "/client/workout-plan", icon: Dumbbell, section: "My coaching" },
+  { label: "My sessions", mobileLabel: "Sessions", href: "/client/sessions", icon: CalendarDays, section: "My coaching" },
   { label: "Check-in", href: "/client/check-in", icon: CheckCircle2, section: "My coaching" },
   { label: "Progress", href: "/client/progress", icon: BarChart3, section: "My coaching" },
-  { label: "Messages", href: "/client/messages", icon: MessageCircle, section: "Account" },
-  { label: "Payments", href: "/client/payments", icon: CreditCard, section: "Account" },
+  { label: "Messages", href: "/client/messages", icon: MessageCircle, section: "Support" },
+  { label: "Payments", href: "/client/payments", icon: CreditCard, section: "Support" },
   { label: "Profile", href: "/client/profile", icon: UserRound, section: "Account" },
+  { label: "Settings", href: "/client/settings", icon: Settings, section: "Account" },
 ];
 
 function SoFitMark({ compact = false }: { compact?: boolean }) {
@@ -117,29 +126,56 @@ function NavLinks({
 export function AppShell({
   role,
   user,
+  theme,
+  notifications,
+  unreadCount,
   children,
 }: {
   role: "coach" | "client";
-  user: { name: string; email: string };
+  user: { name: string; email: string; avatarPath?: string | null };
+  theme: ThemePreference;
+  notifications: ShellNotification[];
+  unreadCount: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [themePreference, setThemePreference] = useState<ThemePreference>(theme);
+  const [resolvedDark, setResolvedDark] = useState(theme === "dark");
+  const [themePending, startThemeTransition] = useTransition();
   const items = role === "coach" ? coachNav : clientNav;
   const active = items.find(
     (item) =>
       pathname === item.href ||
       (item.href.split("/").length > 2 && pathname.startsWith(item.href)),
   );
-  const initials = user.name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("");
+  const profileHref = role === "coach" ? "/coach/profile" : "/client/profile";
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setResolvedDark(document.documentElement.dataset.theme === "dark"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [themePreference]);
+
+  function toggleTheme() {
+    const previousTheme = themePreference;
+    const previousResolved = resolvedDark;
+    const nextTheme = resolvedDark ? "light" : "dark";
+    setThemePreference(nextTheme);
+    setResolvedDark(!resolvedDark);
+    startThemeTransition(async () => {
+      const result = await updateThemeAction(role, nextTheme);
+      if (result.error) {
+        setThemePreference(previousTheme);
+        setResolvedDark(previousResolved);
+      }
+    });
+  }
 
   return (
     <div className={collapsed ? "portal-shell is-collapsed" : "portal-shell"}>
+      <ThemeSync preference={themePreference} />
       <aside className="desktop-sidebar">
         <div className="sidebar-brand-row">
           <SoFitMark compact={collapsed} />
@@ -153,13 +189,15 @@ export function AppShell({
         </div>
         <NavLinks items={items} pathname={pathname} />
         <div className="sidebar-footer">
-          <div className="avatar small">{initials}</div>
-          {!collapsed ? (
-            <div className="sidebar-user-copy">
-              <strong>{user.name}</strong>
-              <span>{role === "coach" ? "Head coach" : "Elite member"}</span>
-            </div>
-          ) : null}
+          <Link className="sidebar-user-link" href={profileHref} title="Open profile">
+            <Avatar name={user.name} src={user.avatarPath} className="small" />
+            {!collapsed ? (
+              <div className="sidebar-user-copy">
+                <strong>{user.name}</strong>
+                <span>{role === "coach" ? "Head coach" : "Client profile"}</span>
+              </div>
+            ) : null}
+          </Link>
           <form action={logoutAction}>
             <button className="icon-button" aria-label="Sign out" type="submit">
               <LogOut size={17} />
@@ -187,18 +225,36 @@ export function AppShell({
             <input placeholder="Search anything" aria-label="Search" />
             <kbd>? K</kbd>
           </label>
-          <button className="icon-button notification-button" aria-label="Notifications">
-            <Bell size={19} />
-            <span />
+          <button className="icon-button topbar-theme-toggle" type="button" onClick={toggleTheme} disabled={themePending} aria-label={resolvedDark ? "Switch to light mode" : "Switch to dark mode"} title={resolvedDark ? "Light mode" : "Dark mode"}>
+            <span className="theme-toggle-icon">{resolvedDark ? <Sun size={18} /> : <Moon size={18} />}</span>
           </button>
-          <button className="profile-button">
-            <span className="avatar">{initials}</span>
+          <div className="topbar-notification-wrap">
+            <button className="icon-button notification-button" aria-label="Notifications" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((value) => !value)}>
+              <Bell size={19} />
+              {unreadCount > 0 ? <span><b>{unreadCount > 9 ? "9+" : unreadCount}</b></span> : null}
+            </button>
+            {notificationsOpen ? (
+              <section className="notification-popover" aria-label="Recent notifications">
+                <header><div><span className="eyebrow">Updates</span><strong>Notifications</strong></div>{unreadCount ? <small>{unreadCount} unread</small> : <small>All caught up</small>}</header>
+                {notifications.length ? <div className="notification-popover-list">{notifications.map((item) => (
+                  <article className={item.isRead ? "is-read" : "is-unread"} key={item.id}>
+                    <span className="notification-item-icon"><Bell size={15} /></span>
+                    <div><strong>{item.title}</strong><p>{item.message}</p><small>{item.senderName} - {item.createdLabel}</small></div>
+                    {!item.isRead ? <form action={markNotificationReadAction.bind(null, role, item.id)}><button type="submit" aria-label={`Mark ${item.title} as read`}><CheckCircle2 size={15} /></button></form> : null}
+                  </article>
+                ))}</div> : <div className="notification-popover-empty"><Bell size={19} /><span>No notifications yet.</span></div>}
+                <Link href={`/${role}/settings#notifications`} onClick={() => setNotificationsOpen(false)}>Open notification settings</Link>
+              </section>
+            ) : null}
+          </div>
+          <Link className="profile-button" href={profileHref} aria-label="Open profile">
+            <Avatar name={user.name} src={user.avatarPath} />
             <span className="profile-copy">
               <strong>{user.name}</strong>
               <small>{role === "coach" ? "Coach" : "Client"}</small>
             </span>
             <ChevronDown size={15} />
-          </button>
+          </Link>
         </header>
         <main className="portal-content">{children}</main>
       </div>
@@ -223,7 +279,7 @@ export function AppShell({
           return (
             <Link key={item.href} href={item.href} className={activeItem ? "active" : ""}>
               <item.icon size={20} />
-              <span>{item.label.split(" ")[0]}</span>
+              <span>{item.mobileLabel || item.label.split(" ")[0]}</span>
             </Link>
           );
         })}

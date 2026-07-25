@@ -37,7 +37,7 @@ export async function loginAction(
       user = { id: Number(record.id), name: record.name, email: record.email, role: record.role, approvalStatus: record.approval_status };
     }
   } catch {
-    return { error: "Database unavailable. Check your MySQL connection." };
+    return { error: "The service is temporarily unavailable. Please try again shortly." };
   }
 
   if (!user) return { error: "Email or password is incorrect." };

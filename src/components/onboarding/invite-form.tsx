@@ -13,11 +13,18 @@ export function InviteForm() {
     setCopied(true);
   }
   return (
-    <section className="card invite-hero">
-      <div><span className="badge success">Invite only</span><h2>Send a private intake link</h2><p>Only this email and single-use link can access the form and account setup.</p></div>
-      <form action={formAction} className="invite-form"><label className="sr-only" htmlFor="invite-email">Client email</label><input id="invite-email" name="email" type="email" placeholder="client@email.com" required /><button className="button primary" disabled={pending}><Send size={15} /> {pending ? "Creating?" : "Create invite"}</button></form>
+    <section className="card invite-composer">
+      <div className="invite-composer-heading">
+        <span className="invite-composer-icon"><Mail size={19} /></span>
+        <div><span className="eyebrow">Step 1</span><h2>Create a private invitation</h2><p>Enter the exact email the client will use for their SoFit account.</p></div>
+      </div>
+      <form action={formAction} className="invite-form">
+        <label htmlFor="invite-email"><span>Client email address</span><input id="invite-email" name="email" type="email" placeholder="client@email.com" autoComplete="email" required /></label>
+        <button className="button primary" disabled={pending}><Send size={15} /> {pending ? "Creating invite..." : "Create secure link"}</button>
+      </form>
       {state.error ? <p className="form-error invite-message">{state.error}</p> : null}
-      {state.link ? <div className="invite-link"><span>{state.link}</span><button type="button" className="button secondary small" onClick={copyLink}>{copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy link"}</button></div> : <div className="invite-link muted"><Mail size={15} /><span>A secure link will appear here. Send it to the invited client yourself.</span></div>}
+      {state.link ? <div className="invite-link"><div><Check size={15} /><span>{state.link}</span></div><button type="button" className="button secondary small" onClick={copyLink}>{copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy link"}</button></div> : <div className="invite-link muted"><Mail size={15} /><span>The secure link will appear here after you create the invitation.</span></div>}
+      <p className="invite-composer-note">Only the invited email can complete signup. Portal access remains locked until you approve the application.</p>
     </section>
   );
 }

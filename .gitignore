@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local design reference
 /refences website/
+
+# user-uploaded profile photos
+/public/uploads/profiles/

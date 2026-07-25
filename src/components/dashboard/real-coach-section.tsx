@@ -1,5 +1,4 @@
 import {
-  Activity,
   BarChart3,
   CalendarDays,
   CheckCircle2,
@@ -8,6 +7,7 @@ import {
   Dumbbell,
   Mail,
   TrendingUp,
+  UserPlus,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,8 +15,11 @@ import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { CoachPackages } from "@/components/packages/coach-packages";
 import { CoachDietPlansPage, CoachWorkoutPlansPage } from "@/components/plans/coach-plan-pages";
-import { HorizontalBars, RingChart, TrendLineChart } from "./charts";
-import { Avatar, Badge, Card, CardHead, PageHeader, ProgressBar, StatCard } from "./primitives";
+import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
+import { ClientDirectory, type ClientDirectoryRow } from "./client-directory";
+import { CoachAnalyticsDashboard, type CoachAnalyticsData } from "./coach-analytics-dashboard";
+import { RingChart, TrendLineChart } from "./charts";
+import { Avatar, Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
 
 export const realCoachSections = [
   "clients",
@@ -31,6 +34,7 @@ export const realCoachSections = [
   "payments",
   "messages",
   "analytics",
+  "profile",
   "settings",
 ];
 
@@ -161,7 +165,7 @@ async function CoachOverview() {
       </div>
       <div className="overview-grid">
         <Card>
-          <CardHead title="Today's schedule" meta={`${schedule.length} database records`} />
+          <CardHead title="Today's schedule" meta={`${schedule.length} scheduled items`} />
           <div className="simple-rows">
             {schedule.map((item, index) => (
               <div key={`${item.starts_at}-${index}`}>
@@ -195,7 +199,7 @@ async function CoachOverview() {
         </div>
       </Card>
       <Card>
-        <CardHead title="Newest clients" meta="Latest database entries" />
+        <CardHead title="Newest clients" meta="Most recently added clients" />
         <div className="simple-rows">
           {recentClients.map((client, index) => <div key={client.id}><Avatar name={client.name} tone={index} /><div><strong>{client.name}</strong><span>{client.email} - {client.service || "No service assigned"}</span></div><Badge tone={tone(client.status)}>{client.status}</Badge><Badge>{client.pipeline_stage}</Badge></div>)}
           {recentClients.length === 0 ? <div><span>No clients have been created yet.</span></div> : null}
@@ -207,8 +211,7 @@ async function CoachOverview() {
 
 async function CoachClients() {
   const db = database();
-  const [clients, pipeline] = await Promise.all([
-    db("clients")
+  const clients = await db("clients")
       .select(
         "clients.id",
         "clients.status",
@@ -216,6 +219,7 @@ async function CoachClients() {
         "clients.joined_at",
         "users.name",
         "users.email",
+        "users.avatar_path",
         "services.name as service",
         "packages.name as package_name",
         "packages.category as package_category",
@@ -225,19 +229,32 @@ async function CoachClients() {
       .leftJoin("services", "services.id", "clients.service_id")
       .leftJoin("packages", "packages.id", "clients.package_id")
       .leftJoin("check_ins", "check_ins.client_id", "clients.id")
-      .groupBy("clients.id", "clients.status", "clients.pipeline_stage", "clients.joined_at", "users.name", "users.email", "services.name", "packages.name", "packages.category")
-      .orderBy("clients.created_at", "desc"),
-    db("clients").select("pipeline_stage").count({ total: "*" }).groupBy("pipeline_stage"),
-  ]);
-  const pipelineRows = pipeline as unknown as Array<{ pipeline_stage: string; total: number | string }>;
-  const counts = new Map(pipelineRows.map((item) => [item.pipeline_stage, numeric(item.total)]));
+      .groupBy("clients.id", "clients.status", "clients.pipeline_stage", "clients.joined_at", "users.name", "users.email", "users.avatar_path", "services.name", "packages.name", "packages.category")
+      .orderBy("clients.created_at", "desc");
+
+  const directoryRows: ClientDirectoryRow[] = clients.map((client) => ({
+    id: numeric(client.id),
+    name: String(client.name),
+    email: String(client.email),
+    avatarPath: client.avatar_path ? String(client.avatar_path) : null,
+    status: String(client.status),
+    pipelineStage: String(client.pipeline_stage),
+    joined: client.joined_at ? dateOnly.format(new Date(client.joined_at)) : "Not recorded",
+    service: client.service ? String(client.service) : null,
+    packageName: client.package_name ? String(client.package_name) : null,
+    packageCategory: client.package_category ? String(client.package_category) : null,
+    adherence: numeric(client.adherence),
+  }));
+
   return (
     <>
-      <PageHeader title="Clients" description="Only client accounts stored in MySQL are shown here." />
-      <div className="pipeline">
-        {["lead", "onboarding", "active", "renewal"].map((stage) => <Card className="pipeline-card" key={stage}><span>{stage}</span><strong>{counts.get(stage) || 0}</strong><small>clients</small></Card>)}
-      </div>
-      {clients.length === 0 ? <EmptyState text="Invite a client to begin onboarding." /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Client</th><th>Package</th><th>Primary service</th><th>Status</th><th>Pipeline</th><th>Adherence</th><th>Joined</th></tr></thead><tbody>{clients.map((client, index) => <tr key={client.id}><td><div className="table-person"><Avatar name={client.name} tone={index} /><div><strong>{client.name}</strong><span>{client.email}</span></div></div></td><td>{client.package_name ? <div><strong>{client.package_name}</strong><br /><Badge>{client.package_category}</Badge></div> : "Not assigned"}</td><td>{client.service || "Not assigned"}</td><td><Badge tone={tone(client.status)}>{client.status}</Badge></td><td><Badge>{client.pipeline_stage}</Badge></td><td><ProgressBar value={numeric(client.adherence)} /></td><td>{client.joined_at ? dateOnly.format(new Date(client.joined_at)) : "-"}</td></tr>)}</tbody></table></div></Card>}
+      <PageHeader
+        eyebrow="Client management"
+        title="Your clients"
+        description="Track every client from first contact to renewal, then focus on the people who need attention today."
+        actions={<Link className="button primary" href="/coach/invites"><UserPlus size={16} /> Invite a client</Link>}
+      />
+      {directoryRows.length === 0 ? <EmptyState text="Invite a client to begin onboarding." /> : <ClientDirectory clients={directoryRows} />}
     </>
   );
 }
@@ -248,7 +265,7 @@ async function CoachServices() {
     .select(database().raw("(SELECT COUNT(*) FROM clients WHERE clients.service_id = services.id) as client_count"))
     .orderBy("type")
     .orderBy("tier");
-  return <><PageHeader title="Services" description="Services and prices stored in MySQL." />{services.length === 0 ? <EmptyState text="No service records exist yet." /> : <div className="service-grid">{services.map((service) => <Card className="service-card" key={service.id}><Badge tone={service.is_active ? "success" : "neutral"}>{service.is_active ? "Active" : "Inactive"}</Badge><h2>{service.name}</h2><p>{service.description || "No description"}</p><div className="service-price"><strong>{money.format(numeric(service.price))}</strong><span>{service.billing_interval}</span></div><div className="service-foot"><span>{numeric(service.client_count)} clients</span><Badge>{service.tier || service.type}</Badge></div></Card>)}</div>}</>;
+  return <><PageHeader title="Services" description="Manage your coaching offers, pricing, and active client count." />{services.length === 0 ? <EmptyState text="No service records exist yet." /> : <div className="service-grid">{services.map((service) => <Card className="service-card" key={service.id}><Badge tone={service.is_active ? "success" : "neutral"}>{service.is_active ? "Active" : "Inactive"}</Badge><h2>{service.name}</h2><p>{service.description || "No description"}</p><div className="service-price"><strong>{money.format(numeric(service.price))}</strong><span>{service.billing_interval}</span></div><div className="service-foot"><span>{numeric(service.client_count)} clients</span><Badge>{service.tier || service.type}</Badge></div></Card>)}</div>}</>;
 }
 
 async function CoachListSection({ section }: { section: string }) {
@@ -259,12 +276,12 @@ async function CoachListSection({ section }: { section: string }) {
   let columns: Array<{ key: string; label: string; format?: (value: unknown, row: Record<string, unknown>) => React.ReactNode }> = [];
 
   if (section === "consultations") {
-    title = "Consultations"; description = "Bookings stored in MySQL.";
+    title = "Consultations"; description = "Scheduled and completed client consultation records.";
     rows = await db("consultations").select("consultations.*", "users.name as client").join("clients", "clients.id", "consultations.client_id").join("users", "users.id", "clients.user_id").orderBy("starts_at", "desc");
     columns = [{ key: "client", label: "Client" }, { key: "starts_at", label: "Starts", format: (v) => dateTime.format(new Date(String(v))) }, { key: "duration_minutes", label: "Minutes" }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }, { key: "session_notes", label: "Notes", format: (v) => String(v || "-") }];
   } else if (section === "diet-plans" || section === "workout-plans") {
     const diet = section === "diet-plans";
-    title = diet ? "Diet plans" : "Workout plans"; description = `${title} stored and assigned in MySQL.`;
+    title = diet ? "Diet plans" : "Workout plans"; description = `${title} created and assigned to your clients.`;
     const table = diet ? "diet_plans" : "workout_plans";
     rows = await db(table).select(`${table}.*`, "users.name as client").join("clients", "clients.id", `${table}.client_id`).join("users", "users.id", "clients.user_id").orderBy(`${table}.updated_at`, "desc");
     columns = [{ key: "title", label: "Plan" }, { key: "client", label: "Client" }, { key: "version", label: "Version" }, { key: diet ? "daily_calories" : "weeks", label: diet ? "Calories" : "Weeks" }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }, { key: "starts_on", label: "Starts", format: (v) => v ? dateOnly.format(new Date(String(v))) : "-" }];
@@ -277,11 +294,11 @@ async function CoachListSection({ section }: { section: string }) {
     rows = await db("check_ins").select("check_ins.*", "users.name as client").join("clients", "clients.id", "check_ins.client_id").join("users", "users.id", "clients.user_id").orderBy("week_of", "desc");
     columns = [{ key: "client", label: "Client" }, { key: "week_of", label: "Week", format: (v) => dateOnly.format(new Date(String(v))) }, { key: "weight_kg", label: "Weight", format: (v) => v ? `${v} kg` : "-" }, { key: "diet_adherence_pct", label: "Diet" , format: (v) => `${numeric(v)}%`}, { key: "workout_completion_pct", label: "Workout", format: (v) => `${numeric(v)}%` }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }];
   } else if (section === "payments") {
-    title = "Payments"; description = "Invoice records stored locally in MySQL.";
+    title = "Payments"; description = "Client invoices, due dates, and payment status.";
     rows = await db("invoices").select("invoices.*", "users.name as client", "services.name as service").join("clients", "clients.id", "invoices.client_id").join("users", "users.id", "clients.user_id").leftJoin("services", "services.id", "invoices.service_id").orderBy("due_on", "desc");
     columns = [{ key: "number", label: "Invoice" }, { key: "client", label: "Client" }, { key: "service", label: "Service", format: (v) => String(v || "-") }, { key: "amount", label: "Amount", format: (v) => money.format(numeric(v)) }, { key: "due_on", label: "Due", format: (v) => dateOnly.format(new Date(String(v))) }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }];
   } else if (section === "messages") {
-    title = "Messages"; description = "Private messages saved in MySQL.";
+    title = "Messages"; description = "Private conversations between you and your clients.";
     rows = await db("messages").select("messages.*", "sender.name as sender", "recipient.name as recipient").join("users as sender", "sender.id", "messages.sender_id").join("users as recipient", "recipient.id", "messages.recipient_id").orderBy("messages.created_at", "desc").limit(100);
     columns = [{ key: "sender", label: "From" }, { key: "recipient", label: "To" }, { key: "body", label: "Message" }, { key: "created_at", label: "Sent", format: (v) => dateTime.format(new Date(String(v))) }];
   }
@@ -291,15 +308,27 @@ async function CoachListSection({ section }: { section: string }) {
 
 async function CoachAnalytics() {
   const db = database();
-  const firstMonth = new Date();
-  firstMonth.setDate(1);
-  firstMonth.setHours(0, 0, 0, 0);
-  firstMonth.setMonth(firstMonth.getMonth() - 5);
-  const [clients, revenue, retention, servicePerformance, monthlyRevenueRows, adherence] = await Promise.all([
-    db("clients").count({ total: "*" }).first(),
-    db("invoices").where({ status: "paid" }).sum({ total: "amount" }).first(),
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const previousMonthStart = new Date(monthStart);
+  previousMonthStart.setMonth(previousMonthStart.getMonth() - 1);
+  const firstMonth = new Date(monthStart);
+  firstMonth.setMonth(firstMonth.getMonth() - 11);
+
+  const [clientSummary, revenueSummary, statusRows, pipelineRows, monthlyRevenueRows, monthlyClientRows, adherence, serviceRows, revenueServiceRows, invoiceRows] = await Promise.all([
+    db("clients")
+      .select(db.raw("COUNT(*) as total"))
+      .select(db.raw("SUM(status = 'active') as active"))
+      .select(db.raw("SUM(status = 'churned') as churned"))
+      .first(),
+    db("invoices")
+      .select(db.raw("COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) as lifetime"))
+      .select(db.raw("COALESCE(SUM(CASE WHEN status = 'paid' AND paid_at >= ? THEN amount ELSE 0 END), 0) as current", [monthStart]))
+      .select(db.raw("COALESCE(SUM(CASE WHEN status = 'paid' AND paid_at >= ? AND paid_at < ? THEN amount ELSE 0 END), 0) as previous", [previousMonthStart, monthStart]))
+      .first(),
     db("clients").select("status").count({ total: "*" }).groupBy("status"),
-    db("services").select("services.name").count({ clients: "clients.id" }).leftJoin("clients", "clients.service_id", "services.id").groupBy("services.id", "services.name").orderBy("clients", "desc"),
+    db("clients").select("pipeline_stage").count({ total: "*" }).groupBy("pipeline_stage"),
     db("invoices")
       .select(db.raw("DATE_FORMAT(paid_at, '%Y-%m') as month"))
       .sum({ total: "amount" })
@@ -307,60 +336,82 @@ async function CoachAnalytics() {
       .where("paid_at", ">=", firstMonth)
       .groupByRaw("DATE_FORMAT(paid_at, '%Y-%m')")
       .orderBy("month"),
-    db("check_ins").avg({ diet: "diet_adherence_pct", workout: "workout_completion_pct" }).first(),
+    db("clients")
+      .select(db.raw("DATE_FORMAT(COALESCE(joined_at, created_at), '%Y-%m') as month"))
+      .count({ total: "*" })
+      .whereRaw("COALESCE(joined_at, created_at) >= ?", [firstMonth])
+      .groupByRaw("DATE_FORMAT(COALESCE(joined_at, created_at), '%Y-%m')")
+      .orderBy("month"),
+    db("check_ins").avg({ diet: "diet_adherence_pct", workout: "workout_completion_pct", energy: "energy_score", sleep: "sleep_score" }).first(),
+    db("services")
+      .select("services.id", "services.name", "services.type", "services.tier")
+      .select(db.raw("(SELECT COUNT(*) FROM clients WHERE clients.service_id = services.id) as client_count"))
+      .select(db.raw("(SELECT COALESCE(SUM(invoices.amount), 0) FROM invoices WHERE invoices.service_id = services.id AND invoices.status = 'paid') as paid_revenue"))
+      .select(db.raw("(SELECT COUNT(*) FROM sessions WHERE sessions.service_id = services.id AND sessions.attendance = 'attended') as attended_sessions"))
+      .orderByRaw("paid_revenue DESC, client_count DESC, services.name ASC"),
+    db("services")
+      .select("services.name")
+      .sum({ total: "invoices.amount" })
+      .join("invoices", "invoices.service_id", "services.id")
+      .where("invoices.status", "paid")
+      .groupBy("services.id", "services.name")
+      .orderBy("total", "desc"),
+    db("invoices")
+      .select("invoices.id", "invoices.number", "invoices.amount", "invoices.currency", "invoices.status", "invoices.due_on", "invoices.paid_at", "users.name as client", "services.name as service")
+      .join("clients", "clients.id", "invoices.client_id")
+      .join("users", "users.id", "clients.user_id")
+      .leftJoin("services", "services.id", "invoices.service_id")
+      .orderBy("invoices.created_at", "desc")
+      .limit(8),
   ]);
-  const retentionRows = retention as unknown as Array<{ status: string; total: number | string }>;
-  const performanceRows = servicePerformance as unknown as Array<{ name: string; clients: number | string }>;
-  const statusCounts = new Map(retentionRows.map((item) => [item.status, numeric(item.total)]));
+  const statusData = statusRows as Array<{ status: string; total: number | string }>;
+  const pipelineData = pipelineRows as Array<{ pipeline_stage: string; total: number | string }>;
   const revenueMap = new Map(
     (monthlyRevenueRows as Array<{ month: string; total: number | string }>).map((row) => [row.month, numeric(row.total)]),
   );
-  const revenueTrend = Array.from({ length: 6 }, (_, index) => {
+  const clientMap = new Map(
+    (monthlyClientRows as Array<{ month: string; total: number | string }>).map((row) => [row.month, numeric(row.total)]),
+  );
+  const months = Array.from({ length: 12 }, (_, index) => {
     const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + index, 1);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-    return { label: date.toLocaleDateString("en-US", { month: "short" }), value: revenueMap.get(key) || 0 };
+    return { key, label: date.toLocaleDateString("en-US", { month: "short" }) };
   });
-  const statusSegments = retentionRows.map((row, index) => ({
+  const totalClients = numeric(clientSummary?.total);
+  const churnedClients = numeric(clientSummary?.churned);
+  const tones = ["green", "amber", "slate", "blue"] as const;
+  const statusSegments = statusData.map((row, index) => ({
     label: row.status,
     value: numeric(row.total),
-    tone: (["green", "amber", "slate", "blue"][index % 4]) as "green" | "amber" | "slate" | "blue",
+    tone: tones[index % tones.length],
   }));
-  return (
-    <>
-      <PageHeader
-        eyebrow="Business intelligence"
-        title="Analytics"
-        description="A focused view of revenue, retention, service demand, and client consistency."
-      />
-      <div className="stats-grid">
-        <StatCard label="Total clients" value={String(numeric(clients?.total))} icon={<Users size={18} />} />
-        <StatCard label="Paid revenue" value={money.format(numeric(revenue?.total))} icon={<TrendingUp size={18} />} accent="green" points={revenueTrend.map((point) => point.value)} />
-        <StatCard label="Avg. diet adherence" value={`${Math.round(numeric(adherence?.diet))}%`} icon={<Activity size={18} />} accent="green" />
-        <StatCard label="Avg. workout completion" value={`${Math.round(numeric(adherence?.workout))}%`} icon={<Dumbbell size={18} />} />
-      </div>
-      <div className="analytics-grid">
-        <Card className="chart-card analytics-revenue">
-          <CardHead title="Revenue trend" meta="Paid invoices over the last six months" />
-          <TrendLineChart data={revenueTrend} valueLabel="Revenue" formatValue={(value) => money.format(value)} />
-        </Card>
-        <Card className="chart-card">
-          <CardHead title="Client retention" meta="Live client status distribution" />
-          <RingChart segments={statusSegments} centerValue={String(statusCounts.get("active") || 0)} centerLabel="active" />
-        </Card>
-        <Card className="chart-card analytics-services">
-          <CardHead title="Service performance" meta="Clients assigned to each offering" />
-          <HorizontalBars items={performanceRows.map((service) => ({ label: service.name, value: numeric(service.clients) }))} />
-        </Card>
-      </div>
-    </>
-  );
+  const revenueSegments = (revenueServiceRows as Array<{ name: string; total: number | string }>).map((row, index) => ({ label: row.name, value: numeric(row.total), tone: tones[index % tones.length] }));
+  const analyticsData: CoachAnalyticsData = {
+    activeClients: numeric(clientSummary?.active),
+    totalClients,
+    retentionRate: totalClients ? Math.round(((totalClients - churnedClients) / totalClients) * 100) : 0,
+    currentRevenue: numeric(revenueSummary?.current),
+    previousRevenue: numeric(revenueSummary?.previous),
+    lifetimeRevenue: numeric(revenueSummary?.lifetime),
+    averageDiet: numeric(adherence?.diet), averageWorkout: numeric(adherence?.workout),
+    averageEnergy: numeric(adherence?.energy), averageSleep: numeric(adherence?.sleep),
+    revenueTrend: months.map((month) => ({ label: month.label, value: revenueMap.get(month.key) || 0 })),
+    clientGrowth: months.map((month) => ({ label: month.label, value: clientMap.get(month.key) || 0 })),
+    pipeline: ["lead", "onboarding", "active", "renewal"].map((stage) => ({ label: stage, value: numeric(pipelineData.find((row) => row.pipeline_stage === stage)?.total) })),
+    statusSegments,
+    revenueSegments,
+    services: (serviceRows as Array<Record<string, unknown>>).map((row) => ({ id: numeric(row.id), name: String(row.name), type: String(row.type), tier: row.tier ? String(row.tier) : null, clients: numeric(row.client_count), paidRevenue: numeric(row.paid_revenue), attendedSessions: numeric(row.attended_sessions) })),
+    invoices: (invoiceRows as Array<Record<string, unknown>>).map((row) => ({ id: numeric(row.id), number: String(row.number), client: String(row.client), service: row.service ? String(row.service) : null, amount: numeric(row.amount), currency: String(row.currency || "USD"), status: String(row.status), dueOn: new Date(String(row.due_on)).toISOString(), paidAt: row.paid_at ? new Date(String(row.paid_at)).toISOString() : null })),
+    generatedAt: new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date()),
+  };
+  return <CoachAnalyticsDashboard data={analyticsData} />;
 }
 
 async function CoachSettings() {
-  const user = await requireRole("coach");
-  const record = await database()("users").select("name", "email", "created_at", "is_active").where({ id: user.id }).first();
-  return <><PageHeader title="Settings" description="Coach account details read from MySQL." /><Card><CardHead title="Coach account" meta="Authentication identity" /><div className="simple-rows"><div><Avatar name={record.name} /><div><strong>{record.name}</strong><span>{record.email}</span></div><Badge tone={record.is_active ? "success" : "danger"}>{record.is_active ? "active" : "disabled"}</Badge></div><div><span className="task-icon mint"><CalendarDays size={16} /></span><div><strong>Created</strong><span>{dateOnly.format(new Date(record.created_at))}</span></div></div></div></Card></>;
+  return <AccountSettingsPage role="coach" />;
 }
+
+async function CoachProfile() { return <AccountProfilePage role="coach" />; }
 
 export async function RealCoachSection({ section = "home" }: { section?: string }) {
   await requireRole("coach");
@@ -371,6 +422,7 @@ export async function RealCoachSection({ section = "home" }: { section?: string 
   if (section === "diet-plans") return <CoachDietPlansPage />;
   if (section === "workout-plans") return <CoachWorkoutPlansPage />;
   if (section === "analytics") return <CoachAnalytics />;
+  if (section === "profile") return <CoachProfile />;
   if (section === "settings") return <CoachSettings />;
   return <CoachListSection section={section} />;
 }

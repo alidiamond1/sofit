@@ -195,7 +195,8 @@ export async function createDietPlanAction(
   });
   revalidatePath("/coach/diet-plans");
   revalidatePath("/client");
-  revalidatePath("/client/plans");
+  revalidatePath("/client/diet-plan");
+  revalidatePath("/client/workout-plan");
   return { success: `${parsed.data.title} was assigned to the client.` };
 }
 
@@ -260,7 +261,8 @@ export async function createWorkoutPlanAction(
   });
   revalidatePath("/coach/workout-plans");
   revalidatePath("/client");
-  revalidatePath("/client/plans");
+  revalidatePath("/client/diet-plan");
+  revalidatePath("/client/workout-plan");
   return { success: `${parsed.data.title} was assigned to the client.` };
 }
 
@@ -428,7 +430,8 @@ export async function updateDietPlanAction(
   });
   revalidatePath("/coach/diet-plans");
   revalidatePath("/client");
-  revalidatePath("/client/plans");
+  revalidatePath("/client/diet-plan");
+  revalidatePath("/client/workout-plan");
   return { success: `${parsed.data.title} was updated.` };
 }
 
@@ -445,7 +448,8 @@ export async function deleteDietPlanAction(
   await db("diet_plans").where({ id: id.data }).del();
   revalidatePath("/coach/diet-plans");
   revalidatePath("/client");
-  revalidatePath("/client/plans");
+  revalidatePath("/client/diet-plan");
+  revalidatePath("/client/workout-plan");
   return { success: `${record.title} was deleted.` };
 }
 
@@ -512,7 +516,8 @@ export async function updateWorkoutPlanAction(
   });
   revalidatePath("/coach/workout-plans");
   revalidatePath("/client");
-  revalidatePath("/client/plans");
+  revalidatePath("/client/diet-plan");
+  revalidatePath("/client/workout-plan");
   return { success: `${parsed.data.title} was updated.` };
 }
 
@@ -529,6 +534,7 @@ export async function deleteWorkoutPlanAction(
   await db("workout_plans").where({ id: id.data }).del();
   revalidatePath("/coach/workout-plans");
   revalidatePath("/client");
-  revalidatePath("/client/plans");
+  revalidatePath("/client/diet-plan");
+  revalidatePath("/client/workout-plan");
   return { success: `${record.title} was deleted.` };
 }

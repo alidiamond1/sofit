@@ -17,8 +17,9 @@ import { database } from "@/lib/db";
 import { HorizontalBars, TrendLineChart } from "./charts";
 import { Avatar, Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
 import { ExerciseMotion } from "@/components/plans/exercise-motion";
+import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
 
-export const realClientSections = ["plans", "sessions", "check-in", "progress", "messages", "payments", "profile"];
+export const realClientSections = ["plans", "diet-plan", "workout-plan", "sessions", "check-in", "progress", "messages", "payments", "profile", "settings"];
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const dateTime = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -177,29 +178,52 @@ async function ClientHome() {
   );
 }
 
-async function ClientPlans() {
-  const { client } = await getClientContext();
-  const [dietPlans, workoutPlans] = await Promise.all([
-    database()("diet_plans").where({ client_id: client.id }).orderBy("updated_at", "desc"),
-    database()("workout_plans").where({ client_id: client.id }).orderBy("updated_at", "desc"),
-  ]);
+function DietPlanCard({ plan }: { plan: Record<string, unknown> }) {
+  const meals = jsonArray(plan.meals);
   return (
-    <>
-      <PageHeader title="My plans" description="Plans assigned to your account in MySQL." />
-      <div className="client-plan-stack">
-        {dietPlans.map((plan) => {
-          const meals = jsonArray(plan.meals);
-          return <Card className="client-detailed-plan" key={plan.id}><div className="client-plan-title"><div><Badge tone={tone(plan.status)}>{plan.status}</Badge><span>Diet plan - version {plan.version}</span><h2>{plan.title}</h2></div><div className="plan-metrics"><div><strong>{plan.daily_calories || "-"}</strong><span>kcal</span></div><div><strong>{plan.protein_g || "-"}</strong><span>protein g</span></div><div><strong>{plan.carbs_g || "-"}</strong><span>carbs g</span></div></div></div><div className="client-meal-timeline">{meals.map((meal, index) => { const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : Array.isArray(meal.items) ? meal.items : []; return <article key={`${String(meal.name)}-${index}`}><time>{String(meal.time || "--:--")}</time><span className="meal-type">{String(meal.type || "meal")}</span><div><h3>{String(meal.name || "Meal")}</h3><p>{ingredients.map(String).join(" - ") || "No ingredients listed"}</p></div><strong>{meal.calories ? `${meal.calories} kcal` : ""}</strong></article>; })}{meals.length === 0 ? <p>No meals are listed in this plan.</p> : null}</div></Card>;
-        })}
-        {workoutPlans.map((plan) => {
-          const exercises = jsonArray(plan.exercises);
-          const days = jsonArray(plan.weekly_split);
-          return <Card className="client-detailed-plan training" key={plan.id}><div className="client-plan-title"><div><Badge tone={tone(plan.status)}>{plan.status}</Badge><span>Workout program - version {plan.version}</span><h2>{plan.title}</h2></div><div className="plan-metrics"><div><strong>{plan.weeks}</strong><span>weeks</span></div><div><strong>{days.length || new Set(exercises.map((item) => String(item.day))).size}</strong><span>days</span></div><div><strong>{exercises.length}</strong><span>exercises</span></div></div></div><div className="client-exercise-list">{exercises.map((exercise, index) => <article key={`${String(exercise.exercise)}-${index}`}><ExerciseMotion compact type={String(exercise.motion_type || "custom")} mediaUrl={exercise.media_url ? String(exercise.media_url) : null} label={String(exercise.exercise || "Exercise")} /><div><span>{String(exercise.day || "Training day")} - {String(exercise.muscle_group || "Exercise")}</span><h3>{String(exercise.exercise || "Exercise")}</h3><p>{String(exercise.instructions || exercise.equipment || "Follow the coach's prescribed technique.")}</p></div><div className="exercise-prescription"><strong>{String(exercise.sets || "-")} x {String(exercise.reps || "-")}</strong><span>RPE {String(exercise.rpe || "-")} - {String(exercise.rest_seconds || 0)}s rest</span></div></article>)}{exercises.length === 0 ? <p>No exercises are listed in this program.</p> : null}</div></Card>;
-        })}
+    <Card className="client-detailed-plan">
+      <div className="client-plan-title">
+        <div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Diet plan - version {String(plan.version)}</span><h2>{String(plan.title)}</h2></div>
+        <div className="plan-metrics"><div><strong>{String(plan.daily_calories || "-")}</strong><span>kcal</span></div><div><strong>{String(plan.protein_g || "-")}</strong><span>protein g</span></div><div><strong>{String(plan.carbs_g || "-")}</strong><span>carbs g</span></div></div>
       </div>
-      {dietPlans.length === 0 && workoutPlans.length === 0 ? <EmptyState text="Your coach has not assigned a diet or workout plan yet." /> : null}
-    </>
+      <div className="client-meal-timeline">
+        {meals.map((meal, index) => {
+          const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : Array.isArray(meal.items) ? meal.items : [];
+          return <article key={`${String(meal.name)}-${index}`}><time>{String(meal.time || "--:--")}</time><span className="meal-type">{String(meal.type || "meal")}</span><div><h3>{String(meal.name || "Meal")}</h3><p>{ingredients.map(String).join(" - ") || "No ingredients listed"}</p></div><strong>{meal.calories ? `${meal.calories} kcal` : ""}</strong></article>;
+        })}
+        {meals.length === 0 ? <p>No meals are listed in this plan.</p> : null}
+      </div>
+    </Card>
   );
+}
+
+function WorkoutPlanCard({ plan }: { plan: Record<string, unknown> }) {
+  const exercises = jsonArray(plan.exercises);
+  const days = jsonArray(plan.weekly_split);
+  return (
+    <Card className="client-detailed-plan training">
+      <div className="client-plan-title">
+        <div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Workout program - version {String(plan.version)}</span><h2>{String(plan.title)}</h2></div>
+        <div className="plan-metrics"><div><strong>{String(plan.weeks || "-")}</strong><span>weeks</span></div><div><strong>{days.length || new Set(exercises.map((item) => String(item.day))).size}</strong><span>days</span></div><div><strong>{exercises.length}</strong><span>exercises</span></div></div>
+      </div>
+      <div className="client-exercise-list">
+        {exercises.map((exercise, index) => <article key={`${String(exercise.exercise)}-${index}`}><ExerciseMotion compact type={String(exercise.motion_type || "custom")} mediaUrl={exercise.media_url ? String(exercise.media_url) : null} label={String(exercise.exercise || "Exercise")} /><div><span>{String(exercise.day || "Training day")} - {String(exercise.muscle_group || "Exercise")}</span><h3>{String(exercise.exercise || "Exercise")}</h3><p>{String(exercise.instructions || exercise.equipment || "Follow the coach's prescribed technique.")}</p></div><div className="exercise-prescription"><strong>{String(exercise.sets || "-")} x {String(exercise.reps || "-")}</strong><span>RPE {String(exercise.rpe || "-")} - {String(exercise.rest_seconds || 0)}s rest</span></div></article>)}
+        {exercises.length === 0 ? <p>No exercises are listed in this program.</p> : null}
+      </div>
+    </Card>
+  );
+}
+
+async function ClientDietPlans() {
+  const { client } = await getClientContext();
+  const dietPlans = await database()("diet_plans").where({ client_id: client.id }).orderBy("updated_at", "desc");
+  return <><PageHeader eyebrow="Nutrition" title="My diet plan" description="Meals, calories, and macro targets assigned by your coach." />{dietPlans.length ? <div className="client-plan-stack">{dietPlans.map((plan) => <DietPlanCard key={plan.id} plan={plan} />)}</div> : <EmptyState text="Your coach has not assigned a diet plan yet." />}</>;
+}
+
+async function ClientWorkoutPlans() {
+  const { client } = await getClientContext();
+  const workoutPlans = await database()("workout_plans").where({ client_id: client.id }).orderBy("updated_at", "desc");
+  return <><PageHeader eyebrow="Training" title="My workout plan" description="Your weekly split, exercises, sets, reps, RPE, and rest guidance." />{workoutPlans.length ? <div className="client-plan-stack">{workoutPlans.map((plan) => <WorkoutPlanCard key={plan.id} plan={plan} />)}</div> : <EmptyState text="Your coach has not assigned a workout plan yet." />}</>;
 }
 
 async function ClientSessions() {
@@ -217,7 +241,7 @@ async function ClientCheckIn() {
   const latest = await database()("check_ins").where({ client_id: client.id }).orderBy("week_of", "desc").first();
   return (
     <>
-      <PageHeader title="Weekly check-in" description="Submitting this form writes directly to your MySQL check-in record." />
+      <PageHeader title="Weekly check-in" description="Share this week's progress, adherence, and notes with your coach." />
       <div className="checkin-form-layout">
         <Card className="checkin-form">
           <form action={submitClientCheckInAction}>
@@ -287,28 +311,31 @@ async function ClientMessages() {
       .where((query) => query.where("messages.sender_id", session.id).orWhere("messages.recipient_id", session.id))
       .orderBy("messages.created_at", "asc"),
   ]);
-  return <><PageHeader title="Messages" description="Messages are read from and written to MySQL." /><Card className="message-shell client-chat"><section className="chat-panel"><header><div>{coach ? <><Avatar name={coach.name} /><p><strong>{coach.name}</strong><span>{coach.email}</span></p></> : <p><strong>No coach account found</strong></p>}</div></header><div className="chat-history">{messages.map((message) => <div className={numeric(message.sender_id) === session.id ? "bubble outgoing" : "bubble incoming"} key={message.id}>{message.body}<time>{dateTime.format(new Date(message.created_at))}</time></div>)}{messages.length === 0 ? <p>No messages yet.</p> : null}</div><form className="message-compose" action={sendClientMessageAction}><input name="body" placeholder="Message your coach" required disabled={!coach} /><button type="submit" className="send-button" disabled={!coach} aria-label="Send message"><Send size={17} /></button></form></section></Card></>;
+  return <><PageHeader title="Messages" description="Your private conversation with the SoFit coach." /><Card className="message-shell client-chat"><section className="chat-panel"><header><div>{coach ? <><Avatar name={coach.name} /><p><strong>{coach.name}</strong><span>{coach.email}</span></p></> : <p><strong>No coach account found</strong></p>}</div></header><div className="chat-history">{messages.map((message) => <div className={numeric(message.sender_id) === session.id ? "bubble outgoing" : "bubble incoming"} key={message.id}>{message.body}<time>{dateTime.format(new Date(message.created_at))}</time></div>)}{messages.length === 0 ? <p>No messages yet.</p> : null}</div><form className="message-compose" action={sendClientMessageAction}><input name="body" placeholder="Message your coach" required disabled={!coach} /><button type="submit" className="send-button" disabled={!coach} aria-label="Send message"><Send size={17} /></button></form></section></Card></>;
 }
 
 async function ClientPayments() {
   const { client } = await getClientContext();
   const invoices = await database()("invoices").select("invoices.*", "services.name as service").leftJoin("services", "services.id", "invoices.service_id").where("invoices.client_id", client.id).orderBy("due_on", "desc");
-  return <><PageHeader title="Payments" description="Your invoice records stored in MySQL. No Stripe data is used." />{invoices.length === 0 ? <EmptyState text="No invoices have been created for your account." /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Invoice</th><th>Service</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td>{invoice.number}</td><td>{invoice.service || "-"}</td><td>{money.format(numeric(invoice.amount))}</td><td>{dateOnly.format(new Date(invoice.due_on))}</td><td><Badge tone={tone(invoice.status)}>{invoice.status}</Badge></td></tr>)}</tbody></table></div></Card>}</>;
+  return <><PageHeader title="Payments" description="Review your invoices, due dates, and payment status." />{invoices.length === 0 ? <EmptyState text="No invoices have been created for your account." /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Invoice</th><th>Service</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td>{invoice.number}</td><td>{invoice.service || "-"}</td><td>{money.format(numeric(invoice.amount))}</td><td>{dateOnly.format(new Date(invoice.due_on))}</td><td><Badge tone={tone(invoice.status)}>{invoice.status}</Badge></td></tr>)}</tbody></table></div></Card>}</>;
 }
 
 async function ClientProfile() {
-  const { client } = await getClientContext();
-  const answers = typeof client.intake_answers === "string" ? JSON.parse(client.intake_answers) : client.intake_answers || {};
-  return <><PageHeader title="Profile" description="Account and intake details stored in MySQL." /><div className="profile-layout"><Card className="profile-summary"><Avatar name={client.name} /><h2>{client.name}</h2><p>{client.email}</p><Badge tone={tone(client.status)}>{client.status}</Badge></Card><Card><CardHead title="Client details" meta="Your onboarding record" /><div className="application-answers"><dl><div><dt>Assigned package</dt><dd>{client.package_name ? `${client.package_name} (${client.package_category})` : "Not assigned"}</dd></div><div><dt>Primary service</dt><dd>{client.service_name || "Not assigned"}</dd></div><div><dt>Pipeline stage</dt><dd>{client.pipeline_stage}</dd></div><div><dt>Goals</dt><dd>{client.goals || answers.goals || "-"}</dd></div><div><dt>Phone</dt><dd>{client.phone || "-"}</dd></div><div><dt>Coach expectations</dt><dd>{answers.coach_expectations || "-"}</dd></div><div><dt>Meal-plan motivation</dt><dd>{answers.meal_plan_motivation || "-"}</dd></div></dl></div></Card></div></>;
+  return <AccountProfilePage role="client" />;
 }
+
+async function ClientSettings() { return <AccountSettingsPage role="client" />; }
 
 export async function RealClientSection({ section = "home" }: { section?: string }) {
   if (section === "home") return <ClientHome />;
-  if (section === "plans") return <ClientPlans />;
+  if (section === "plans") redirect("/client/diet-plan");
+  if (section === "diet-plan") return <ClientDietPlans />;
+  if (section === "workout-plan") return <ClientWorkoutPlans />;
   if (section === "sessions") return <ClientSessions />;
   if (section === "check-in") return <ClientCheckIn />;
   if (section === "progress") return <ClientProgress />;
   if (section === "messages") return <ClientMessages />;
   if (section === "payments") return <ClientPayments />;
+  if (section === "settings") return <ClientSettings />;
   return <ClientProfile />;
 }
