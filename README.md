@@ -1,40 +1,83 @@
 # SoFit
 
-Online fitness coaching platform with separate coach and client portals, built with Next.js, MySQL, and Knex.
+SoFit is a role-based fitness coaching platform with separate Coach and Client dashboards. It uses Next.js 16, MySQL, Knex, secure cookie sessions, and database-backed profile photos.
 
-This project was bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Local setup
 
-## Getting Started
+Requirements:
 
-First, run the development server:
+- Node.js 20.9 or newer
+- A MySQL database
+
+Copy `.env.example` to `.env`, fill in the database details, and then run:
 
 ```bash
+npm install
+npm run db:migrate
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Import the repository
 
-## Learn More
+In Vercel, choose **Add New > Project**, import `alidiamond1/sofit`, and keep the detected framework as **Next.js**. The default build command `npm run build` and output settings are correct.
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Add environment variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+In **Project Settings > Environment Variables**, add these to Production and Preview:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Required | Value |
+| --- | --- | --- |
+| `DB_HOST` | Yes* | Public hostname of the hosted MySQL server |
+| `DB_PORT` | Yes* | Usually `3306` |
+| `DB_NAME` | Yes* | MySQL database name |
+| `DB_USER` | Yes* | MySQL username |
+| `DB_PASSWORD` | Yes* | MySQL password |
+| `DATABASE_URL` | Optional* | May replace all five `DB_*` connection variables |
+| `DB_SSL` | Recommended | `true` when the provider requires TLS |
+| `DB_SSL_REJECT_UNAUTHORIZED` | Recommended | `true`; use `false` only if the provider explicitly requires it |
+| `DB_POOL_MAX` | Recommended | `3` for a serverless deployment |
+| `SESSION_SECRET` | Yes | A long random secret |
+| `NEXT_PUBLIC_APP_URL` | Recommended | Production URL, such as `https://sofit.vercel.app` |
 
-## Deploy on Vercel
+\* Use either `DATABASE_URL` or the individual database connection variables.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Generate `SESSION_SECRET` locally:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+```
+
+Do not copy the local `.env` file into GitHub. It is intentionally ignored.
+
+### 3. Apply database migrations
+
+The database must be reachable from the internet and allow Vercel connections. After linking the local folder to the Vercel project, apply migrations once:
+
+```bash
+npx vercel link
+npx vercel env run -e production -- npm run db:migrate
+```
+
+Run migrations again whenever a new migration file is added. Do not run seeds in production unless demo data is intentionally required.
+
+### 4. Deploy
+
+Deploy from the Vercel dashboard, push to the production branch, or run:
+
+```bash
+npx vercel --prod
+```
+
+After Vercel assigns the final domain, update `NEXT_PUBLIC_APP_URL` and redeploy. Test login, creating an invite, uploading a profile photo, coach/client messaging, and logout.
+
+## Production notes
+
+- Profile photos are stored in MySQL, so they remain available across Vercel function instances without S3.
+- Knex and `mysql2` are kept as server-only packages to avoid dialect bundling errors.
+- The connection pool defaults to three connections per function instance.
+- Authentication requires `SESSION_SECRET` in production.
+- Vercel automatically deploys `main` to Production and other branches as Preview deployments when Git integration is enabled.

@@ -1,7 +1,5 @@
 "use server";
 
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -88,12 +86,18 @@ export async function uploadAvatarAction(
   const mime = file.type as keyof typeof avatarTypes;
   if (!validImageSignature(bytes, mime)) return { error: "This file is not a valid image." };
 
-  const uploadDirectory = path.join(process.cwd(), "public", "uploads", "profiles");
-  await mkdir(uploadDirectory, { recursive: true });
-  const filename = `profile-${session.id}-${Date.now()}.${avatarTypes[mime]}`;
-  await writeFile(path.join(uploadDirectory, filename), bytes);
-  const avatarPath = `/uploads/profiles/${filename}`;
-  await database()("users").where({ id: session.id, role }).update({ avatar_path: avatarPath, updated_at: new Date() });
+  const version = Date.now();
+  const avatarPath = `/api/avatars/${session.id}?v=${version}`;
+  await database().transaction(async (trx) => {
+    const values = {
+      mime_type: mime,
+      image_data: Buffer.from(bytes),
+      size_bytes: file.size,
+      updated_at: new Date(),
+    };
+    await trx("user_avatars").insert({ user_id: session.id, ...values }).onConflict("user_id").merge(values);
+    await trx("users").where({ id: session.id, role }).update({ avatar_path: avatarPath, updated_at: new Date() });
+  });
 
   refreshAccountPages(role);
   return { success: "Profile photo updated." };

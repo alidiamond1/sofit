@@ -138,7 +138,7 @@ export function Avatar({
   const initials = name.split(" ").map((part) => part[0]).slice(0, 2).join("");
   return (
     <span className={`avatar tone-${tone % 5} ${className}`.trim()}>
-      {src ? <Image src={src} alt={`${name} profile photo`} fill sizes="96px" unoptimized={src.startsWith("blob:")} /> : initials}
+      {src ? <Image src={src} alt={`${name} profile photo`} fill sizes="96px" unoptimized={src.startsWith("blob:") || src.startsWith("/api/avatars/")} /> : initials}
     </span>
   );
 }
