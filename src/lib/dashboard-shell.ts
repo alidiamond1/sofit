@@ -9,8 +9,8 @@ function notificationLabel(value: unknown) {
 }
 
 export async function loadDashboardShell(userId: number) {
-  const [user, saved, rows, unreadRow] = await Promise.all([
-    database()("users").select("name", "email", "avatar_path").where({ id: userId }).first(),
+  const [user, saved, notificationRows, unreadNotificationRow, messageRows, unreadMessageRow] = await Promise.all([
+    database()("users").select("name", "email", "avatar_path", "role").where({ id: userId }).first(),
     database()("user_settings").select("theme").where({ user_id: userId }).first(),
     database()("notifications")
       .select("notifications.id", "notifications.title", "notifications.message", "notifications.read_at", "notifications.created_at", "sender.name as sender_name")
@@ -19,19 +19,48 @@ export async function loadDashboardShell(userId: number) {
       .orderBy("notifications.created_at", "desc")
       .limit(6),
     database()("notifications").where({ user_id: userId }).whereNull("read_at").count({ total: "*" }).first(),
+    database()("messages")
+      .select("messages.id", "messages.body", "messages.read_at", "messages.created_at", "sender.id as sender_id", "sender.name as sender_name")
+      .join("users as sender", "sender.id", "messages.sender_id")
+      .where({ "messages.recipient_id": userId })
+      .orderBy("messages.created_at", "desc")
+      .limit(6),
+    database()("messages").where({ recipient_id: userId }).whereNull("read_at").count({ total: "*" }).first(),
   ]);
   const theme: ThemePreference = saved?.theme === "light" || saved?.theme === "dark" ? saved.theme : "system";
-  return {
-    user: { name: String(user.name), email: String(user.email), avatarPath: user.avatar_path ? String(user.avatar_path) : null },
-    theme,
-    unreadCount: Number(unreadRow?.total || 0),
-    notifications: rows.map((item) => ({
+  const role = String(user.role || "client");
+  const notifications = [
+    ...notificationRows.map((item) => ({
       id: Number(item.id),
+      kind: "notification" as const,
       title: String(item.title),
       message: String(item.message),
       createdLabel: notificationLabel(item.created_at),
+      createdTimestamp: new Date(String(item.created_at)).getTime(),
       isRead: Boolean(item.read_at),
       senderName: item.sender_name ? String(item.sender_name) : "SoFit",
+      href: `/${role}/settings#notifications`,
     })),
+    ...messageRows.map((item) => ({
+      id: Number(item.id),
+      kind: "message" as const,
+      title: `New message from ${String(item.sender_name)}`,
+      message: String(item.body),
+      createdLabel: notificationLabel(item.created_at),
+      createdTimestamp: new Date(String(item.created_at)).getTime(),
+      isRead: Boolean(item.read_at),
+      senderName: String(item.sender_name),
+      href: role === "coach" ? `/coach/messages?client=${Number(item.sender_id)}` : "/client/messages",
+    })),
+  ]
+    .sort((a, b) => b.createdTimestamp - a.createdTimestamp)
+    .slice(0, 6);
+  const unreadMessageCount = Number(unreadMessageRow?.total || 0);
+  return {
+    user: { name: String(user.name), email: String(user.email), avatarPath: user.avatar_path ? String(user.avatar_path) : null },
+    theme,
+    unreadCount: Number(unreadNotificationRow?.total || 0) + unreadMessageCount,
+    unreadMessageCount,
+    notifications,
   };
 }

@@ -49,29 +49,3 @@ export async function submitClientCheckInAction(formData: FormData) {
   revalidatePath("/client/progress");
   revalidatePath("/coach/check-ins");
 }
-
-const messageSchema = z.object({
-  body: z.string().trim().min(1).max(5000),
-});
-
-export async function sendClientMessageAction(formData: FormData) {
-  const session = await requireRole("client");
-  const parsed = messageSchema.safeParse({ body: formData.get("body") });
-  if (!parsed.success) return;
-
-  const coach = await database()("users")
-    .select("id")
-    .where({ role: "coach", is_active: true })
-    .orderBy("id")
-    .first();
-  if (!coach) return;
-
-  await database()("messages").insert({
-    sender_id: session.id,
-    recipient_id: coach.id,
-    body: parsed.data.body,
-  });
-
-  revalidatePath("/client/messages");
-  revalidatePath("/coach/messages");
-}

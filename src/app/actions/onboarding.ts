@@ -138,24 +138,57 @@ export async function approveApplicationAction(formData: FormData) {
   if (!inviteId) return;
 
   await database().transaction(async (trx) => {
-    const invite = await trx("invites").where({ id: inviteId, status: "submitted" }).first();
+    const invite = await trx("invites").where({ id: inviteId, status: "submitted" }).forUpdate().first();
     if (!invite?.user_id) throw new Error("Application is not ready for approval.");
-    await trx("users").where({ id: invite.user_id, role: "client" }).update({ approval_status: "approved" });
+    const clientUser = await trx("users")
+      .select("id", "name")
+      .where({ id: invite.user_id, role: "client" })
+      .first();
+    if (!clientUser) throw new Error("The client account could not be found.");
+
+    const clientName = String(clientUser.name || "").trim();
+    const firstName = clientName.split(/\s+/)[0] || "there";
+    const now = new Date();
+    const welcomeMessage = `Hi ${firstName}, welcome to SoFit! I am glad to have you here. If you need any help or have questions about your plan, training, nutrition, sessions, or progress, send me a message here anytime. I will get back to you as quickly as possible.`;
+
+    await trx("users").where({ id: clientUser.id }).update({ approval_status: "approved", updated_at: now });
     await trx("clients").where({ user_id: invite.user_id }).update({
       service_id: serviceId || null,
       status: "active",
       pipeline_stage: "onboarding",
-      joined_at: new Date(),
+      joined_at: now,
+      updated_at: now,
     });
     await trx("invites").where({ id: inviteId }).update({
       status: "approved",
       selected_service_id: serviceId || null,
       reviewed_by: coach.id,
-      approved_at: new Date(),
+      approved_at: now,
+      updated_at: now,
+    });
+    await trx("messages").insert({
+      sender_id: coach.id,
+      recipient_id: clientUser.id,
+      body: welcomeMessage,
+      created_at: now,
+      updated_at: now,
+    });
+    await trx("notifications").insert({
+      user_id: clientUser.id,
+      sender_id: coach.id,
+      title: `Welcome to SoFit, ${firstName}!`,
+      message: "Your coaching portal is ready. If you need help or have any questions, message your coach here and you will receive a reply as quickly as possible.",
+      type: "client_welcome",
+      created_at: now,
+      updated_at: now,
     });
   });
   revalidatePath("/coach/invites");
   revalidatePath("/coach");
+  revalidatePath("/coach/messages");
+  revalidatePath("/client", "layout");
+  revalidatePath("/client/messages");
+  revalidatePath("/client/settings");
   revalidatePath(`/coach/invites/${inviteId}`);
 }
 

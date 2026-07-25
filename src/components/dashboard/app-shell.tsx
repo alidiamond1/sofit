@@ -30,10 +30,11 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useEffect, useState, useTransition, type ReactNode } from "react";
 import { logoutAction } from "@/app/actions/auth";
 import { markNotificationReadAction } from "@/app/actions/notifications";
+import { markMessageReadAction } from "@/app/actions/messages";
 import { updateThemeAction } from "@/app/actions/profile";
 import logo from "@/assets/png.png";
 import logoIcon from "@/assets/icon.png";
@@ -41,7 +42,7 @@ import { Avatar } from "./primitives";
 import { ThemeSync, type ThemePreference } from "./theme-sync";
 
 type NavItem = { label: string; mobileLabel?: string; href: string; icon: LucideIcon; section: string };
-type ShellNotification = { id: number; title: string; message: string; createdLabel: string; isRead: boolean; senderName: string };
+type ShellNotification = { id: number; kind: "notification" | "message"; title: string; message: string; createdLabel: string; isRead: boolean; senderName: string; href: string };
 
 const coachNav: NavItem[] = [
   { label: "Overview", href: "/coach", icon: Home, section: "Workspace" },
@@ -90,10 +91,12 @@ function SoFitMark({ compact = false }: { compact?: boolean }) {
 function NavLinks({
   items,
   pathname,
+  unreadMessageCount,
   onNavigate,
 }: {
   items: NavItem[];
   pathname: string;
+  unreadMessageCount: number;
   onNavigate?: () => void;
 }) {
   return (
@@ -115,6 +118,11 @@ function NavLinks({
             >
               <item.icon size={18} strokeWidth={1.8} />
               <span>{item.label}</span>
+              {item.href.endsWith("/messages") && unreadMessageCount > 0 ? (
+                <b className="nav-unread-count" aria-label={`${unreadMessageCount} unread messages`}>
+                  {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                </b>
+              ) : null}
             </Link>
           </Fragment>
         );
@@ -129,6 +137,7 @@ export function AppShell({
   theme,
   notifications,
   unreadCount,
+  unreadMessageCount,
   children,
 }: {
   role: "coach" | "client";
@@ -136,9 +145,11 @@ export function AppShell({
   theme: ThemePreference;
   notifications: ShellNotification[];
   unreadCount: number;
+  unreadMessageCount: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -157,6 +168,13 @@ export function AppShell({
     const frame = window.requestAnimationFrame(() => setResolvedDark(document.documentElement.dataset.theme === "dark"));
     return () => window.cancelAnimationFrame(frame);
   }, [themePreference]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, 8000);
+    return () => window.clearInterval(interval);
+  }, [router]);
 
   function toggleTheme() {
     const previousTheme = themePreference;
@@ -187,7 +205,7 @@ export function AppShell({
             <PanelLeftClose size={17} />
           </button>
         </div>
-        <NavLinks items={items} pathname={pathname} />
+        <NavLinks items={items} pathname={pathname} unreadMessageCount={unreadMessageCount} />
         <div className="sidebar-footer">
           <Link className="sidebar-user-link" href={profileHref} title="Open profile">
             <Avatar name={user.name} src={user.avatarPath} className="small" />
@@ -237,13 +255,13 @@ export function AppShell({
               <section className="notification-popover" aria-label="Recent notifications">
                 <header><div><span className="eyebrow">Updates</span><strong>Notifications</strong></div>{unreadCount ? <small>{unreadCount} unread</small> : <small>All caught up</small>}</header>
                 {notifications.length ? <div className="notification-popover-list">{notifications.map((item) => (
-                  <article className={item.isRead ? "is-read" : "is-unread"} key={item.id}>
-                    <span className="notification-item-icon"><Bell size={15} /></span>
-                    <div><strong>{item.title}</strong><p>{item.message}</p><small>{item.senderName} - {item.createdLabel}</small></div>
-                    {!item.isRead ? <form action={markNotificationReadAction.bind(null, role, item.id)}><button type="submit" aria-label={`Mark ${item.title} as read`}><CheckCircle2 size={15} /></button></form> : null}
+                  <article className={item.isRead ? "is-read" : "is-unread"} key={`${item.kind}-${item.id}`}>
+                    <span className="notification-item-icon">{item.kind === "message" ? <MessageCircle size={15} /> : <Bell size={15} />}</span>
+                    <Link className="notification-item-copy" href={item.href} onClick={() => setNotificationsOpen(false)}><strong>{item.title}</strong><p>{item.message}</p><small>{item.senderName} - {item.createdLabel}</small></Link>
+                    {!item.isRead ? <form action={item.kind === "message" ? markMessageReadAction.bind(null, role, item.id) : markNotificationReadAction.bind(null, role, item.id)}><button type="submit" aria-label={`Mark ${item.title} as read`}><CheckCircle2 size={15} /></button></form> : null}
                   </article>
                 ))}</div> : <div className="notification-popover-empty"><Bell size={19} /><span>No notifications yet.</span></div>}
-                <Link href={`/${role}/settings#notifications`} onClick={() => setNotificationsOpen(false)}>Open notification settings</Link>
+                <Link href={unreadMessageCount ? `/${role}/messages` : `/${role}/settings#notifications`} onClick={() => setNotificationsOpen(false)}>{unreadMessageCount ? "Open message inbox" : "Open notification settings"}</Link>
               </section>
             ) : null}
           </div>
@@ -268,7 +286,7 @@ export function AppShell({
                 <X size={20} />
               </button>
             </div>
-            <NavLinks items={items} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+            <NavLinks items={items} pathname={pathname} unreadMessageCount={unreadMessageCount} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       ) : null}

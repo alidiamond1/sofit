@@ -315,6 +315,20 @@ body{
 .button.danger{color:#fff;background:var(--red);box-shadow:0 8px 18px rgba(214,83,83,.18)}
 .button.danger:hover{background:#b94242;box-shadow:0 10px 22px rgba(214,83,83,.24)}
 
+/* Client and service management dialogs */
+.client-modal-panel,.service-modal-panel{padding:30px!important}
+.client-modal-panel>header,.service-modal-panel>header{padding-bottom:20px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+.client-modal-panel>header h2,.service-modal-panel>header h2{margin:7px 0 5px;font-size:25px;letter-spacing:-.035em}
+.client-modal-panel>header p,.service-modal-panel>header p{margin:0;color:var(--muted);font-size:11px;line-height:1.55}
+.client-edit-form,.service-editor-form{display:grid;gap:16px}
+.client-edit-form .form-grid,.service-editor-form .form-grid{gap:15px 16px}
+.client-edit-form .form-submit,.service-editor-form .form-submit{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.client-edit-form .form-submit>span,.service-editor-form .form-submit>span{max-width:480px;color:var(--muted);font-size:9px;line-height:1.5}
+.service-library-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 19px;margin-bottom:20px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}
+.service-library-toolbar>div:first-child{display:flex;align-items:center;gap:12px}.service-library-toolbar>div:first-child>div strong,.service-library-toolbar>div:first-child>div span{display:block}.service-library-toolbar>div:first-child>div strong{font-size:12px}.service-library-toolbar>div:first-child>div span{margin-top:3px;color:var(--muted);font-size:9px}
+.managed-service-card{min-height:320px}.service-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}.service-card-head .service-icon{margin:0}.service-card-head>div{display:flex;align-items:center;gap:9px}.service-card-head .record-actions{padding-left:9px;border-left:1px solid var(--line)}
+.service-type-label{display:block;margin-bottom:8px;color:var(--primary);font-size:8px;font-weight:750;letter-spacing:.11em;text-transform:uppercase}.managed-service-card>p{min-height:54px}.managed-service-card .service-price strong{letter-spacing:-.04em}
+
 @keyframes content-enter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 @keyframes bar-grow{from{width:0}}
 
@@ -367,6 +381,11 @@ body{
   .destructive-panel{padding:28px 18px 24px!important}
   .destructive-panel h2{font-size:22px}
   .confirm-actions{display:grid;grid-template-columns:1fr 1fr}
+  .client-modal-panel,.service-modal-panel{padding:22px 18px!important}
+  .client-edit-form .form-grid,.service-editor-form .form-grid{grid-template-columns:1fr}
+  .client-edit-form .form-grid label.full,.service-editor-form .form-grid label.full{grid-column:auto}
+  .client-edit-form .form-submit,.service-editor-form .form-submit{align-items:stretch;flex-direction:column}
+  .client-edit-form .form-submit .button,.service-editor-form .form-submit .button{width:100%}
 }
 
 @media(prefers-reduced-motion:reduce){

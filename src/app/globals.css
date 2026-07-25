@@ -12,5 +12,7 @@
 @import "../styles/account-center.css";
 @import "../styles/settings-enhancements.css";
 @import "../styles/analytics-dashboard.css";
+@import "../styles/messages.css";
+@import "../styles/icon-system.css";
 
 /* Shared portal styles load in dependency order above. */

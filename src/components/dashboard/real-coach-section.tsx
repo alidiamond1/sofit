@@ -16,10 +16,13 @@ import { database } from "@/lib/db";
 import { CoachPackages } from "@/components/packages/coach-packages";
 import { CoachDietPlansPage, CoachWorkoutPlansPage } from "@/components/plans/coach-plan-pages";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
+import { CoachServicesWorkspace, type EditableService } from "@/components/services/coach-services";
 import { ClientDirectory, type ClientDirectoryRow } from "./client-directory";
 import { CoachAnalyticsDashboard, type CoachAnalyticsData } from "./coach-analytics-dashboard";
 import { RingChart, TrendLineChart } from "./charts";
 import { Avatar, Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
+import { MessagingWorkspace } from "@/components/messages/messaging-workspace";
+import { loadCoachMessageThreads } from "@/lib/messages";
 
 export const realCoachSections = [
   "clients",
@@ -44,6 +47,13 @@ const dateOnly = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeri
 
 function numeric(value: unknown) {
   return Number(value || 0);
+}
+
+function dateInputValue(value: unknown) {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? "" : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function tone(status: string): "success" | "warning" | "danger" | "neutral" {
@@ -211,35 +221,49 @@ async function CoachOverview() {
 
 async function CoachClients() {
   const db = database();
-  const clients = await db("clients")
+  const [clients, serviceOptions, packageOptions] = await Promise.all([
+    db("clients")
       .select(
         "clients.id",
+        "clients.service_id",
+        "clients.package_id",
         "clients.status",
         "clients.pipeline_stage",
         "clients.joined_at",
+        "clients.phone",
+        "clients.date_of_birth",
+        "clients.goals",
+        "clients.medical_notes",
         "users.name",
         "users.email",
         "users.avatar_path",
         "services.name as service",
         "packages.name as package_name",
         "packages.category as package_category",
-        db.raw("COALESCE(ROUND(AVG((COALESCE(check_ins.diet_adherence_pct, 0) + COALESCE(check_ins.workout_completion_pct, 0)) / 2)), 0) as adherence"),
+        db.raw("(SELECT COALESCE(ROUND(AVG((COALESCE(ci.diet_adherence_pct, 0) + COALESCE(ci.workout_completion_pct, 0)) / 2)), 0) FROM check_ins AS ci WHERE ci.client_id = clients.id) as adherence"),
       )
       .join("users", "users.id", "clients.user_id")
       .leftJoin("services", "services.id", "clients.service_id")
       .leftJoin("packages", "packages.id", "clients.package_id")
-      .leftJoin("check_ins", "check_ins.client_id", "clients.id")
-      .groupBy("clients.id", "clients.status", "clients.pipeline_stage", "clients.joined_at", "users.name", "users.email", "users.avatar_path", "services.name", "packages.name", "packages.category")
-      .orderBy("clients.created_at", "desc");
+      .orderBy("clients.created_at", "desc"),
+    db("services").select("id", "name", "is_active").orderBy("name"),
+    db("packages").select("id", "name", "category", "is_active").orderBy("name"),
+  ]);
 
   const directoryRows: ClientDirectoryRow[] = clients.map((client) => ({
     id: numeric(client.id),
     name: String(client.name),
     email: String(client.email),
     avatarPath: client.avatar_path ? String(client.avatar_path) : null,
+    phone: String(client.phone || ""),
+    dateOfBirth: dateInputValue(client.date_of_birth),
+    goals: String(client.goals || ""),
+    medicalNotes: String(client.medical_notes || ""),
     status: String(client.status),
     pipelineStage: String(client.pipeline_stage),
     joined: client.joined_at ? dateOnly.format(new Date(client.joined_at)) : "Not recorded",
+    serviceId: client.service_id ? numeric(client.service_id) : null,
+    packageId: client.package_id ? numeric(client.package_id) : null,
     service: client.service ? String(client.service) : null,
     packageName: client.package_name ? String(client.package_name) : null,
     packageCategory: client.package_category ? String(client.package_category) : null,
@@ -254,18 +278,38 @@ async function CoachClients() {
         description="Track every client from first contact to renewal, then focus on the people who need attention today."
         actions={<Link className="button primary" href="/coach/invites"><UserPlus size={16} /> Invite a client</Link>}
       />
-      {directoryRows.length === 0 ? <EmptyState text="Invite a client to begin onboarding." /> : <ClientDirectory clients={directoryRows} />}
+      {directoryRows.length === 0 ? <EmptyState text="Invite a client to begin onboarding." /> : (
+        <ClientDirectory
+          clients={directoryRows}
+          services={serviceOptions.map((service) => ({ id: numeric(service.id), name: String(service.name), isActive: Boolean(service.is_active) }))}
+          packages={packageOptions.map((item) => ({ id: numeric(item.id), name: String(item.name), category: String(item.category), isActive: Boolean(item.is_active) }))}
+        />
+      )}
     </>
   );
 }
 
 async function CoachServices() {
-  const services = await database()("services")
+  const db = database();
+  const services = await db("services")
     .select("services.*")
-    .select(database().raw("(SELECT COUNT(*) FROM clients WHERE clients.service_id = services.id) as client_count"))
+    .select(db.raw("(SELECT COUNT(*) FROM clients WHERE clients.service_id = services.id) as client_count"))
+    .select(db.raw("(SELECT COUNT(*) FROM package_services WHERE package_services.service_id = services.id) as package_count"))
     .orderBy("type")
     .orderBy("tier");
-  return <><PageHeader title="Services" description="Manage your coaching offers, pricing, and active client count." />{services.length === 0 ? <EmptyState text="No service records exist yet." /> : <div className="service-grid">{services.map((service) => <Card className="service-card" key={service.id}><Badge tone={service.is_active ? "success" : "neutral"}>{service.is_active ? "Active" : "Inactive"}</Badge><h2>{service.name}</h2><p>{service.description || "No description"}</p><div className="service-price"><strong>{money.format(numeric(service.price))}</strong><span>{service.billing_interval}</span></div><div className="service-foot"><span>{numeric(service.client_count)} clients</span><Badge>{service.tier || service.type}</Badge></div></Card>)}</div>}</>;
+  const rows: EditableService[] = services.map((service) => ({
+    id: numeric(service.id),
+    name: String(service.name),
+    type: String(service.type) as EditableService["type"],
+    tier: service.tier ? String(service.tier) as EditableService["tier"] : null,
+    price: numeric(service.price),
+    billingInterval: String(service.billing_interval) as EditableService["billingInterval"],
+    description: String(service.description || ""),
+    isActive: Boolean(service.is_active),
+    clientCount: numeric(service.client_count),
+    packageCount: numeric(service.package_count),
+  }));
+  return <><PageHeader eyebrow="Coach controlled" title="Services" description="Create and manage coaching offers, pricing, availability, and client assignments." /><CoachServicesWorkspace services={rows} /></>;
 }
 
 async function CoachListSection({ section }: { section: string }) {
@@ -413,14 +457,31 @@ async function CoachSettings() {
 
 async function CoachProfile() { return <AccountProfilePage role="coach" />; }
 
-export async function RealCoachSection({ section = "home" }: { section?: string }) {
-  await requireRole("coach");
+async function CoachMessages({ coachId, initialClientId }: { coachId: number; initialClientId?: number | null }) {
+  const threads = await loadCoachMessageThreads(coachId);
+  const unread = threads.reduce((total, thread) => total + thread.unreadCount, 0);
+  return (
+    <>
+      <PageHeader
+        eyebrow="Private coaching inbox"
+        title="Messages"
+        description="Keep every client conversation organized, respond to coaching needs, and see new messages immediately."
+        actions={<Badge tone={unread ? "blue" : "success"}>{unread ? `${unread} unread` : "Inbox clear"}</Badge>}
+      />
+      <MessagingWorkspace role="coach" currentUserId={coachId} threads={threads} initialParticipantId={initialClientId} />
+    </>
+  );
+}
+
+export async function RealCoachSection({ section = "home", selectedClientId }: { section?: string; selectedClientId?: number | null }) {
+  const session = await requireRole("coach");
   if (section === "home") return <CoachOverview />;
   if (section === "clients") return <CoachClients />;
   if (section === "services") return <CoachServices />;
   if (section === "packages") return <CoachPackages />;
   if (section === "diet-plans") return <CoachDietPlansPage />;
   if (section === "workout-plans") return <CoachWorkoutPlansPage />;
+  if (section === "messages") return <CoachMessages coachId={session.id} initialClientId={selectedClientId} />;
   if (section === "analytics") return <CoachAnalytics />;
   if (section === "profile") return <CoachProfile />;
   if (section === "settings") return <CoachSettings />;

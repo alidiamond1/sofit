@@ -1,0 +1,140 @@
+/* SoFit icon system: one optical center, stroke language, and theme response. */
+:root{
+  --icon-stroke:1.85;
+  --icon-box-border:var(--line);
+  --icon-box-bg:var(--surface-soft);
+  --icon-box-fg:var(--primary);
+}
+
+:where(
+  .workspace-icon,
+  .service-icon,
+  .settings-step-icon,
+  .account-heading-icon,
+  .theme-choice-preview,
+  .client-step-icon,
+  .invite-step-icon,
+  .summary-icon,
+  .notification-feed-icon,
+  .notification-item-icon,
+  .task-icon,
+  .stat-card-head>i,
+  .theme-toggle-icon
+){
+  display:inline-grid!important;
+  grid-template-columns:1fr;
+  grid-template-rows:1fr;
+  place-content:center!important;
+  place-items:center!important;
+  align-self:center;
+  flex:none;
+  padding:0!important;
+  aspect-ratio:1;
+  box-sizing:border-box;
+  line-height:0!important;
+  text-align:center;
+  vertical-align:middle;
+}
+
+:where(
+  .workspace-icon,
+  .service-icon,
+  .settings-step-icon,
+  .account-heading-icon,
+  .theme-choice-preview,
+  .client-step-icon,
+  .invite-step-icon,
+  .summary-icon,
+  .notification-feed-icon,
+  .notification-item-icon,
+  .task-icon,
+  .stat-card-head>i,
+  .theme-toggle-icon
+) > svg{
+  position:static!important;
+  display:block!important;
+  flex:none;
+  width:18px!important;
+  height:18px!important;
+  margin:0!important;
+  overflow:visible;
+  transform:none;
+  stroke-width:var(--icon-stroke);
+  vector-effect:non-scaling-stroke;
+}
+
+.workspace-icon{width:44px!important;height:44px!important;flex-basis:44px!important;border:1px solid var(--icon-box-border);border-radius:12px;background:var(--icon-box-bg);color:var(--icon-box-fg)}
+.service-icon{width:42px!important;height:42px!important;flex-basis:42px!important;border-radius:12px}
+.settings-step-icon,.theme-choice-preview{width:38px!important;height:38px!important;flex-basis:38px!important;border-radius:11px}
+.account-heading-icon,.invite-step-icon{width:36px!important;height:36px!important;flex-basis:36px!important;border-radius:11px}
+.client-step-icon,.stat-card-head>i{width:38px!important;height:38px!important;flex-basis:38px!important;border-radius:12px}
+.summary-icon,.notification-feed-icon{width:34px!important;height:34px!important;flex-basis:34px!important;border-radius:10px}
+.notification-item-icon{width:32px!important;height:32px!important;flex-basis:32px!important;border-radius:10px}
+.task-icon{width:40px!important;height:40px!important;flex-basis:40px!important;border-radius:12px}
+
+.theme-choice-preview>svg,.settings-step-icon>svg,.account-heading-icon>svg{width:17px!important;height:17px!important}
+.summary-icon>svg,.notification-feed-icon>svg,.notification-item-icon>svg{width:16px!important;height:16px!important}
+.theme-toggle-icon{width:28px!important;height:28px!important;border-radius:9px}
+.theme-toggle-icon>svg{width:16px!important;height:16px!important}
+.topbar-theme-toggle{display:inline-grid!important;place-content:center!important;place-items:center!important;padding:0!important;line-height:0!important}
+.portal-shell .icon-button{
+  place-content:center;
+  place-items:center;
+  padding:0;
+  line-height:0;
+}
+.portal-shell .icon-button>svg{
+  position:static;
+  display:block;
+  flex:none;
+  width:17px;
+  height:17px;
+  margin:0;
+  stroke-width:var(--icon-stroke);
+}
+
+:is(.plan-workspace-toolbar,.service-library-toolbar)>div:first-child{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+:is(.plan-workspace-toolbar,.service-library-toolbar)>div:first-child>div{
+  min-width:0;
+  min-height:44px;
+  display:grid;
+  align-content:center;
+}
+:is(.plan-workspace-toolbar,.service-library-toolbar)>div:first-child strong{margin:0;line-height:1.25}
+:is(.plan-workspace-toolbar,.service-library-toolbar)>div:first-child span:not(.workspace-icon){line-height:1.4}
+
+.settings-step-nav button{align-items:center}
+.settings-step-nav button>span:last-child{align-self:center}
+.theme-choice{align-items:center}
+
+html[data-theme="dark"]{
+  --icon-box-border:var(--line-strong);
+  --icon-box-bg:var(--surface-soft);
+  --icon-box-fg:var(--primary);
+}
+html[data-theme="dark"] :where(.workspace-icon,.service-icon,.settings-step-icon,.account-heading-icon,.theme-choice-preview,.client-step-icon,.invite-step-icon){
+  border-color:var(--icon-box-border);
+  background:var(--icon-box-bg);
+  color:var(--icon-box-fg);
+  box-shadow:none;
+}
+html[data-theme="dark"] .theme-toggle-icon{background:#3a3218;color:#f3c95c}
+html[data-theme="dark"] .portal-shell .icon-button{
+  border-color:var(--line-strong)!important;
+  background:var(--surface-soft)!important;
+  color:var(--ink)!important;
+  box-shadow:none;
+}
+html[data-theme="dark"] .portal-shell .icon-button.quiet{background:transparent!important}
+html[data-theme="dark"] .portal-shell .icon-button:hover{border-color:#416078!important;background:var(--primary-soft)!important;color:#dff1ff!important}
+html[data-theme="dark"] .portal-shell .topbar-theme-toggle{background:var(--surface)!important}
+
+@media(max-width:560px){
+  .workspace-icon{width:40px!important;height:40px!important;flex-basis:40px!important}
+  :is(.plan-workspace-toolbar,.service-library-toolbar)>div:first-child>div{min-height:40px}
+}

@@ -7,17 +7,18 @@ import {
   Dumbbell,
   Mail,
   Scale,
-  Send,
   Utensils,
 } from "lucide-react";
 import { redirect } from "next/navigation";
-import { sendClientMessageAction, submitClientCheckInAction } from "@/app/actions/client";
+import { submitClientCheckInAction } from "@/app/actions/client";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { HorizontalBars, TrendLineChart } from "./charts";
-import { Avatar, Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
+import { Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
 import { ExerciseMotion } from "@/components/plans/exercise-motion";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
+import { MessagingWorkspace } from "@/components/messages/messaging-workspace";
+import { loadClientMessageThreads } from "@/lib/messages";
 
 export const realClientSections = ["plans", "diet-plan", "workout-plan", "sessions", "check-in", "progress", "messages", "payments", "profile", "settings"];
 
@@ -303,15 +304,19 @@ async function ClientProgress() {
 
 async function ClientMessages() {
   const { session } = await getClientContext();
-  const [coach, messages] = await Promise.all([
-    database()("users").select("id", "name", "email").where({ role: "coach", is_active: true }).orderBy("id").first(),
-    database()("messages")
-      .select("messages.*", "sender.name as sender")
-      .join("users as sender", "sender.id", "messages.sender_id")
-      .where((query) => query.where("messages.sender_id", session.id).orWhere("messages.recipient_id", session.id))
-      .orderBy("messages.created_at", "asc"),
-  ]);
-  return <><PageHeader title="Messages" description="Your private conversation with the SoFit coach." /><Card className="message-shell client-chat"><section className="chat-panel"><header><div>{coach ? <><Avatar name={coach.name} /><p><strong>{coach.name}</strong><span>{coach.email}</span></p></> : <p><strong>No coach account found</strong></p>}</div></header><div className="chat-history">{messages.map((message) => <div className={numeric(message.sender_id) === session.id ? "bubble outgoing" : "bubble incoming"} key={message.id}>{message.body}<time>{dateTime.format(new Date(message.created_at))}</time></div>)}{messages.length === 0 ? <p>No messages yet.</p> : null}</div><form className="message-compose" action={sendClientMessageAction}><input name="body" placeholder="Message your coach" required disabled={!coach} /><button type="submit" className="send-button" disabled={!coach} aria-label="Send message"><Send size={17} /></button></form></section></Card></>;
+  const threads = await loadClientMessageThreads(session.id);
+  const unread = threads.reduce((total, thread) => total + thread.unreadCount, 0);
+  return (
+    <>
+      <PageHeader
+        eyebrow="Coach support"
+        title="Messages"
+        description="Ask questions, share updates, and stay connected with your SoFit coach in one private conversation."
+        actions={<Badge tone={unread ? "blue" : "success"}>{unread ? `${unread} unread` : "Up to date"}</Badge>}
+      />
+      <MessagingWorkspace role="client" currentUserId={session.id} threads={threads} initialParticipantId={threads[0]?.participantId} />
+    </>
+  );
 }
 
 async function ClientPayments() {
