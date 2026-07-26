@@ -1,0 +1,262 @@
+/* ============================================================
+   SoFit — Premium / Glass elevation layer
+   ------------------------------------------------------------
+   Loaded LAST in globals.css so it wins the cascade. It turns
+   the flat UI into a depth-rich, glassy, premium system across
+   BOTH light and dark themes. Accent stays deep blue.
+   Direction: "Dark Premium / Glass".
+   ============================================================ */
+
+/* 1 ── Token refinement + new glass/accent system ─────────── */
+:root{
+  --accent:#1f75b9;
+  --accent-bright:#3f97e0;
+  --accent-grad:linear-gradient(135deg,#2f80d8 0%,#5aa9f0 100%);
+  --accent-grad-soft:linear-gradient(135deg,rgba(47,128,216,.16),rgba(90,169,240,.06));
+  --accent-glow:rgba(47,128,216,.32);
+
+  --glass-bg:rgba(255,255,255,.74);
+  --glass-strong:rgba(255,255,255,.86);
+  --glass-border:rgba(255,255,255,.9);
+  --glass-hairline:rgba(20,60,110,.08);
+  --glass-blur:18px;
+  --ring:rgba(47,128,216,.16);
+
+  --shadow-glass:0 1px 0 rgba(255,255,255,.7) inset,0 18px 44px -24px rgba(20,55,95,.42);
+  --shadow-float:0 28px 64px -30px rgba(20,55,95,.5);
+  --shadow-glow:0 12px 30px -10px var(--accent-glow);
+}
+
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --canvas:#080d14;
+  --surface:#111a25;
+  --surface-soft:#16212e;
+  --sidebar:#0a121b;
+  --ink:#eaf1f8;
+  --muted:#94a7b9;
+  --faint:#647a8e;
+  --line:#1f2d3c;
+  --line-strong:#2b3c4f;
+
+  --accent:#3f97e0;
+  --accent-bright:#66b6f4;
+  --accent-grad:linear-gradient(135deg,#2f80d8 0%,#59c6f5 100%);
+  --accent-grad-soft:linear-gradient(135deg,rgba(63,151,224,.22),rgba(89,198,245,.05));
+  --accent-glow:rgba(63,151,224,.5);
+
+  --glass-bg:rgba(19,28,40,.6);
+  --glass-strong:rgba(23,34,48,.82);
+  --glass-border:rgba(255,255,255,.07);
+  --glass-hairline:rgba(255,255,255,.06);
+  --glass-blur:22px;
+  --ring:rgba(63,151,224,.32);
+
+  --shadow-glass:0 1px 0 rgba(255,255,255,.05) inset,0 24px 60px -28px rgba(0,0,0,.75);
+  --shadow-float:0 34px 76px -32px rgba(0,0,0,.82);
+  --shadow-glow:0 16px 40px -12px var(--accent-glow);
+}
+
+/* 2 ── Living background mesh ──────────────────────────────── */
+body{
+  background:
+    radial-gradient(1100px 620px at 84% -8%,rgba(47,128,216,.10),transparent 58%),
+    radial-gradient(900px 640px at -10% 110%,rgba(47,128,216,.06),transparent 60%),
+    var(--canvas);
+  background-attachment:fixed;
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .portal-shell,
+html[data-theme="dark"] .portal-main,
+html[data-theme="dark"] .portal-content{
+  background:
+    radial-gradient(1200px 700px at 86% -12%,rgba(63,151,224,.18),transparent 56%),
+    radial-gradient(1000px 720px at -12% 114%,rgba(36,150,128,.09),transparent 55%),
+    radial-gradient(760px 520px at 50% 46%,rgba(63,151,224,.04),transparent 62%),
+    var(--canvas);
+  background-attachment:fixed;
+}
+html[data-theme="dark"] .portal-main,
+html[data-theme="dark"] .portal-content{background-attachment:local}
+
+/* 3 ── Sidebar: glass panel + glowing active state ─────────── */
+.desktop-sidebar{
+  background:linear-gradient(180deg,var(--glass-strong),var(--glass-bg));
+  backdrop-filter:blur(20px) saturate(140%);
+  -webkit-backdrop-filter:blur(20px) saturate(140%);
+  border-right:1px solid var(--glass-hairline);
+}
+html[data-theme="dark"] .desktop-sidebar{
+  background:linear-gradient(180deg,rgba(12,19,28,.92),rgba(8,13,20,.8));
+  border-right:1px solid var(--line);
+  box-shadow:1px 0 0 rgba(255,255,255,.02),28px 0 70px -46px rgba(0,0,0,.9);
+}
+.nav-link{transition:background .18s ease,color .18s ease,box-shadow .22s ease,transform .18s ease}
+.nav-link:hover{transform:translateX(2px)}
+.nav-link.active{
+  background:var(--accent-grad-soft);
+  box-shadow:inset 0 0 0 1px var(--ring),0 10px 26px -14px var(--accent-glow);
+}
+.nav-link.active:before{
+  background:var(--accent-grad)!important;
+  box-shadow:0 0 12px 1px var(--accent-glow);
+}
+html[data-theme="dark"] .nav-link{color:#a7b8c9}
+html[data-theme="dark"] .nav-link:hover{background:rgba(63,151,224,.08);color:#eaf6ff}
+html[data-theme="dark"] .nav-link.active{
+  background:var(--accent-grad-soft);
+  color:#eaf6ff;
+  box-shadow:inset 0 0 0 1px var(--ring),0 12px 30px -14px var(--accent-glow);
+}
+.nav-link.active svg,html[data-theme="dark"] .nav-link.active svg{color:var(--accent-bright)}
+
+.sidebar-footer{
+  border:1px solid var(--glass-hairline);
+  background:var(--accent-grad-soft),var(--glass-bg);
+  backdrop-filter:blur(10px);
+}
+html[data-theme="dark"] .sidebar-footer{
+  border-color:var(--line-strong);
+  background:linear-gradient(135deg,rgba(63,151,224,.1),rgba(23,34,48,.7));
+}
+
+/* 4 ── Topbar: deeper frosted glass ───────────────────────── */
+.topbar{
+  background:var(--glass-bg);
+  backdrop-filter:blur(24px) saturate(150%);
+  -webkit-backdrop-filter:blur(24px) saturate(150%);
+  border-bottom:1px solid var(--glass-hairline);
+}
+html[data-theme="dark"] .topbar{
+  background:rgba(10,16,24,.72);
+  border-bottom:1px solid var(--line);
+}
+.top-search{transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.top-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+
+/* 5 ── Cards: frosted glass + hover lift + accent glow ─────── */
+.card{
+  border:1px solid var(--glass-border);
+  background:var(--glass-bg);
+  backdrop-filter:blur(var(--glass-blur)) saturate(130%);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(130%);
+  box-shadow:var(--shadow-glass);
+  transition:transform .24s cubic-bezier(.22,.8,.34,1),box-shadow .24s ease,border-color .24s ease;
+}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-float);border-color:var(--ring)}
+html[data-theme="dark"] .card{
+  border:1px solid var(--glass-border);
+  background:linear-gradient(180deg,rgba(23,34,48,.72),rgba(17,26,37,.62));
+  box-shadow:var(--shadow-glass);
+}
+html[data-theme="dark"] .card:hover{
+  border-color:var(--ring);
+  box-shadow:var(--shadow-float),0 0 0 1px var(--ring)
+}
+
+/* top highlight hairline on cards */
+.card{position:relative}
+.card:before{
+  content:""!important;display:block!important;
+  position:absolute;inset:0 0 auto;height:1px;
+  background:linear-gradient(90deg,transparent,var(--glass-hairline) 20%,rgba(90,169,240,.35) 50%,var(--glass-hairline) 80%,transparent);
+  opacity:.7;pointer-events:none;
+}
+html[data-theme="dark"] .card:before{background:linear-gradient(90deg,transparent,rgba(89,198,245,.28) 50%,transparent)}
+
+/* 6 ── Buttons: gradient primary with glow, glass secondary ── */
+.button.primary{
+  background:var(--accent-grad);
+  box-shadow:0 10px 26px -10px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.28);
+}
+.button.primary:hover{
+  transform:translateY(-2px);
+  box-shadow:0 16px 34px -10px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.32);
+}
+.button.secondary{
+  background:var(--glass-bg);
+  backdrop-filter:blur(10px);
+  border-color:var(--glass-hairline);
+}
+html[data-theme="dark"] .button.secondary{
+  background:var(--surface-soft);
+  border-color:var(--line-strong);
+  color:var(--ink);
+}
+html[data-theme="dark"] .button.secondary:hover{border-color:var(--accent);background:rgba(63,151,224,.12)}
+
+/* 7 ── Stat cards: accent rail, glowing icon, gradient number ─ */
+.stat-card{
+  border-top:none;
+  overflow:hidden;
+}
+.stat-card:before{
+  content:"";position:absolute;inset:0 0 auto;height:3px;
+  background:var(--accent-grad);opacity:.95;
+}
+.stat-card.accent-green:before{background:linear-gradient(135deg,#27ad55,#5fe08a)}
+.stat-card.accent-amber:before{background:linear-gradient(135deg,#d58f20,#f2c15a)}
+.stat-card-head>i{
+  background:var(--accent-grad-soft);
+  box-shadow:0 8px 20px -10px var(--accent-glow),inset 0 0 0 1px var(--ring);
+}
+.stat-card-main>strong{
+  background:var(--accent-grad);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+}
+html[data-theme="dark"] .stat-card-main>strong{background:linear-gradient(135deg,#8ec9f7,#e9f3fb);-webkit-background-clip:text;background-clip:text}
+.stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-float)}
+
+/* 8 ── Pipeline / summary cards accent ────────────────────── */
+.pipeline-card.active{
+  border-color:var(--ring);
+  background:var(--accent-grad-soft),var(--glass-bg);
+  box-shadow:0 12px 30px -16px var(--accent-glow);
+}
+html[data-theme="dark"] .pipeline-card.active{background:linear-gradient(145deg,rgba(63,151,224,.14),rgba(17,26,37,.7))}
+
+/* 9 ── Progress + charts: glowing accent fills ────────────── */
+.progress-track>span,.horizontal-track>span{box-shadow:0 0 10px -2px var(--accent-glow)}
+.ring-segment{filter:drop-shadow(0 0 5px var(--accent-glow))}
+.chart-line,.spark-line{filter:drop-shadow(0 3px 8px var(--accent-glow))}
+
+/* 10 ── Badges + table polish ─────────────────────────────── */
+.badge.blue{background:var(--accent-grad-soft);border-color:var(--ring)}
+.data-table tbody tr{transition:background .16s ease,box-shadow .16s ease}
+.data-table tbody tr:hover td{background:var(--accent-grad-soft)}
+html[data-theme="dark"] .data-table th{background:rgba(12,19,28,.85);backdrop-filter:blur(8px)}
+html[data-theme="dark"] .data-table tbody tr:hover td{background:rgba(63,151,224,.08)}
+
+/* 11 ── Icon buttons: subtle glass + accent hover ─────────── */
+.portal-shell .icon-button{transition:color .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease,transform .16s ease}
+.portal-shell .icon-button:hover{transform:translateY(-1px);box-shadow:var(--shadow-glow)}
+
+/* 12 ── Messaging: accent glow on outgoing bubbles ────────── */
+.bubble.outgoing{background:var(--accent-grad);box-shadow:0 10px 24px -12px var(--accent-glow)}
+.send-button{background:var(--accent-grad);box-shadow:0 8px 20px -10px var(--accent-glow)}
+
+/* 13 ── Headings: crisper tracking + faint depth in dark ──── */
+.page-header h1,.client-welcome h1{letter-spacing:-.055em}
+html[data-theme="dark"] .page-header h1,
+html[data-theme="dark"] .client-welcome h1{text-shadow:0 1px 24px rgba(63,151,224,.14)}
+.eyebrow{
+  background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+}
+
+/* 14 ── Refined scrollbars (dark) ─────────────────────────── */
+html[data-theme="dark"] ::-webkit-scrollbar-thumb{background:#2b3c4f}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover{background:#3a5064}
+
+/* 15 ── Auth / login: premium glass polish ────────────────── */
+.login-card{position:relative}
+.login-panel{background:radial-gradient(760px 520px at 80% -10%,rgba(47,128,216,.05),transparent 60%),#fff}
+.login-submit{background:var(--accent-grad)!important;box-shadow:0 12px 28px -10px var(--accent-glow)!important}
+.story-quote{box-shadow:0 20px 50px -30px rgba(20,55,95,.4)}
+
+/* 16 ── Motion respect ────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  .card,.stat-card,.nav-link,.button,.icon-button{transition:none!important}
+  .card:hover,.stat-card:hover,.button.primary:hover{transform:none!important}
+}

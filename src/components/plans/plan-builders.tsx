@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertTriangle, Dumbbell, Pencil, Plus, Trash2, Utensils, X } from "lucide-react";
+import { AlertTriangle, Check, Dumbbell, Library, Pencil, Plus, Search, Trash2, Utensils, X } from "lucide-react";
 import { useActionState, useState } from "react";
 import {
+  addStarterExercisesAction,
   createDietPlanAction,
   createExerciseAction,
   createMealTemplateAction,
@@ -13,7 +14,9 @@ import {
   updateMealTemplateAction,
   type PlanActionState,
 } from "@/app/actions/plans";
-import { ExerciseMotion, type ExerciseMotionType } from "./exercise-motion";
+import { type ExerciseMotionType } from "./exercise-motion";
+import { ExerciseMedia, MediaUploader } from "./exercise-media";
+import { STARTER_EXERCISES } from "@/lib/workout/starter-exercises";
 
 export type PlanClient = { id: number; name: string; email: string };
 export type MealOption = {
@@ -26,6 +29,7 @@ export type MealOption = {
   fat_g: number | null;
   ingredients: string;
   instructions: string | null;
+  media_url: string | null;
 };
 export type ExerciseOption = {
   id: number;
@@ -93,7 +97,7 @@ export function DietPlanBuilder({ clients, meals, defaultDate }: { clients: Plan
       <div className="typed-library-grid meal-library-grid">
         {mealGroups.map((group) => {
           const groupMeals = meals.filter((meal) => meal.meal_type === group.type);
-          return <section className="typed-library-column" key={group.type}><header><span>{group.label}</span><strong>{groupMeals.length}</strong></header><div>{groupMeals.map((meal) => <article className="library-item-card" key={meal.id}><div className="library-card-top"><span className="library-item-type">{meal.meal_type}</span><div className="record-actions"><button className="mini-action" type="button" title="Edit meal" aria-label={`Edit ${meal.name}`} onClick={() => setEditingMeal(meal)}><Pencil size={13} /></button><button className="mini-action danger-action" type="button" title="Delete meal" aria-label={`Delete ${meal.name}`} onClick={() => setDeletingMeal(meal)}><Trash2 size={13} /></button></div></div><h3>{meal.name}</h3><p>{meal.calories ? `${meal.calories} calories` : "Calories not set"}</p></article>)}{groupMeals.length === 0 ? <div className="library-column-empty">No {group.type} meals yet.</div> : null}</div></section>;
+          return <section className="typed-library-column" key={group.type}><header><span>{group.label}</span><strong>{groupMeals.length}</strong></header><div>{groupMeals.map((meal) => <article className="meal-item-card" key={meal.id}><ExerciseMedia variant="thumb" context="meal" className="meal-thumb" url={meal.media_url} name={meal.name} /><div className="meal-item-copy"><span className="library-item-type">{meal.meal_type}</span><h3>{meal.name}</h3><p>{meal.calories ? `${meal.calories} kcal` : "Calories not set"}</p></div><div className="record-actions"><button className="mini-action" type="button" title="Edit meal" aria-label={`Edit ${meal.name}`} onClick={() => setEditingMeal(meal)}><Pencil size={13} /></button><button className="mini-action danger-action" type="button" title="Delete meal" aria-label={`Delete ${meal.name}`} onClick={() => setDeletingMeal(meal)}><Trash2 size={13} /></button></div></article>)}{groupMeals.length === 0 ? <div className="library-column-empty">No {group.type} meals yet.</div> : null}</div></section>;
         })}
       </div>
 
@@ -102,6 +106,7 @@ export function DietPlanBuilder({ clients, meals, defaultDate }: { clients: Plan
         <header><span className="eyebrow">Edit meal</span><h2>{editingMeal.name}</h2><p>Update this reusable meal. Existing client plans keep their saved snapshot.</p></header>
         <form action={editMealAction} className="builder-form">
           <input type="hidden" name="id" value={editingMeal.id} />
+          <MediaUploader context="meal" defaultUrl={editingMeal.media_url} name={editingMeal.name} />
           <div className="form-grid">
             <label><span>Meal name</span><input name="name" defaultValue={editingMeal.name} required /></label>
             <label><span>Meal type</span><select name="meal_type" defaultValue={editingMeal.meal_type}><option value="breakfast">Breakfast / Quraac</option><option value="lunch">Lunch / Qado</option><option value="dinner">Dinner / Casho</option><option value="snack">Snack</option></select></label>
@@ -109,7 +114,7 @@ export function DietPlanBuilder({ clients, meals, defaultDate }: { clients: Plan
             <label><span>Protein (g)</span><input name="protein_g" type="number" min="0" defaultValue={editingMeal.protein_g ?? ""} /></label>
             <label><span>Carbs (g)</span><input name="carbs_g" type="number" min="0" defaultValue={editingMeal.carbs_g ?? ""} /></label>
             <label><span>Fat (g)</span><input name="fat_g" type="number" min="0" defaultValue={editingMeal.fat_g ?? ""} /></label>
-            <label className="full"><span>Ingredients</span><textarea name="ingredients" rows={4} defaultValue={editingMeal.ingredients} required /></label>
+            <label className="full"><span>Ingredients &amp; amounts</span><textarea name="ingredients" rows={4} defaultValue={editingMeal.ingredients} required /></label>
             <label className="full"><span>Preparation instructions</span><textarea name="instructions" rows={3} defaultValue={editingMeal.instructions || ""} /></label>
           </div>
           <ActionMessage state={editMealState} />
@@ -124,6 +129,7 @@ export function DietPlanBuilder({ clients, meals, defaultDate }: { clients: Plan
       <section className="builder-panel library-panel">
         <header><span className="eyebrow">Reusable library</span><h2>Add a meal</h2><p>Create breakfast, lunch, dinner, or snack options once, then reuse them in client plans.</p></header>
         <form action={mealAction} className="builder-form">
+          <MediaUploader context="meal" name="New meal" />
           <div className="form-grid">
             <label><span>Meal name</span><input name="name" placeholder="Chicken rice bowl" required /></label>
             <label><span>Meal type</span><select name="meal_type" defaultValue="breakfast"><option value="breakfast">Breakfast / Quraac</option><option value="lunch">Lunch / Qado</option><option value="dinner">Dinner / Casho</option><option value="snack">Snack</option></select></label>
@@ -131,7 +137,7 @@ export function DietPlanBuilder({ clients, meals, defaultDate }: { clients: Plan
             <label><span>Protein (g)</span><input name="protein_g" type="number" min="0" /></label>
             <label><span>Carbs (g)</span><input name="carbs_g" type="number" min="0" /></label>
             <label><span>Fat (g)</span><input name="fat_g" type="number" min="0" /></label>
-            <label className="full"><span>Ingredients</span><textarea name="ingredients" rows={4} placeholder="150g chicken, 200g rice, vegetables" required /></label>
+            <label className="full"><span>Ingredients &amp; amounts</span><textarea name="ingredients" rows={4} placeholder="150g chicken, 200g rice, vegetables" required /></label>
             <label className="full"><span>Preparation instructions</span><textarea name="instructions" rows={3} placeholder="How the client prepares this meal" /></label>
           </div>
           <ActionMessage state={mealState} />
@@ -184,6 +190,7 @@ export function DietPlanBuilder({ clients, meals, defaultDate }: { clients: Plan
 export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { clients: PlanClient[]; exercises: ExerciseOption[]; defaultDate: string }) {
   const [exerciseModal, setExerciseModal] = useState(false);
   const [programModal, setProgramModal] = useState(false);
+  const [starterModal, setStarterModal] = useState(false);
   const [editingExercise, setEditingExercise] = useState<ExerciseOption | null>(null);
   const [deletingExercise, setDeletingExercise] = useState<ExerciseOption | null>(null);
   const [exerciseState, exerciseAction, exercisePending] = useActionState(async (previous: PlanActionState, formData: FormData) => {
@@ -206,7 +213,11 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
     if (result.success) setDeletingExercise(null);
     return result;
   }, initialState);
-  const [motionType, setMotionType] = useState<ExerciseMotionType>("squat");
+  const [starterState, starterAction, starterPending] = useActionState(async (previous: PlanActionState, formData: FormData) => {
+    return addStarterExercisesAction(previous, formData);
+  }, initialState);
+  const [query, setQuery] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState("all");
   const [selectedExercises, setSelectedExercises] = useState<Array<{ key: string; exerciseId: number; day: string; sets: number; reps: string; rpe: number; restSeconds: number }>>([]);
 
   function addExercise() {
@@ -218,30 +229,67 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
     setSelectedExercises((current) => current.map((item) => item.key === key ? { ...item, ...values } : item));
   }
 
+  const existingExerciseNames = new Set(exercises.map((exercise) => exercise.name.toLowerCase()));
+  const muscleGroups = ["all", ...Array.from(new Set(exercises.map((exercise) => exercise.muscle_group)))];
+  const filteredExercises = exercises.filter((exercise) => {
+    const matchesMuscle = muscleFilter === "all" || exercise.muscle_group === muscleFilter;
+    const haystack = `${exercise.name} ${exercise.muscle_group} ${exercise.equipment}`.toLowerCase();
+    return matchesMuscle && (query.trim() === "" || haystack.includes(query.trim().toLowerCase()));
+  });
+
   return (
     <>
       <div className="plan-workspace-toolbar">
-        <div><span className="workspace-icon"><Dumbbell size={19} /></span><div><strong>Exercise library</strong><span>{exercises.length} reusable movements with visual guidance</span></div></div>
-        <div><button className="button secondary" type="button" onClick={() => setExerciseModal(true)}><Plus size={15} /> Add exercise</button><button className="button primary" type="button" onClick={() => setProgramModal(true)} disabled={exercises.length === 0}><Plus size={15} /> Create workout plan</button></div>
+        <div><span className="workspace-icon"><Dumbbell size={19} /></span><div><strong>Exercise library</strong><span>{exercises.length} movements with real photo &amp; video demos</span></div></div>
+        <div><button className="button secondary" type="button" onClick={() => setStarterModal(true)}><Library size={15} /> Starter library</button><button className="button secondary" type="button" onClick={() => setExerciseModal(true)}><Plus size={15} /> Add exercise</button><button className="button primary" type="button" onClick={() => setProgramModal(true)} disabled={exercises.length === 0}><Plus size={15} /> Create workout plan</button></div>
       </div>
-      <div className="exercise-library-grid">
-        {exercises.map((exercise) => <article className="exercise-library-card" key={exercise.id}><div className="exercise-card-actions record-actions"><button className="mini-action" type="button" title="Edit exercise" aria-label={`Edit ${exercise.name}`} onClick={() => setEditingExercise(exercise)}><Pencil size={13} /></button><button className="mini-action danger-action" type="button" title="Delete exercise" aria-label={`Delete ${exercise.name}`} onClick={() => setDeletingExercise(exercise)}><Trash2 size={13} /></button></div><ExerciseMotion type={exercise.motion_type} mediaUrl={exercise.media_url} label={exercise.name} /><div><span>{exercise.muscle_group}</span><h3>{exercise.name}</h3><p>{exercise.equipment} - {exercise.difficulty}</p></div></article>)}
-        {exercises.length === 0 ? <div className="library-page-empty"><Dumbbell size={24} /><strong>No exercises yet</strong><span>Use Add exercise to create the first movement.</span></div> : null}
+      {exercises.length > 0 ? (
+        <div className="exercise-filter-bar">
+          <label className="exercise-search"><Search size={16} /><input placeholder="Search exercises, muscle, equipment…" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search exercises" /></label>
+          <div className="exercise-chip-row">
+            {muscleGroups.map((group) => <button type="button" key={group} className={muscleFilter === group ? "exercise-chip active" : "exercise-chip"} onClick={() => setMuscleFilter(group)}>{group === "all" ? "All" : group}</button>)}
+          </div>
+        </div>
+      ) : null}
+      <div className="exercise-gallery">
+        {filteredExercises.map((exercise) => (
+          <article className="exercise-tile" key={exercise.id}>
+            <div className="exercise-tile-media">
+              <div className="exercise-tile-actions record-actions">
+                <button className="mini-action" type="button" title="Edit exercise" aria-label={`Edit ${exercise.name}`} onClick={() => setEditingExercise(exercise)}><Pencil size={13} /></button>
+                <button className="mini-action danger-action" type="button" title="Delete exercise" aria-label={`Delete ${exercise.name}`} onClick={() => setDeletingExercise(exercise)}><Trash2 size={13} /></button>
+              </div>
+              <ExerciseMedia variant="tile" url={exercise.media_url} name={exercise.name} muscleGroup={exercise.muscle_group} />
+              <span className="exercise-tile-badge">{exercise.muscle_group}</span>
+            </div>
+            <div className="exercise-tile-body">
+              <h3>{exercise.name}</h3>
+              <div className="exercise-tile-tags">
+                <span className="exercise-tag">{exercise.equipment}</span>
+                <span className={`exercise-tag diff-${exercise.difficulty}`}>{exercise.difficulty}</span>
+              </div>
+            </div>
+          </article>
+        ))}
+        {exercises.length === 0 ? (
+          <div className="exercise-gallery-empty"><span className="media-empty-icon"><Dumbbell size={24} /></span><strong>No exercises yet</strong><span>Add your own, or start with {STARTER_EXERCISES.length} ready-made exercises that already include real demos.</span><button className="button primary" type="button" onClick={() => setStarterModal(true)}><Library size={15} /> Browse starter library</button></div>
+        ) : filteredExercises.length === 0 ? (
+          <div className="exercise-gallery-empty"><span className="media-empty-icon"><Search size={22} /></span><strong>No matches</strong><span>Try another muscle group or a different search term.</span></div>
+        ) : null}
       </div>
 
       {editingExercise ? <div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setEditingExercise(null)}><div className="plan-modal" role="dialog" aria-modal="true" aria-label={`Edit ${editingExercise.name}`} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setEditingExercise(null)}><X size={18} /></button>
       <section className="builder-panel library-panel exercise-library-panel">
         <header><span className="eyebrow">Edit exercise</span><h2>{editingExercise.name}</h2><p>Update the reusable movement. Existing assigned programs keep their saved prescription.</p></header>
-        <ExerciseMotion type={editingExercise.motion_type} mediaUrl={editingExercise.media_url} label={editingExercise.name} />
         <form action={editExerciseAction} className="builder-form">
           <input type="hidden" name="id" value={editingExercise.id} />
+          <MediaUploader defaultUrl={editingExercise.media_url} name={editingExercise.name} muscleGroup={editingExercise.muscle_group} />
           <div className="form-grid">
             <label><span>Exercise name</span><input name="name" defaultValue={editingExercise.name} required /></label>
             <label><span>Muscle group</span><input name="muscle_group" defaultValue={editingExercise.muscle_group} required /></label>
             <label><span>Equipment</span><input name="equipment" defaultValue={editingExercise.equipment} required /></label>
             <label><span>Difficulty</span><select name="difficulty" defaultValue={editingExercise.difficulty}><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
-            <label><span>Character motion</span><select name="motion_type" defaultValue={editingExercise.motion_type}><option value="squat">Squat</option><option value="hinge">Hinge</option><option value="push">Push</option><option value="pull">Pull</option><option value="lunge">Lunge</option><option value="plank">Plank</option><option value="curl">Curl</option><option value="press">Press</option><option value="custom">Custom</option></select></label>
-            <label><span>GIF / image URL</span><input name="media_url" type="url" defaultValue={editingExercise.media_url || ""} /></label>
+            <label><span>Movement pattern</span><select name="motion_type" defaultValue={editingExercise.motion_type}><option value="squat">Squat</option><option value="hinge">Hinge</option><option value="push">Push</option><option value="pull">Pull</option><option value="lunge">Lunge</option><option value="plank">Plank</option><option value="curl">Curl</option><option value="press">Press</option><option value="custom">Custom / other</option></select></label>
             <label className="full"><span>Coaching instructions</span><textarea name="instructions" rows={4} defaultValue={editingExercise.instructions || ""} /></label>
           </div>
           <ActionMessage state={editExerciseState} />
@@ -254,16 +302,15 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
 
       {exerciseModal ? <div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setExerciseModal(false)}><div className="plan-modal" role="dialog" aria-modal="true" aria-label="Add an exercise" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setExerciseModal(false)}><X size={18} /></button>
       <section className="builder-panel library-panel exercise-library-panel">
-        <header><span className="eyebrow">Exercise library</span><h2>Add an exercise</h2><p>Select a built-in character motion or paste your own licensed GIF/image URL.</p></header>
-        <ExerciseMotion type={motionType} label="New exercise" />
+        <header><span className="eyebrow">Exercise library</span><h2>Add an exercise</h2><p>Upload a photo, GIF, or short video of the movement, then add the coaching cues.</p></header>
         <form action={exerciseAction} className="builder-form">
+          <MediaUploader name="New exercise" />
           <div className="form-grid">
             <label><span>Exercise name</span><input name="name" placeholder="Goblet squat" required /></label>
             <label><span>Muscle group</span><input name="muscle_group" placeholder="Legs" required /></label>
             <label><span>Equipment</span><input name="equipment" defaultValue="Bodyweight" required /></label>
             <label><span>Difficulty</span><select name="difficulty" defaultValue="beginner"><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
-            <label><span>Character motion</span><select name="motion_type" value={motionType} onChange={(event) => setMotionType(event.target.value as ExerciseMotionType)}><option value="squat">Squat</option><option value="hinge">Hinge</option><option value="push">Push</option><option value="pull">Pull</option><option value="lunge">Lunge</option><option value="plank">Plank</option><option value="curl">Curl</option><option value="press">Press</option><option value="custom">Custom</option></select></label>
-            <label><span>GIF / image URL (optional)</span><input name="media_url" type="url" placeholder="https://.../exercise.gif" /></label>
+            <label><span>Movement pattern</span><select name="motion_type" defaultValue="custom"><option value="squat">Squat</option><option value="hinge">Hinge</option><option value="push">Push</option><option value="pull">Pull</option><option value="lunge">Lunge</option><option value="plank">Plank</option><option value="curl">Curl</option><option value="press">Press</option><option value="custom">Custom / other</option></select></label>
             <label className="full"><span>Coaching instructions</span><textarea name="instructions" rows={4} placeholder="Setup, movement, breathing, and common mistakes" /></label>
           </div>
           <ActionMessage state={exerciseState} />
@@ -291,7 +338,7 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
               return (
                 <div className="composer-row workout-row" key={selection.key}>
                   <span className="row-number">{index + 1}</span>
-                  {exercise ? <ExerciseMotion compact type={exercise.motion_type} mediaUrl={exercise.media_url} label={exercise.name} /> : null}
+                  {exercise ? <ExerciseMedia variant="thumb" className="composer-thumb" url={exercise.media_url} name={exercise.name} muscleGroup={exercise.muscle_group} /> : null}
                   <label className="exercise-select"><span>Exercise</span><select value={selection.exerciseId} onChange={(event) => updateExercise(selection.key, { exerciseId: Number(event.target.value) })}>{exercises.map((item) => <option key={item.id} value={item.id}>{item.name} - {item.muscle_group}</option>)}</select></label>
                   <label><span>Day</span><input value={selection.day} onChange={(event) => updateExercise(selection.key, { day: event.target.value })} /></label>
                   <label><span>Sets</span><input type="number" min="1" max="20" value={selection.sets} onChange={(event) => updateExercise(selection.key, { sets: Number(event.target.value) })} /></label>
@@ -308,6 +355,35 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
           <ActionMessage state={planState} />
           <button className="button primary" type="submit" disabled={planPending || selectedExercises.length === 0}>{planPending ? "Assigning..." : "Create and assign workout plan"}</button>
         </form>
+      </section>
+      </div></div> : null}
+
+      {starterModal ? <div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setStarterModal(false)}><div className="plan-modal extra-wide" role="dialog" aria-modal="true" aria-label="Starter exercise library" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setStarterModal(false)}><X size={18} /></button>
+      <section className="builder-panel library-panel">
+        <header><span className="eyebrow">Starter library</span><h2>Add ready-made exercises</h2><p>Public-domain demonstration photos you can use right now, then swap for your own uploaded photo or video anytime.</p></header>
+        <form action={starterAction} className="starter-add-all">
+          <input type="hidden" name="names" value="" />
+          <div className="composer-list-head"><div><strong>{STARTER_EXERCISES.length} exercises with demos</strong><span>Chest &middot; Back &middot; Legs &middot; Shoulders &middot; Arms &middot; Core &middot; Glutes</span></div><button className="button primary small" type="submit" disabled={starterPending}>{starterPending ? "Adding…" : "Add all"}</button></div>
+        </form>
+        <ActionMessage state={starterState} />
+        <div className="exercise-gallery starter-gallery">
+          {STARTER_EXERCISES.map((starter) => {
+            const added = existingExerciseNames.has(starter.name.toLowerCase());
+            return (
+              <article className="exercise-tile" key={starter.name}>
+                <div className="exercise-tile-media">
+                  <ExerciseMedia variant="tile" url={starter.media_url} name={starter.name} muscleGroup={starter.muscle_group} />
+                  <span className="exercise-tile-badge">{starter.muscle_group}</span>
+                </div>
+                <div className="exercise-tile-body">
+                  <h3>{starter.name}</h3>
+                  <div className="exercise-tile-tags"><span className="exercise-tag">{starter.equipment}</span><span className={`exercise-tag diff-${starter.difficulty}`}>{starter.difficulty}</span></div>
+                  {added ? <span className="starter-added"><Check size={13} /> In library</span> : <form action={starterAction}><input type="hidden" name="names" value={JSON.stringify([starter.name])} /><button className="button secondary small full" type="submit" disabled={starterPending}><Plus size={13} /> Add</button></form>}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
       </div></div> : null}
     </>

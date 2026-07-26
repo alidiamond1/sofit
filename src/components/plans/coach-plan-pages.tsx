@@ -40,7 +40,7 @@ export async function CoachDietPlansPage() {
   const db = database();
   const [clientRows, mealRows, plans] = await Promise.all([
     clients(),
-    db("meal_library").select("id", "name", "meal_type", "calories", "protein_g", "carbs_g", "fat_g", "ingredients", "instructions").where({ is_active: true }).orderByRaw("FIELD(meal_type, 'breakfast', 'lunch', 'dinner', 'snack')").orderBy("name"),
+    db("meal_library").select("id", "name", "meal_type", "calories", "protein_g", "carbs_g", "fat_g", "ingredients", "instructions", "media_url").where({ is_active: true }).orderByRaw("FIELD(meal_type, 'breakfast', 'lunch', 'dinner', 'snack')").orderBy("name"),
     db("diet_plans").select("diet_plans.*", "users.name as client").join("clients", "clients.id", "diet_plans.client_id").join("users", "users.id", "clients.user_id").orderBy("diet_plans.updated_at", "desc"),
   ]);
   const meals = mealRows.map((row) => ({
@@ -74,7 +74,7 @@ export async function CoachWorkoutPlansPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Training workspace" title="Workout plans" description="Build your own exercise library with animated character guidance, then compose and assign complete programs." />
+      <PageHeader eyebrow="Training workspace" title="Workout plans" description="Build an exercise library with real photo, GIF, and video demos, then compose and assign complete programs your clients can follow with perfect form." />
       <WorkoutPlanBuilder clients={clientRows} exercises={exercises} defaultDate={defaultDate()} />
       <div className="section-row"><div><span className="eyebrow">Assigned programs</span><h2>Workout plan history</h2></div><Badge>{plans.length} plans</Badge></div>
       {plans.length === 0 ? <Card className="empty-state"><Dumbbell size={24} /><h3>No workout plans yet</h3><p>Create the first program above.</p></Card> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Program</th><th>Client</th><th>Version</th><th>Weeks</th><th>Status</th><th>Starts</th><th className="actions-column">Actions</th></tr></thead><tbody>{plans.map((plan) => <tr key={plan.id}><td><strong>{plan.title}</strong></td><td>{plan.client}</td><td>{plan.version}</td><td>{plan.weeks}</td><td><Badge tone={statusTone(plan.status)}>{plan.status}</Badge></td><td>{plan.starts_on ? dateOnly.format(new Date(plan.starts_on)) : "-"}</td><td className="actions-column"><WorkoutPlanRecordActions plan={{ id: Number(plan.id), client_id: Number(plan.client_id), title: plan.title, version: Number(plan.version), weeks: Number(plan.weeks), starts_on: inputDate(plan.starts_on), status: plan.status, exercises: plan.exercises }} clients={clientRows} exercises={exercises} /></td></tr>)}</tbody></table></div></Card>}

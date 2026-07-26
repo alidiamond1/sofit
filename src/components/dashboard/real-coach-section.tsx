@@ -23,6 +23,8 @@ import { RingChart, TrendLineChart } from "./charts";
 import { Avatar, Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
 import { MessagingWorkspace } from "@/components/messages/messaging-workspace";
 import { loadCoachMessageThreads } from "@/lib/messages";
+import { WeekScheduler, type SchedulerDiet, type SchedulerPlan, type SchedulerSlot } from "@/components/schedule/week-scheduler";
+import { planDays } from "@/lib/schedule";
 
 export const realCoachSections = [
   "clients",
@@ -32,6 +34,7 @@ export const realCoachSections = [
   "consultations",
   "diet-plans",
   "workout-plans",
+  "schedule",
   "personal-training",
   "check-ins",
   "payments",
@@ -473,6 +476,50 @@ async function CoachMessages({ coachId, initialClientId }: { coachId: number; in
   );
 }
 
+async function CoachSchedule({ selectedClientId }: { selectedClientId?: number | null }) {
+  const db = database();
+  const clientRows = await db("clients")
+    .select("clients.id", "users.name")
+    .join("users", "users.id", "clients.user_id")
+    .whereNot("clients.status", "churned")
+    .orderBy("users.name");
+  const clients = clientRows.map((row) => ({ id: numeric(row.id), name: String(row.name) }));
+
+  let workoutPlans: SchedulerPlan[] = [];
+  let dietPlans: SchedulerDiet[] = [];
+  const schedule: SchedulerSlot[] = Array.from({ length: 7 }, (_, weekday) => ({ weekday, workoutPlanId: null, workoutDay: null, dietPlanId: null, isRest: false }));
+
+  if (selectedClientId) {
+    const [workoutRows, dietRows, scheduleRows] = await Promise.all([
+      db("workout_plans").select("id", "title", "exercises").where({ client_id: selectedClientId }).orderBy("updated_at", "desc"),
+      db("diet_plans").select("id", "title").where({ client_id: selectedClientId }).orderBy("updated_at", "desc"),
+      db("client_week_schedule").where({ client_id: selectedClientId }),
+    ]);
+    workoutPlans = workoutRows.map((row) => ({ id: numeric(row.id), title: String(row.title), days: planDays(row.exercises) }));
+    dietPlans = dietRows.map((row) => ({ id: numeric(row.id), title: String(row.title) }));
+    const byWeekday = new Map(scheduleRows.map((row) => [Number(row.weekday), row]));
+    for (let weekday = 0; weekday < 7; weekday += 1) {
+      const row = byWeekday.get(weekday);
+      if (row) {
+        schedule[weekday] = {
+          weekday,
+          workoutPlanId: row.workout_plan_id ? Number(row.workout_plan_id) : null,
+          workoutDay: row.workout_day ? String(row.workout_day) : null,
+          dietPlanId: row.diet_plan_id ? Number(row.diet_plan_id) : null,
+          isRest: Boolean(row.is_rest),
+        };
+      }
+    }
+  }
+
+  return (
+    <>
+      <PageHeader eyebrow="Training workspace" title="Weekly schedule" description="Assign each client a workout and diet for every day of the week. Clients see today's plan and tick off each exercise on their dashboard." />
+      <WeekScheduler clients={clients} selectedClientId={selectedClientId ?? null} workoutPlans={workoutPlans} dietPlans={dietPlans} schedule={schedule} />
+    </>
+  );
+}
+
 export async function RealCoachSection({ section = "home", selectedClientId }: { section?: string; selectedClientId?: number | null }) {
   const session = await requireRole("coach");
   if (section === "home") return <CoachOverview />;
@@ -481,6 +528,7 @@ export async function RealCoachSection({ section = "home", selectedClientId }: {
   if (section === "packages") return <CoachPackages />;
   if (section === "diet-plans") return <CoachDietPlansPage />;
   if (section === "workout-plans") return <CoachWorkoutPlansPage />;
+  if (section === "schedule") return <CoachSchedule selectedClientId={selectedClientId} />;
   if (section === "messages") return <CoachMessages coachId={session.id} initialClientId={selectedClientId} />;
   if (section === "analytics") return <CoachAnalytics />;
   if (section === "profile") return <CoachProfile />;

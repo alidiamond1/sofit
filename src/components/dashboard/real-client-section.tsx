@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Dumbbell,
   Mail,
+  Moon,
   Scale,
   Utensils,
 } from "lucide-react";
@@ -15,7 +16,10 @@ import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { HorizontalBars, TrendLineChart } from "./charts";
 import { Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
-import { ExerciseMotion } from "@/components/plans/exercise-motion";
+import { WorkoutExerciseList, MealTimeline } from "@/components/plans/client-plan-views";
+import { TodayWorkout } from "@/components/schedule/today-workout";
+import { MonthCalendar, type DaySchedule } from "@/components/schedule/month-calendar";
+import { exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
 import { MessagingWorkspace } from "@/components/messages/messaging-workspace";
 import { loadClientMessageThreads } from "@/lib/messages";
@@ -109,6 +113,48 @@ async function ClientHome() {
       value: numeric(item.weight_kg),
     }));
 
+  const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
+  const clientTz = String(settingsRow?.timezone || "Africa/Nairobi");
+  let scheduleReady = true;
+  let isRestToday = false;
+  let todayPlanTitle = "";
+  let todayDayLabel: string | null = null;
+  let todayExercises: Array<{ key: string; name: string; muscleGroup: string; equipment: string; difficulty: string; mediaUrl: string | null; day: string; sets: string; reps: string; rpe: string; restSeconds: number; instructions: string | null; done: boolean }> = [];
+  try {
+    const scheduleSlot = await database()("client_week_schedule").where({ client_id: client.id, weekday: weekdayIndex(clientTz) }).first();
+    isRestToday = Boolean(scheduleSlot?.is_rest);
+    if (scheduleSlot && !scheduleSlot.is_rest && scheduleSlot.workout_plan_id) {
+      const today = todayISO(clientTz);
+      const [todayPlan, completions] = await Promise.all([
+        database()("workout_plans").select("title", "exercises").where({ id: scheduleSlot.workout_plan_id, client_id: client.id }).first(),
+        database()("workout_completions").select("exercise_key").where({ client_id: client.id, scheduled_on: today }),
+      ]);
+      if (todayPlan) {
+        const doneKeys = new Set(completions.map((row) => String(row.exercise_key)));
+        todayPlanTitle = String(todayPlan.title);
+        todayDayLabel = scheduleSlot.workout_day ? String(scheduleSlot.workout_day) : null;
+        todayExercises = exercisesForDay(todayPlan.exercises, todayDayLabel).map((exercise) => ({
+          key: exercise.key,
+          name: exercise.name,
+          muscleGroup: exercise.muscleGroup,
+          equipment: exercise.equipment,
+          difficulty: exercise.difficulty,
+          mediaUrl: exercise.mediaUrl,
+          day: todayDayLabel || "",
+          sets: exercise.sets,
+          reps: exercise.reps,
+          rpe: exercise.rpe,
+          restSeconds: exercise.restSeconds,
+          instructions: exercise.instructions,
+          done: doneKeys.has(exercise.key),
+        }));
+      }
+    }
+  } catch {
+    // Schedule tables not migrated yet — Home still renders without the Today card.
+    scheduleReady = false;
+  }
+
   return (
     <>
       <PageHeader
@@ -133,6 +179,13 @@ async function ClientHome() {
           </div>
         </Card>
       ) : null}
+      {!scheduleReady ? null : todayExercises.length > 0 ? (
+        <TodayWorkout exercises={todayExercises} planTitle={todayPlanTitle} dayLabel={todayDayLabel} />
+      ) : isRestToday ? (
+        <Card className="today-rest"><span className="today-rest-icon"><Moon size={20} /></span><div><strong>Rest day</strong><span>No workout scheduled today — focus on recovery, sleep, and good nutrition.</span></div></Card>
+      ) : (
+        <Card className="today-rest today-empty"><span className="today-rest-icon"><Dumbbell size={20} /></span><div><strong>No workout scheduled today</strong><span>Your coach hasn&rsquo;t set today&rsquo;s training yet — your assigned plans are on the Workout plan page.</span></div></Card>
+      )}
       <div className="stats-grid">
         <StatCard label="Account status" value={client.status} note={client.pipeline_stage} icon={<CheckCircle2 size={18} />} accent="green" />
         <StatCard label="Latest weight" value={latestCheckIn?.weight_kg ? `${latestCheckIn.weight_kg} kg` : "-"} note={latestCheckIn ? dateOnly.format(new Date(latestCheckIn.week_of)) : "No check-in yet"} icon={<Scale size={18} />} points={progressTrend.map((point) => point.value)} />
@@ -187,13 +240,18 @@ function DietPlanCard({ plan }: { plan: Record<string, unknown> }) {
         <div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Diet plan - version {String(plan.version)}</span><h2>{String(plan.title)}</h2></div>
         <div className="plan-metrics"><div><strong>{String(plan.daily_calories || "-")}</strong><span>kcal</span></div><div><strong>{String(plan.protein_g || "-")}</strong><span>protein g</span></div><div><strong>{String(plan.carbs_g || "-")}</strong><span>carbs g</span></div></div>
       </div>
-      <div className="client-meal-timeline">
-        {meals.map((meal, index) => {
-          const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : Array.isArray(meal.items) ? meal.items : [];
-          return <article key={`${String(meal.name)}-${index}`}><time>{String(meal.time || "--:--")}</time><span className="meal-type">{String(meal.type || "meal")}</span><div><h3>{String(meal.name || "Meal")}</h3><p>{ingredients.map(String).join(" - ") || "No ingredients listed"}</p></div><strong>{meal.calories ? `${meal.calories} kcal` : ""}</strong></article>;
-        })}
-        {meals.length === 0 ? <p>No meals are listed in this plan.</p> : null}
-      </div>
+      <MealTimeline meals={meals.map((meal) => ({
+        name: String(meal.name || "Meal"),
+        type: String(meal.type || "meal"),
+        time: String(meal.time || ""),
+        calories: meal.calories ? String(meal.calories) : "",
+        protein: meal.protein_g ? String(meal.protein_g) : "",
+        carbs: meal.carbs_g ? String(meal.carbs_g) : "",
+        fat: meal.fat_g ? String(meal.fat_g) : "",
+        mediaUrl: meal.media_url ? String(meal.media_url) : null,
+        ingredients: Array.isArray(meal.ingredients) ? meal.ingredients.map(String) : Array.isArray(meal.items) ? (meal.items as unknown[]).map(String) : [],
+        instructions: meal.instructions ? String(meal.instructions) : null,
+      }))} />
     </Card>
   );
 }
@@ -207,10 +265,19 @@ function WorkoutPlanCard({ plan }: { plan: Record<string, unknown> }) {
         <div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Workout program - version {String(plan.version)}</span><h2>{String(plan.title)}</h2></div>
         <div className="plan-metrics"><div><strong>{String(plan.weeks || "-")}</strong><span>weeks</span></div><div><strong>{days.length || new Set(exercises.map((item) => String(item.day))).size}</strong><span>days</span></div><div><strong>{exercises.length}</strong><span>exercises</span></div></div>
       </div>
-      <div className="client-exercise-list">
-        {exercises.map((exercise, index) => <article key={`${String(exercise.exercise)}-${index}`}><ExerciseMotion compact type={String(exercise.motion_type || "custom")} mediaUrl={exercise.media_url ? String(exercise.media_url) : null} label={String(exercise.exercise || "Exercise")} /><div><span>{String(exercise.day || "Training day")} - {String(exercise.muscle_group || "Exercise")}</span><h3>{String(exercise.exercise || "Exercise")}</h3><p>{String(exercise.instructions || exercise.equipment || "Follow the coach's prescribed technique.")}</p></div><div className="exercise-prescription"><strong>{String(exercise.sets || "-")} x {String(exercise.reps || "-")}</strong><span>RPE {String(exercise.rpe || "-")} - {String(exercise.rest_seconds || 0)}s rest</span></div></article>)}
-        {exercises.length === 0 ? <p>No exercises are listed in this program.</p> : null}
-      </div>
+      <WorkoutExerciseList exercises={exercises.map((exercise) => ({
+        name: String(exercise.exercise || "Exercise"),
+        muscleGroup: String(exercise.muscle_group || ""),
+        equipment: String(exercise.equipment || "Bodyweight"),
+        difficulty: String(exercise.difficulty || "beginner"),
+        mediaUrl: exercise.media_url ? String(exercise.media_url) : null,
+        day: String(exercise.day || "Training day"),
+        sets: String(exercise.sets ?? "-"),
+        reps: String(exercise.reps ?? "-"),
+        rpe: String(exercise.rpe ?? "-"),
+        restSeconds: Number(exercise.rest_seconds ?? 0),
+        instructions: exercise.instructions ? String(exercise.instructions) : null,
+      }))} />
     </Card>
   );
 }
@@ -229,12 +296,95 @@ async function ClientWorkoutPlans() {
 
 async function ClientSessions() {
   const { client } = await getClientContext();
+  const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
+  const clientTz = String(settingsRow?.timezone || "Africa/Nairobi");
   const sessions = await database()("sessions")
     .select("sessions.*", "services.name as service")
     .leftJoin("services", "services.id", "sessions.service_id")
     .where("sessions.client_id", client.id)
     .orderBy("starts_at", "desc");
-  return <><PageHeader title="My sessions" description="Your real booking and attendance history." />{sessions.length === 0 ? <EmptyState text="No personal training sessions are booked yet." /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Session</th><th>Date</th><th>Duration</th><th>Attendance</th><th>Notes</th></tr></thead><tbody>{sessions.map((item) => <tr key={item.id}><td>{item.service || "Personal training"}</td><td>{dateTime.format(new Date(item.starts_at))}</td><td>{item.duration_minutes} min</td><td><Badge tone={tone(item.attendance)}>{item.attendance}</Badge></td><td>{item.notes || "-"}</td></tr>)}</tbody></table></div></Card>}</>;
+
+  const weekDays: DaySchedule[] = Array.from({ length: 7 }, (_, weekday) => ({ weekday, isRest: false, workout: null, diet: null }));
+  try {
+    const slots = await database()("client_week_schedule").where({ client_id: client.id });
+    const workoutIds = [...new Set(slots.filter((slot) => slot.workout_plan_id).map((slot) => Number(slot.workout_plan_id)))];
+    const dietIds = [...new Set(slots.filter((slot) => slot.diet_plan_id).map((slot) => Number(slot.diet_plan_id)))];
+    const [workoutPlans, dietPlans] = await Promise.all([
+      workoutIds.length ? database()("workout_plans").whereIn("id", workoutIds).where({ client_id: client.id }).select("id", "title", "exercises") : Promise.resolve([]),
+      dietIds.length ? database()("diet_plans").whereIn("id", dietIds).where({ client_id: client.id }).select("id", "title", "meals") : Promise.resolve([]),
+    ]);
+    const workoutById = new Map(workoutPlans.map((plan) => [Number(plan.id), plan]));
+    const dietById = new Map(dietPlans.map((plan) => [Number(plan.id), plan]));
+    for (const slot of slots) {
+      const weekday = Number(slot.weekday);
+      if (weekday < 0 || weekday > 6) continue;
+      const isRest = Boolean(slot.is_rest);
+      let workout: DaySchedule["workout"] = null;
+      let diet: DaySchedule["diet"] = null;
+      if (!isRest && slot.workout_plan_id) {
+        const plan = workoutById.get(Number(slot.workout_plan_id));
+        if (plan) {
+          const dayLabel = slot.workout_day ? String(slot.workout_day) : null;
+          workout = {
+            title: String(plan.title),
+            dayLabel,
+            exercises: exercisesForDay(plan.exercises, dayLabel).map((exercise) => ({
+              name: exercise.name,
+              muscleGroup: exercise.muscleGroup,
+              equipment: exercise.equipment,
+              difficulty: exercise.difficulty,
+              mediaUrl: exercise.mediaUrl,
+              day: dayLabel || "",
+              sets: exercise.sets,
+              reps: exercise.reps,
+              rpe: exercise.rpe,
+              restSeconds: exercise.restSeconds,
+              instructions: exercise.instructions,
+            })),
+          };
+        }
+      }
+      if (!isRest && slot.diet_plan_id) {
+        const plan = dietById.get(Number(slot.diet_plan_id));
+        if (plan) {
+          diet = {
+            title: String(plan.title),
+            meals: jsonArray(plan.meals).map((meal) => ({
+              name: String(meal.name || "Meal"),
+              type: String(meal.type || "meal"),
+              time: String(meal.time || ""),
+              calories: meal.calories ? String(meal.calories) : "",
+              protein: meal.protein_g ? String(meal.protein_g) : "",
+              carbs: meal.carbs_g ? String(meal.carbs_g) : "",
+              fat: meal.fat_g ? String(meal.fat_g) : "",
+              mediaUrl: meal.media_url ? String(meal.media_url) : null,
+              ingredients: Array.isArray(meal.ingredients) ? meal.ingredients.map(String) : Array.isArray(meal.items) ? (meal.items as unknown[]).map(String) : [],
+              instructions: meal.instructions ? String(meal.instructions) : null,
+            })),
+          };
+        }
+      }
+      weekDays[weekday] = { weekday, isRest, workout, diet };
+    }
+  } catch {
+    // schedule tables not migrated yet
+  }
+  const dayFmt = new Intl.DateTimeFormat("en-CA", { timeZone: clientTz, year: "numeric", month: "2-digit", day: "2-digit" });
+  const timeFmt = new Intl.DateTimeFormat("en-US", { timeZone: clientTz, hour: "numeric", minute: "2-digit" });
+  const calendarSessions = sessions.map((item) => ({
+    date: dayFmt.format(new Date(item.starts_at)),
+    title: item.service || "Personal training",
+    time: timeFmt.format(new Date(item.starts_at)),
+    status: String(item.attendance),
+  }));
+
+  return (
+    <>
+      <PageHeader title="My sessions" description="Your training calendar, bookings, and attendance history." />
+      <MonthCalendar sessions={calendarSessions} weekDays={weekDays} today={todayISO(clientTz)} />
+      {sessions.length === 0 ? <EmptyState text="No personal training sessions are booked yet." /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Session</th><th>Date</th><th>Duration</th><th>Attendance</th><th>Notes</th></tr></thead><tbody>{sessions.map((item) => <tr key={item.id}><td>{item.service || "Personal training"}</td><td>{dateTime.format(new Date(item.starts_at))}</td><td>{item.duration_minutes} min</td><td><Badge tone={tone(item.attendance)}>{item.attendance}</Badge></td><td>{item.notes || "-"}</td></tr>)}</tbody></table></div></Card>}
+    </>
+  );
 }
 
 async function ClientCheckIn() {

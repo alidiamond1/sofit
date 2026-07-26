@@ -1,0 +1,229 @@
+/* ============================================================
+   SoFit — Workout experience
+   Real exercise media (photo/GIF/video via Cloudinary), a premium
+   exercise gallery for the coach, and a "today's workout" view for
+   the client. Inherits the glass/accent tokens from premium.css.
+   ============================================================ */
+
+/* 1 ── Exercise media (shared) ─────────────────────────────── */
+.exercise-media{
+  position:relative;overflow:hidden;
+  display:grid;place-items:center;
+  background:var(--surface-soft);
+  color:var(--muted);
+}
+.exercise-media img,.exercise-media video{
+  width:100%;height:100%;object-fit:cover;display:block;
+  background:var(--surface-soft);
+}
+.exercise-media.as-tile{aspect-ratio:16/11;width:100%}
+.exercise-media.as-thumb{width:100%;height:100%;border-radius:14px}
+.exercise-media.as-hero{width:100%;aspect-ratio:16/10;border-radius:16px}
+.exercise-media.composer-thumb{width:54px;height:54px;border-radius:11px}
+
+.exercise-media.is-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;text-align:center;padding:12px;
+  background:
+    radial-gradient(120% 120% at 50% 0%,var(--accent-grad-soft),transparent 70%),
+    var(--surface-soft);
+}
+.media-empty-icon{
+  width:46px;height:46px;display:grid;place-items:center;
+  border-radius:14px;background:var(--accent-grad-soft);color:var(--accent);
+  box-shadow:inset 0 0 0 1px var(--ring);
+}
+.as-thumb .media-empty-icon{width:34px;height:34px;border-radius:11px}
+.media-empty-label{font-size:10px;font-weight:650;letter-spacing:.02em;text-transform:capitalize}
+.media-play-badge{
+  position:absolute;right:8px;bottom:8px;
+  width:24px;height:24px;display:grid;place-items:center;
+  border-radius:50%;background:rgba(8,13,20,.55);color:#fff;
+  backdrop-filter:blur(6px);
+}
+
+/* 2 ── Coach: filter / search bar ──────────────────────────── */
+.exercise-filter-bar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px 16px;margin-bottom:16px;
+  border:1px solid var(--glass-border);border-radius:16px;
+  background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));
+  box-shadow:var(--shadow-glass);
+}
+.exercise-search{
+  flex:1;min-width:200px;display:flex;align-items:center;gap:9px;
+  padding:9px 13px;border:1px solid var(--line);border-radius:11px;
+  background:var(--surface-soft);color:var(--faint);
+}
+.exercise-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font-size:12px}
+.exercise-chip-row{display:flex;gap:7px;flex-wrap:wrap}
+.exercise-chip{
+  padding:7px 13px;border:1px solid var(--line);border-radius:999px;
+  background:var(--surface);color:var(--muted);
+  font-size:11px;font-weight:640;cursor:pointer;white-space:nowrap;
+  transition:color .15s ease,border-color .15s ease,background .15s ease,transform .15s ease;
+}
+.exercise-chip:hover{color:var(--ink);border-color:var(--line-strong);transform:translateY(-1px)}
+.exercise-chip.active{
+  color:#fff;border-color:transparent;background:var(--accent-grad);
+  box-shadow:0 8px 18px -8px var(--accent-glow);
+}
+html[data-theme="dark"] .exercise-chip{background:var(--surface-soft);color:var(--muted)}
+
+/* 3 ── Coach: exercise gallery ─────────────────────────────── */
+.exercise-gallery{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:16px;
+}
+.exercise-tile{
+  position:relative;overflow:hidden;display:flex;flex-direction:column;
+  border:1px solid var(--glass-border);border-radius:18px;
+  background:var(--glass-bg);backdrop-filter:blur(var(--glass-blur));
+  box-shadow:var(--shadow-glass);
+  transition:transform .22s cubic-bezier(.22,.8,.34,1),box-shadow .22s ease,border-color .22s ease;
+}
+.exercise-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-float);border-color:var(--ring)}
+html[data-theme="dark"] .exercise-tile{background:linear-gradient(180deg,rgba(23,34,48,.72),rgba(17,26,37,.62))}
+.exercise-tile-media{position:relative;overflow:hidden}
+.exercise-tile:hover .exercise-tile-media img,
+.exercise-tile:hover .exercise-tile-media video{transform:scale(1.05)}
+.exercise-tile-media img,.exercise-tile-media video{transition:transform .4s cubic-bezier(.22,.8,.34,1)}
+.exercise-tile-media:after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 55%,rgba(6,11,18,.42));
+}
+.exercise-tile-badge{
+  position:absolute;left:10px;bottom:10px;z-index:2;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:999px;
+  background:rgba(8,13,20,.55);color:#fff;
+  font-size:9px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;
+  backdrop-filter:blur(8px);
+}
+.exercise-tile-actions{
+  position:absolute;z-index:3;top:9px;right:9px;
+  display:flex;gap:5px;padding:4px;border-radius:12px;
+  background:rgba(255,255,255,.86);box-shadow:0 6px 18px rgba(8,20,35,.14);
+  backdrop-filter:blur(8px);
+  opacity:0;transform:translateY(-4px);transition:opacity .18s ease,transform .18s ease;
+}
+.exercise-tile:hover .exercise-tile-actions,.exercise-tile:focus-within .exercise-tile-actions{opacity:1;transform:none}
+html[data-theme="dark"] .exercise-tile-actions{background:rgba(17,26,37,.9)}
+.exercise-tile-body{padding:14px 15px 16px;display:flex;flex-direction:column;gap:9px}
+.exercise-tile-body h3{margin:0;font-size:14px;letter-spacing:-.01em;line-height:1.25}
+.exercise-tile-tags{display:flex;flex-wrap:wrap;gap:6px}
+.exercise-tag{
+  padding:4px 9px;border-radius:8px;background:var(--surface-soft);
+  border:1px solid var(--line);color:var(--muted);
+  font-size:9px;font-weight:640;text-transform:capitalize;
+}
+.exercise-tag.diff-beginner{color:#218b44;border-color:#cee9d6;background:var(--green-soft)}
+.exercise-tag.diff-intermediate{color:#9b6816;border-color:#f0dfb8;background:var(--amber-soft)}
+.exercise-tag.diff-advanced{color:#b84d4d;border-color:#f1d0d0;background:var(--red-soft)}
+html[data-theme="dark"] .exercise-tag{background:var(--surface-soft);border-color:var(--line-strong)}
+html[data-theme="dark"] .exercise-tag.diff-beginner{color:#5fd48a}
+html[data-theme="dark"] .exercise-tag.diff-intermediate{color:#f0c674}
+html[data-theme="dark"] .exercise-tag.diff-advanced{color:#f2a1a1}
+
+.exercise-gallery-empty{
+  grid-column:1/-1;min-height:240px;display:grid;place-items:center;align-content:center;gap:10px;
+  border:1px dashed var(--line-strong);border-radius:18px;
+  background:var(--glass-bg);color:var(--muted);text-align:center;
+}
+.exercise-gallery-empty .media-empty-icon{width:52px;height:52px}
+.exercise-gallery-empty strong{font-size:14px;color:var(--ink)}
+.exercise-gallery-empty span{font-size:11px}
+.exercise-gallery-empty .button{margin-top:6px}
+
+/* Starter library picker */
+.starter-gallery{margin-top:4px}
+.starter-gallery .exercise-tile-body{gap:8px}
+.starter-added{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 10px;border-radius:9px;
+  background:var(--green-soft);color:#218b44;border:1px solid #cee9d6;
+  font-size:10px;font-weight:650;
+}
+html[data-theme="dark"] .starter-added{background:var(--green-soft);color:var(--green);border-color:transparent}
+
+/* 4 ── Cloudinary uploader ─────────────────────────────────── */
+.media-uploader{display:grid;gap:12px;margin-bottom:6px}
+.media-dropzone{
+  position:relative;overflow:hidden;
+  border:1px dashed var(--line-strong);border-radius:16px;
+  background:var(--surface-soft);min-height:150px;
+  display:grid;place-items:center;
+}
+.media-dropzone.has-preview{border-style:solid;padding:0}
+.media-dropzone .exercise-media.as-hero{border-radius:15px}
+.media-dropzone-empty{display:grid;justify-items:center;gap:6px;padding:28px 18px;text-align:center}
+.media-dropzone-empty .media-empty-icon{width:50px;height:50px}
+.media-dropzone-empty strong{font-size:13px;color:var(--ink)}
+.media-dropzone-empty span{max-width:280px;color:var(--muted);font-size:10px;line-height:1.5}
+.media-uploading{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:9px;
+  background:rgba(8,13,20,.5);color:#fff;font-size:12px;font-weight:600;backdrop-filter:blur(4px);
+}
+.media-uploader-actions{display:flex;flex-wrap:wrap;gap:8px}
+.media-uploader-actions .button.danger-text{color:var(--red)}
+.media-url-field>span{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:var(--muted);font-size:11px;font-weight:600}
+.media-hint{margin:0;color:var(--muted);font-size:10px;line-height:1.5}
+.media-hint.error{color:var(--red)}
+.media-hint code{padding:1px 5px;border-radius:5px;background:var(--surface-soft);border:1px solid var(--line);font-size:9px}
+.spin{animation:media-spin 1s linear infinite}
+@keyframes media-spin{to{transform:rotate(360deg)}}
+
+/* 5 ── Client: today's workout ─────────────────────────────── */
+.workout-day-group{margin-top:6px}
+.workout-day-head{
+  display:flex;align-items:center;gap:10px;padding:6px 22px 12px;
+}
+.workout-day-head span{
+  display:inline-flex;align-items:center;gap:7px;
+  color:var(--accent);font-size:10px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;
+}
+.workout-day-head:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent-grad)}
+.workout-day-head hr{flex:1;height:1px;border:0;background:var(--line)}
+
+.client-exercise-list.rich article{
+  grid-template-columns:78px minmax(0,1fr) auto;gap:16px;padding:16px 22px;
+  transition:background .16s ease;
+}
+.client-exercise-list.rich article:hover{background:var(--accent-grad-soft)}
+.client-exercise-list.rich .exercise-media.as-thumb{height:78px;border-radius:14px}
+.client-exercise-list.rich h3{font-size:13px;margin:2px 0 4px}
+.client-exercise-list.rich article>div:nth-child(2)>span{color:var(--accent);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.client-exercise-list.rich p{font-size:10px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.exercise-prescription .rpe-pill{
+  display:inline-block;margin-top:6px;padding:3px 8px;border-radius:999px;
+  background:var(--accent-grad-soft);color:var(--accent);
+  font-size:9px;font-weight:700;letter-spacing:.02em;
+}
+
+/* 5b ── Meal media: coach library cards + client diet rows ──── */
+.meal-item-card{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
+.exercise-media.meal-thumb.as-thumb{width:48px;height:48px;flex:0 0 auto;border-radius:10px}
+.meal-item-copy{flex:1;min-width:0}
+.meal-item-copy .library-item-type{color:var(--accent);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.meal-item-copy h3{margin:3px 0 2px;font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meal-item-copy p{margin:0;color:var(--muted);font-size:10px}
+.meal-item-card .record-actions{flex:0 0 auto}
+
+.client-meal-timeline.rich article{grid-template-columns:52px 58px minmax(0,1fr) auto;gap:14px}
+.exercise-media.meal-row-thumb.as-thumb{height:58px;border-radius:12px}
+.client-meal-timeline.rich time{color:var(--accent);font-weight:700}
+.client-meal-timeline.rich .meal-type{display:inline-block;margin-bottom:5px;padding:3px 8px;border-radius:7px;background:var(--accent-grad-soft);color:var(--accent);font-size:8px;text-transform:uppercase;font-weight:700;letter-spacing:.05em}
+.client-meal-timeline.rich h3{margin:0;font-size:13px}
+.client-meal-timeline.rich p{margin:4px 0 0;color:var(--muted);font-size:10px;line-height:1.5}
+@media(max-width:760px){
+  .client-meal-timeline.rich article{grid-template-columns:50px minmax(0,1fr) auto;gap:12px}
+  .client-meal-timeline.rich time{display:none}
+}
+
+/* 6 ── Responsive ──────────────────────────────────────────── */
+@media(max-width:760px){
+  .exercise-gallery{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .exercise-filter-bar{padding:12px}
+  .client-exercise-list.rich article{grid-template-columns:64px minmax(0,1fr);gap:12px}
+  .client-exercise-list.rich .exercise-media.as-thumb{height:64px}
+  .exercise-prescription{grid-column:2;text-align:left}
+}

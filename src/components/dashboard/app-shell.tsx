@@ -5,6 +5,7 @@ import {
   Apple,
   BarChart3,
   Bell,
+  CalendarCheck,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -53,11 +54,13 @@ const coachNav: NavItem[] = [
   { label: "Consultations", href: "/coach/consultations", icon: CalendarDays, section: "Coaching" },
   { label: "Diet plans", href: "/coach/diet-plans", icon: Apple, section: "Coaching" },
   { label: "Workout plans", href: "/coach/workout-plans", icon: Dumbbell, section: "Coaching" },
+  { label: "Schedule", href: "/coach/schedule", icon: CalendarCheck, section: "Coaching" },
   { label: "Personal training", href: "/coach/personal-training", icon: Activity, section: "Coaching" },
   { label: "Check-ins", href: "/coach/check-ins", icon: ClipboardCheck, section: "Coaching" },
   { label: "Payments", href: "/coach/payments", icon: CreditCard, section: "Business" },
   { label: "Messages", href: "/coach/messages", icon: MessageCircle, section: "Business" },
   { label: "Analytics", href: "/coach/analytics", icon: BarChart3, section: "Business" },
+  { label: "Notifications", href: "/coach/settings#notifications", icon: Bell, section: "Account" },
   { label: "Profile", href: "/coach/profile", icon: UserRound, section: "Account" },
   { label: "Settings", href: "/coach/settings", icon: Settings, section: "Account" },
 ];
@@ -92,11 +95,15 @@ function NavLinks({
   items,
   pathname,
   unreadMessageCount,
+  unreadCount,
+  onOpenNotifications,
   onNavigate,
 }: {
   items: NavItem[];
   pathname: string;
   unreadMessageCount: number;
+  unreadCount: number;
+  onOpenNotifications?: () => void;
   onNavigate?: () => void;
 }) {
   return (
@@ -110,20 +117,37 @@ function NavLinks({
             {index === 0 || items[index - 1].section !== item.section ? (
               <span className="nav-section">{item.section}</span>
             ) : null}
-            <Link
-              href={item.href}
-              className={active ? "nav-link active" : "nav-link"}
-              onClick={onNavigate}
-              title={item.label}
-            >
-              <item.icon size={18} strokeWidth={1.8} />
-              <span>{item.label}</span>
-              {item.href.endsWith("/messages") && unreadMessageCount > 0 ? (
-                <b className="nav-unread-count" aria-label={`${unreadMessageCount} unread messages`}>
-                  {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
-                </b>
-              ) : null}
-            </Link>
+            {item.label === "Notifications" && onOpenNotifications ? (
+              <button
+                type="button"
+                className={active ? "nav-link active" : "nav-link"}
+                onClick={() => { onOpenNotifications(); onNavigate?.(); }}
+                title={item.label}
+              >
+                <item.icon size={18} strokeWidth={1.8} />
+                <span>{item.label}</span>
+                {unreadCount > 0 ? (
+                  <b className="nav-unread-count" aria-label={`${unreadCount} unread notifications`}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </b>
+                ) : null}
+              </button>
+            ) : (
+              <Link
+                href={item.href}
+                className={active ? "nav-link active" : "nav-link"}
+                onClick={onNavigate}
+                title={item.label}
+              >
+                <item.icon size={18} strokeWidth={1.8} />
+                <span>{item.label}</span>
+                {item.href.endsWith("/messages") && unreadMessageCount > 0 ? (
+                  <b className="nav-unread-count" aria-label={`${unreadMessageCount} unread messages`}>
+                    {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                  </b>
+                ) : null}
+              </Link>
+            )}
           </Fragment>
         );
       })}
@@ -205,7 +229,7 @@ export function AppShell({
             <PanelLeftClose size={17} />
           </button>
         </div>
-        <NavLinks items={items} pathname={pathname} unreadMessageCount={unreadMessageCount} />
+        <NavLinks items={items} pathname={pathname} unreadMessageCount={unreadMessageCount} unreadCount={unreadCount} onOpenNotifications={() => setNotificationsOpen(true)} />
         <div className="sidebar-footer">
           <Link className="sidebar-user-link" href={profileHref} title="Open profile">
             <Avatar name={user.name} src={user.avatarPath} className="small" />
@@ -286,7 +310,7 @@ export function AppShell({
                 <X size={20} />
               </button>
             </div>
-            <NavLinks items={items} pathname={pathname} unreadMessageCount={unreadMessageCount} onNavigate={() => setMobileOpen(false)} />
+            <NavLinks items={items} pathname={pathname} unreadMessageCount={unreadMessageCount} unreadCount={unreadCount} onOpenNotifications={() => setNotificationsOpen(true)} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       ) : null}

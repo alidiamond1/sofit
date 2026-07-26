@@ -1,0 +1,174 @@
+/* ============================================================
+   SoFit — Weekly scheduling (coach) + today's workout (client)
+   Inherits the glass/accent tokens from premium.css.
+   ============================================================ */
+
+/* Sidebar "Notifications" renders as a button (opens the popover) — match nav-link. */
+button.nav-link{width:100%;-webkit-appearance:none;appearance:none;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer}
+
+/* ── Coach: weekly scheduler ────────────────────────────────── */
+.scheduler-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+.scheduler-client-picker{display:flex;flex-direction:column;gap:6px;min-width:240px}
+.scheduler-client-picker span{color:var(--muted);font-size:11px;font-weight:600}
+.scheduler-client-picker select{min-height:44px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:12px;background:var(--surface);color:var(--ink)}
+.scheduler-summary{text-align:right}
+.scheduler-summary strong{display:block;font-family:var(--font-geist-mono),monospace;font-size:26px;letter-spacing:-.03em;color:var(--accent)}
+.scheduler-summary span{color:var(--muted);font-size:10px}
+.scheduler-hint{margin:0 0 16px;padding:12px 14px;border-radius:12px;background:var(--amber-soft);color:#9b6816;font-size:12px;border:1px solid #f0dfb8}
+html[data-theme="dark"] .scheduler-hint{color:#f0c674;border-color:transparent}
+
+.scheduler-empty{display:grid;justify-items:center;gap:8px;text-align:center;padding:40px 24px}
+.scheduler-empty svg{color:var(--accent)}
+.scheduler-empty h3{margin:6px 0 0;font-size:17px}
+.scheduler-empty p{margin:0;max-width:420px;color:var(--muted);font-size:12px;line-height:1.6}
+.scheduler-empty .scheduler-client-picker{margin-top:8px;align-items:center}
+
+.scheduler-week{display:grid;grid-template-columns:repeat(auto-fit,minmax(184px,1fr));gap:12px;align-items:start}
+.scheduler-day{display:flex;flex-direction:column;gap:11px;min-height:200px;padding:15px}
+.scheduler-day .scheduler-day-body{flex:1}
+.scheduler-day.is-rest{opacity:.9}
+.scheduler-day-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.scheduler-day-head strong{font-size:14px;letter-spacing:-.01em}
+.scheduler-rest{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer}
+.scheduler-rest input{accent-color:var(--accent)}
+.scheduler-day-body{display:grid;gap:10px}
+.scheduler-day-body label{display:grid;gap:5px}
+.scheduler-day-body label>span{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:10px;font-weight:600}
+.scheduler-day-body select{min-height:38px;padding:8px 10px;border:1px solid var(--line-strong);border-radius:10px;background:var(--surface);color:var(--ink);font-size:12px}
+.scheduler-rest-note{margin:0;padding:16px 0;color:var(--muted);font-size:11px;text-align:center}
+.scheduler-day .button{margin-top:auto}
+
+/* ── Client: today's workout ────────────────────────────────── */
+.today-workout{padding:20px;margin-bottom:16px}
+.today-workout-head{display:flex;align-items:center;gap:18px}
+.today-ring{position:relative;width:78px;height:78px;flex:0 0 auto}
+.today-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.today-ring-track{fill:none;stroke:var(--line);stroke-width:7}
+html[data-theme="dark"] .today-ring-track{stroke:var(--line-strong)}
+.today-ring-value{fill:none;stroke:var(--accent);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .5s cubic-bezier(.22,.8,.34,1);filter:drop-shadow(0 0 5px var(--accent-glow))}
+.today-ring-center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;line-height:1}
+.today-ring-center strong{font-family:var(--font-geist-mono),monospace;font-size:17px;color:var(--ink)}
+.today-ring-center span{margin-top:2px;color:var(--muted);font-size:9px}
+.today-workout-copy{flex:1;min-width:0}
+.today-workout-copy h2{margin:3px 0 4px;font-size:19px;letter-spacing:-.02em}
+.today-workout-copy p{margin:0;color:var(--muted);font-size:12px}
+.today-streak{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:999px;background:var(--surface-soft);border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:700;flex:0 0 auto}
+.today-streak.is-complete{background:var(--green-soft);border-color:transparent;color:#218b44}
+.today-streak svg{color:var(--amber)}
+.today-streak.is-complete svg{color:var(--green)}
+html[data-theme="dark"] .today-streak.is-complete{color:var(--green)}
+
+.today-exercise-list{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+.today-exercise-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--surface-soft);transition:opacity .2s ease,background .2s ease}
+.today-exercise-list li:hover{background:var(--accent-grad-soft)}
+.today-open{display:grid;grid-template-columns:56px minmax(0,1fr);align-items:center;gap:14px;min-width:0;padding:0;border:0;background:transparent;font:inherit;text-align:left;color:inherit;cursor:pointer}
+.today-exercise-list li.is-done{opacity:.6}
+.today-exercise-list li.is-done .today-exercise-copy h3{text-decoration:line-through}
+.today-thumb.as-thumb{height:56px}
+.today-exercise-copy{min-width:0}
+.today-exercise-copy span{color:var(--accent);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.today-exercise-copy h3{margin:2px 0 3px;font-size:13px}
+.today-exercise-copy small{color:var(--muted);font-size:10px}
+.today-check{width:38px;height:38px;flex:0 0 auto;display:grid;place-items:center;border:2px solid var(--line-strong);border-radius:50%;background:transparent;color:transparent;cursor:pointer;transition:border-color .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease}
+.today-check:hover{border-color:var(--accent);color:var(--accent)}
+.today-check.is-done{border-color:transparent;background:var(--accent-grad);color:#fff;box-shadow:0 8px 18px -8px var(--accent-glow)}
+
+.today-rest{display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:18px 20px}
+.today-rest-icon{width:44px;height:44px;flex:0 0 auto;display:grid;place-items:center;border-radius:14px;background:var(--accent-grad-soft);color:var(--accent)}
+.today-rest strong{display:block;font-size:15px}
+.today-rest span{color:var(--muted);font-size:12px}
+
+/* ── Client: month calendar ─────────────────────────────────── */
+.calendar-card{padding:20px;margin-bottom:16px}
+.calendar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.calendar-head h2{margin:3px 0 0;font-size:18px;letter-spacing:-.02em}
+.calendar-head .eyebrow{display:inline-flex;align-items:center;gap:5px}
+.calendar-nav{display:flex;align-items:center;gap:7px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.calendar-dow{text-align:center;padding:4px 0;color:var(--faint);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.calendar-cell.is-blank{min-height:0;background:transparent;border:0}
+.calendar-cell.is-day{
+  display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:5px;
+  min-height:92px;padding:8px;border-radius:12px;border:1px solid var(--line);background:var(--surface-soft);
+  text-align:left;cursor:pointer;-webkit-appearance:none;appearance:none;font:inherit;color:inherit;
+  transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease;
+}
+.calendar-cell.is-day:hover{border-color:var(--ring);box-shadow:0 10px 22px -14px var(--accent-glow);transform:translateY(-1px)}
+.calendar-cell.is-day>b{font-size:12px;font-weight:700;color:var(--muted)}
+.calendar-cell.is-day.is-today{border-color:var(--accent);background:var(--accent-grad-soft)}
+.calendar-cell.is-day.is-today>b{color:var(--accent)}
+.calendar-pills{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cal-pill{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;font-style:normal;text-transform:capitalize}
+.cal-pill.workout{background:var(--accent-grad-soft);color:var(--accent)}
+.cal-pill.diet{background:var(--green-soft);color:#218b44}
+.cal-pill.session{background:#eaf0f6;color:#556b80;text-transform:none}
+.cal-pill.rest{background:var(--surface);color:var(--muted);border:1px solid var(--line)}
+html[data-theme="dark"] .cal-pill.diet{color:var(--green)}
+html[data-theme="dark"] .cal-pill.session{background:var(--surface);color:var(--muted)}
+html[data-theme="dark"] .cal-pill.rest{background:var(--canvas)}
+.cal-dot{display:inline-block;width:8px;height:8px;border-radius:3px}
+.cal-dot.workout{background:var(--accent)}
+.cal-dot.diet{background:var(--green)}
+.cal-dot.session{background:#7c93a8}
+.cal-dot.rest{background:var(--line-strong)}
+.calendar-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+.calendar-legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:10px}
+
+/* Day plan popup */
+.day-modal{width:min(620px,100%)}
+.day-panel{padding:26px}
+.day-panel-head{margin-bottom:6px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.day-panel-head h2{margin:5px 0 0;font-size:22px;letter-spacing:-.02em}
+.day-section{margin-top:20px}
+.day-section>h4{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.day-section>h4 svg{color:var(--accent)}
+.day-plan-name{margin:0 0 8px;font-size:14px;font-weight:650;color:var(--ink)}
+.day-empty,.day-rest{margin:0;padding:16px;border:1px dashed var(--line-strong);border-radius:12px;color:var(--muted);font-size:12px;text-align:center}
+.day-session-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.day-session-list li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
+.day-session-list li>span:first-child{font-family:var(--font-geist-mono),monospace;font-size:11px;color:var(--accent);font-weight:700}
+.day-section .client-exercise-list,.day-section .client-meal-timeline{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+@media(max-width:620px){
+  .calendar-cell.is-day{min-height:74px;padding:6px}
+  .cal-pill{font-size:8px;padding:2px 4px}
+  .day-panel{padding:22px 16px}
+}
+
+/* ── Client: assigned plan polish (professional header + rows) ─ */
+.client-plan-title{background:var(--accent-grad-soft)}
+.client-plan-title .plan-metrics{display:flex;gap:9px;min-width:0}
+.client-plan-title .plan-metrics>div{flex:1;min-width:64px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);text-align:center}
+html[data-theme="dark"] .client-plan-title .plan-metrics>div{background:var(--surface-soft)}
+.client-plan-title .plan-metrics strong{display:block;font-family:var(--font-geist-mono),monospace;font-size:18px;line-height:1;color:var(--ink)}
+.client-plan-title .plan-metrics span{display:block;margin-top:4px;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em}
+.client-meal-timeline article{transition:background .16s ease}
+.client-meal-timeline article:hover{background:var(--accent-grad-soft)}
+.client-meal-timeline time{color:var(--accent)}
+.client-meal-timeline .meal-type{background:var(--accent-grad-soft);color:var(--accent);font-weight:700}
+
+/* ── Client: exercise / meal detail popup ───────────────────── */
+.client-exercise-list.rich article.is-clickable,.client-meal-timeline.rich article.is-clickable{cursor:pointer}
+.client-exercise-list.rich article.is-clickable:focus-visible,.client-meal-timeline.rich article.is-clickable:focus-visible{outline:3px solid var(--ring);outline-offset:-2px}
+.detail-modal{width:min(560px,100%)}
+.detail-panel{display:grid;gap:16px;padding:28px}
+.detail-panel .exercise-media.as-hero{border-radius:16px}
+.detail-head h2{margin:6px 0 8px;font-size:22px;letter-spacing:-.02em}
+.detail-tags{display:flex;flex-wrap:wrap;gap:7px}
+.detail-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.detail-metrics>div{padding:12px 8px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft);text-align:center}
+.detail-metrics strong{display:block;font-family:var(--font-geist-mono),monospace;font-size:17px;color:var(--ink)}
+.detail-metrics span{color:var(--muted);font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.detail-instructions h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.detail-instructions p{margin:0;font-size:13px;line-height:1.7;color:var(--ink)}
+.detail-ingredients{margin:0;padding-left:18px;display:grid;gap:5px}
+.detail-ingredients li{font-size:13px;line-height:1.5;color:var(--ink)}
+@media(max-width:560px){.detail-metrics{grid-template-columns:repeat(2,1fr)}.detail-panel{padding:22px 18px}}
+
+@media(max-width:640px){
+  .today-workout-head{flex-wrap:wrap}
+  .today-streak{order:3}
+  .scheduler-week{grid-template-columns:1fr 1fr}
+}
+@media(max-width:460px){
+  .scheduler-week{grid-template-columns:1fr}
+}

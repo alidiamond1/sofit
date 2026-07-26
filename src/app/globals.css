@@ -14,5 +14,10 @@
 @import "../styles/analytics-dashboard.css";
 @import "../styles/messages.css";
 @import "../styles/icon-system.css";
+@import "../styles/premium.css";
+@import "../styles/workout.css";
+@import "../styles/schedule.css";
 
 /* Shared portal styles load in dependency order above. */
+/* premium.css elevates the whole UI to the glass/depth system; workout.css adds the training experience. */
+/* css-graph rebuild marker: v4 (forces Turbopack to recompile @imported stylesheets) */

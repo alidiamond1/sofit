@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
+import { STARTER_EXERCISES } from "@/lib/workout/starter-exercises";
 
 export type PlanActionState = { error?: string; success?: string };
 
@@ -18,6 +19,7 @@ const mealTemplateSchema = z.object({
   fat: nullableMacro,
   ingredients: z.string().trim().min(2).max(5000),
   instructions: z.string().trim().max(5000).optional(),
+  mediaUrl: z.union([z.literal(""), z.string().url().max(1000)]),
 });
 
 const exerciseSchema = z.object({
@@ -85,6 +87,7 @@ export async function createMealTemplateAction(
     fat: optionalNumber(formData.get("fat_g")),
     ingredients: formData.get("ingredients"),
     instructions: formData.get("instructions") || undefined,
+    mediaUrl: String(formData.get("media_url") || "").trim(),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Check the meal details." };
 
@@ -97,6 +100,7 @@ export async function createMealTemplateAction(
     fat_g: parsed.data.fat ?? null,
     ingredients: parsed.data.ingredients,
     instructions: parsed.data.instructions || null,
+    media_url: parsed.data.mediaUrl || null,
     is_active: true,
   });
   revalidatePath("/coach/diet-plans");
@@ -131,6 +135,36 @@ export async function createExerciseAction(
   });
   revalidatePath("/coach/workout-plans");
   return { success: `${parsed.data.name} was added to the exercise library.` };
+}
+
+export async function addStarterExercisesAction(
+  _previous: PlanActionState,
+  formData: FormData,
+): Promise<PlanActionState> {
+  await requireRole("coach");
+  const raw = safeJson(formData.get("names"));
+  const requested = Array.isArray(raw) ? raw.map(String) : [];
+  const pool = requested.length ? STARTER_EXERCISES.filter((exercise) => requested.includes(exercise.name)) : STARTER_EXERCISES;
+  if (pool.length === 0) return { error: "No starter exercises were selected." };
+
+  const db = database();
+  const existing = await db("exercise_library").select("name");
+  const existingNames = new Set(existing.map((row) => String(row.name).toLowerCase()));
+  const toInsert = pool.filter((exercise) => !existingNames.has(exercise.name.toLowerCase()));
+  if (toInsert.length === 0) return { success: "Those exercises are already in your library." };
+
+  await db("exercise_library").insert(toInsert.map((exercise) => ({
+    name: exercise.name,
+    muscle_group: exercise.muscle_group,
+    equipment: exercise.equipment,
+    difficulty: exercise.difficulty,
+    motion_type: exercise.motion_type,
+    media_url: exercise.media_url,
+    instructions: exercise.instructions,
+    is_active: true,
+  })));
+  revalidatePath("/coach/workout-plans");
+  return { success: `Added ${toInsert.length} starter exercise${toInsert.length === 1 ? "" : "s"} with demos.` };
 }
 
 export async function createDietPlanAction(
@@ -173,6 +207,7 @@ export async function createDietPlanAction(
       fat_g: meal.fat_g,
       ingredients: String(meal.ingredients).split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean),
       instructions: meal.instructions,
+      media_url: meal.media_url,
     };
   });
 
@@ -281,6 +316,7 @@ export async function updateMealTemplateAction(
     fat: optionalNumber(formData.get("fat_g")),
     ingredients: formData.get("ingredients"),
     instructions: formData.get("instructions") || undefined,
+    mediaUrl: String(formData.get("media_url") || "").trim(),
   });
   if (!id.success) return { error: "The selected meal is invalid." };
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Check the meal details." };
@@ -296,6 +332,7 @@ export async function updateMealTemplateAction(
     fat_g: parsed.data.fat ?? null,
     ingredients: parsed.data.ingredients,
     instructions: parsed.data.instructions || null,
+    media_url: parsed.data.mediaUrl || null,
     updated_at: db.fn.now(),
   });
   revalidatePath("/coach/diet-plans");
@@ -409,6 +446,7 @@ export async function updateDietPlanAction(
       fat_g: meal.fat_g,
       ingredients: String(meal.ingredients).split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean),
       instructions: meal.instructions,
+      media_url: meal.media_url,
     };
   });
   await db.transaction(async (trx) => {
