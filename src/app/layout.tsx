@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { PwaRegister } from "@/components/pwa-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,14 +14,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "SoFit - Online Fitness Coaching", template: "%s - SoFit" },
-  description: "Personal plans, clear progress, and focused online fitness coaching.",
+  applicationName: "SoFit",
+  title: { default: "SoFit — Fitness & Nutrition Coaching", template: "%s · SoFit" },
+  description: "Personal training, custom diet & workout plans, and daily accountability — all in one calm coaching app.",
+  appleWebApp: { capable: true, title: "SoFit", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1f75b9",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {children}
+        <PwaRegister />
+      </body>
     </html>
   );
 }
