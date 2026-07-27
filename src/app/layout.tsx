@@ -25,6 +25,11 @@ export const viewport: Viewport = {
   themeColor: "#1f75b9",
 };
 
+/* Caps every page render and Server Action under this layout. Without it a
+   stalled query can hold an invocation open until the platform ceiling, which
+   the visitor experiences as a page that loads forever and then 503s. */
+export const maxDuration = 20;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>

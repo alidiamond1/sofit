@@ -1,5 +1,6 @@
 import "server-only";
 
+import { redirect } from "next/navigation";
 import { database } from "@/lib/db";
 import type { ThemePreference } from "@/components/dashboard/theme-sync";
 
@@ -27,6 +28,11 @@ export async function loadDashboardShell(userId: number) {
       .limit(6),
     database()("messages").where({ recipient_id: userId }).whereNull("read_at").count({ total: "*" }).first(),
   ]);
+  // A session cookie outlives its user row for up to a week (deleted account,
+  // restored database). Reading `.role` off undefined would crash the layout
+  // with no way back, so hand them a clean slate instead.
+  if (!user) redirect("/api/reset");
+
   const theme: ThemePreference = saved?.theme === "light" || saved?.theme === "dark" ? saved.theme : "system";
   const role = String(user.role || "client");
   const notifications = [
