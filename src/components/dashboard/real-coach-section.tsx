@@ -14,6 +14,9 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { CoachPackages } from "@/components/packages/coach-packages";
+import { BookConsultationButton, CoachConsultationsWorkspace, type ConsultationRow, type ConsultationClientOption } from "@/components/dashboard/coach-consultations";
+import { BookSessionButton, CoachPersonalTrainingWorkspace, type SessionRow, type SessionClientOption, type SessionServiceOption } from "@/components/dashboard/coach-personal-training";
+import { CoachCheckInsWorkspace, type CheckInRow } from "@/components/dashboard/coach-check-ins";
 import { CoachDietPlansPage, CoachWorkoutPlansPage } from "@/components/plans/coach-plan-pages";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
 import { CoachServicesWorkspace, type EditableService } from "@/components/services/coach-services";
@@ -315,6 +318,125 @@ async function CoachServices() {
   return <><PageHeader eyebrow="Coach controlled" title="Services" description="Create and manage coaching offers, pricing, availability, and client assignments." /><CoachServicesWorkspace services={rows} /></>;
 }
 
+async function CoachConsultations() {
+  const db = database();
+  const [consultationRows, clientRows] = await Promise.all([
+    db("consultations")
+      .select("consultations.id", "consultations.starts_at", "consultations.duration_minutes", "consultations.status", "consultations.session_notes", "users.name as client")
+      .join("clients", "clients.id", "consultations.client_id")
+      .join("users", "users.id", "clients.user_id")
+      .orderBy("consultations.starts_at", "desc"),
+    db("clients")
+      .select("clients.id", "clients.status", "users.name")
+      .join("users", "users.id", "clients.user_id")
+      .orderBy("users.name"),
+  ]);
+
+  const consultations: ConsultationRow[] = consultationRows.map((row) => ({
+    id: numeric(row.id),
+    client: String(row.client),
+    startsAt: new Date(row.starts_at).toISOString(),
+    durationMinutes: numeric(row.duration_minutes),
+    status: row.status as ConsultationRow["status"],
+    notes: String(row.session_notes || ""),
+  }));
+  const clients: ConsultationClientOption[] = clientRows.map((row) => ({ id: numeric(row.id), name: String(row.name), status: String(row.status) }));
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Coaching"
+        title="Consultations"
+        description="Book intake calls and assessments, then track them through to completion."
+        actions={<BookConsultationButton clients={clients} />}
+      />
+      <CoachConsultationsWorkspace consultations={consultations} />
+    </>
+  );
+}
+
+async function CoachPersonalTraining() {
+  const db = database();
+  const [sessionRows, clientRows, serviceRows] = await Promise.all([
+    db("sessions")
+      .select("sessions.id", "sessions.starts_at", "sessions.duration_minutes", "sessions.attendance", "sessions.notes", "users.name as client", "services.name as service", "services.tier")
+      .join("clients", "clients.id", "sessions.client_id")
+      .join("users", "users.id", "clients.user_id")
+      .leftJoin("services", "services.id", "sessions.service_id")
+      .orderBy("sessions.starts_at", "desc"),
+    db("clients")
+      .select("clients.id", "clients.status", "users.name")
+      .join("users", "users.id", "clients.user_id")
+      .orderBy("users.name"),
+    db("services").select("id", "name", "tier").where({ type: "personal_training", is_active: true }).orderBy("tier"),
+  ]);
+
+  const sessions: SessionRow[] = sessionRows.map((row) => ({
+    id: numeric(row.id),
+    client: String(row.client),
+    service: String(row.service || row.tier || "PT"),
+    startsAt: new Date(row.starts_at).toISOString(),
+    durationMinutes: numeric(row.duration_minutes),
+    attendance: row.attendance as SessionRow["attendance"],
+    notes: String(row.notes || ""),
+  }));
+  const clients: SessionClientOption[] = clientRows.map((row) => ({ id: numeric(row.id), name: String(row.name), status: String(row.status) }));
+  const services: SessionServiceOption[] = serviceRows.map((row) => ({ id: numeric(row.id), name: String(row.name), tier: row.tier ? String(row.tier) : null }));
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Coaching"
+        title="Personal training"
+        description="Log 1:1 sessions, track attendance, and keep a record of every client you train."
+        actions={<BookSessionButton clients={clients} services={services} />}
+      />
+      <CoachPersonalTrainingWorkspace sessions={sessions} />
+    </>
+  );
+}
+
+function normalizeDate(value: unknown): string {
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+async function CoachCheckIns() {
+  const db = database();
+  const rows = await db("check_ins")
+    .select("check_ins.*", "clients.id as client_id", "users.name as client")
+    .join("clients", "clients.id", "check_ins.client_id")
+    .join("users", "users.id", "clients.user_id")
+    .orderBy("week_of", "desc");
+
+  const checkIns: CheckInRow[] = rows.map((row) => ({
+    id: numeric(row.id),
+    clientId: numeric(row.client_id),
+    client: String(row.client),
+    weekOf: normalizeDate(row.week_of),
+    weightKg: row.weight_kg != null ? Number(row.weight_kg) : null,
+    dietPct: numeric(row.diet_adherence_pct),
+    workoutPct: numeric(row.workout_completion_pct),
+    energy: row.energy_score != null ? numeric(row.energy_score) : null,
+    sleep: row.sleep_score != null ? numeric(row.sleep_score) : null,
+    clientNotes: String(row.client_notes || ""),
+    coachFeedback: String(row.coach_feedback || ""),
+    status: row.status as CheckInRow["status"],
+  }));
+
+  return (
+    <>
+      <PageHeader eyebrow="Coaching" title="Check-ins" description="Weekly submissions from every client, grouped and trended over time." />
+      <CoachCheckInsWorkspace checkIns={checkIns} />
+    </>
+  );
+}
+
 async function CoachListSection({ section }: { section: string }) {
   const db = database();
   let title = "";
@@ -322,24 +444,12 @@ async function CoachListSection({ section }: { section: string }) {
   let rows: Array<Record<string, unknown>> = [];
   let columns: Array<{ key: string; label: string; format?: (value: unknown, row: Record<string, unknown>) => React.ReactNode }> = [];
 
-  if (section === "consultations") {
-    title = "Consultations"; description = "Scheduled and completed client consultation records.";
-    rows = await db("consultations").select("consultations.*", "users.name as client").join("clients", "clients.id", "consultations.client_id").join("users", "users.id", "clients.user_id").orderBy("starts_at", "desc");
-    columns = [{ key: "client", label: "Client" }, { key: "starts_at", label: "Starts", format: (v) => dateTime.format(new Date(String(v))) }, { key: "duration_minutes", label: "Minutes" }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }, { key: "session_notes", label: "Notes", format: (v) => String(v || "-") }];
-  } else if (section === "diet-plans" || section === "workout-plans") {
+  if (section === "diet-plans" || section === "workout-plans") {
     const diet = section === "diet-plans";
     title = diet ? "Diet plans" : "Workout plans"; description = `${title} created and assigned to your clients.`;
     const table = diet ? "diet_plans" : "workout_plans";
     rows = await db(table).select(`${table}.*`, "users.name as client").join("clients", "clients.id", `${table}.client_id`).join("users", "users.id", "clients.user_id").orderBy(`${table}.updated_at`, "desc");
     columns = [{ key: "title", label: "Plan" }, { key: "client", label: "Client" }, { key: "version", label: "Version" }, { key: diet ? "daily_calories" : "weeks", label: diet ? "Calories" : "Weeks" }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }, { key: "starts_on", label: "Starts", format: (v) => v ? dateOnly.format(new Date(String(v))) : "-" }];
-  } else if (section === "personal-training") {
-    title = "Personal training"; description = "Session records for assigned clients.";
-    rows = await db("sessions").select("sessions.*", "users.name as client", "services.name as service", "services.tier").join("clients", "clients.id", "sessions.client_id").join("users", "users.id", "clients.user_id").leftJoin("services", "services.id", "sessions.service_id").orderBy("starts_at", "desc");
-    columns = [{ key: "client", label: "Client" }, { key: "service", label: "Service", format: (v, row) => String(v || row.tier || "PT") }, { key: "starts_at", label: "Starts", format: (v) => dateTime.format(new Date(String(v))) }, { key: "duration_minutes", label: "Minutes" }, { key: "attendance", label: "Attendance", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }];
-  } else if (section === "check-ins") {
-    title = "Check-ins"; description = "Weekly submissions received from clients.";
-    rows = await db("check_ins").select("check_ins.*", "users.name as client").join("clients", "clients.id", "check_ins.client_id").join("users", "users.id", "clients.user_id").orderBy("week_of", "desc");
-    columns = [{ key: "client", label: "Client" }, { key: "week_of", label: "Week", format: (v) => dateOnly.format(new Date(String(v))) }, { key: "weight_kg", label: "Weight", format: (v) => v ? `${v} kg` : "-" }, { key: "diet_adherence_pct", label: "Diet" , format: (v) => `${numeric(v)}%`}, { key: "workout_completion_pct", label: "Workout", format: (v) => `${numeric(v)}%` }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }];
   } else if (section === "payments") {
     title = "Payments"; description = "Client invoices, due dates, and payment status.";
     rows = await db("invoices").select("invoices.*", "users.name as client", "services.name as service").join("clients", "clients.id", "invoices.client_id").join("users", "users.id", "clients.user_id").leftJoin("services", "services.id", "invoices.service_id").orderBy("due_on", "desc");
@@ -526,6 +636,9 @@ export async function RealCoachSection({ section = "home", selectedClientId }: {
   if (section === "clients") return <CoachClients />;
   if (section === "services") return <CoachServices />;
   if (section === "packages") return <CoachPackages />;
+  if (section === "consultations") return <CoachConsultations />;
+  if (section === "personal-training") return <CoachPersonalTraining />;
+  if (section === "check-ins") return <CoachCheckIns />;
   if (section === "diet-plans") return <CoachDietPlansPage />;
   if (section === "workout-plans") return <CoachWorkoutPlansPage />;
   if (section === "schedule") return <CoachSchedule selectedClientId={selectedClientId} />;

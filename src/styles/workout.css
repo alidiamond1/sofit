@@ -200,7 +200,7 @@ html[data-theme="dark"] .starter-added{background:var(--green-soft);color:var(--
 }
 
 /* 5b ── Meal media: coach library cards + client diet rows ──── */
-.meal-item-card{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
+.meal-item-card{display:flex;align-items:center;gap:11px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
 .exercise-media.meal-thumb.as-thumb{width:48px;height:48px;flex:0 0 auto;border-radius:10px}
 .meal-item-copy{flex:1;min-width:0}
 .meal-item-copy .library-item-type{color:var(--accent);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}

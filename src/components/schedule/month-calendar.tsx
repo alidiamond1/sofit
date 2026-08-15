@@ -4,15 +4,15 @@ import { CalendarDays, ChevronLeft, ChevronRight, Clock, Dumbbell, Utensils, X }
 import { useState } from "react";
 import { WEEKDAY_SHORT } from "@/lib/schedule";
 import { ModalPortal } from "@/components/dashboard/modal-portal";
-import { WorkoutExerciseList, MealTimeline, type ClientExercise, type ClientMeal } from "@/components/plans/client-plan-views";
+import { WorkoutExerciseList, MealTimeline, type ExerciseDetail, type MealDetail } from "@/components/plans/client-plan-views";
 
 export type CalendarSession = { date: string; title: string; time: string; status: string };
 
 export type DaySchedule = {
   weekday: number;
   isRest: boolean;
-  workout: { title: string; dayLabel: string | null; exercises: ClientExercise[] } | null;
-  diet: { title: string; meals: ClientMeal[] } | null;
+  workout: { title: string; dayLabel: string | null; exercises: ExerciseDetail[] } | null;
+  diet: { title: string; meals: MealDetail[] } | null;
 };
 
 function pad(value: number) {

@@ -1,6 +1,6 @@
 /* Coach clients */
 .client-management{display:grid;gap:20px}
-.client-pipeline,.client-directory-card{border:1px solid var(--line);border-radius:22px;background:#fff;box-shadow:0 14px 40px rgba(31,71,108,.07)}
+.client-pipeline,.client-directory-card{min-width:0;border:1px solid var(--line);border-radius:22px;background:#fff;box-shadow:0 14px 40px rgba(31,71,108,.07)}
 .client-pipeline{padding:24px}
 .client-pipeline-heading,.client-directory-heading,.invite-process-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
 .client-pipeline-heading h2,.client-directory-heading h2,.invite-process-heading h2,.invite-summary-heading h2,.invite-composer-heading h2{margin:5px 0 0;font-size:20px;letter-spacing:-.035em}

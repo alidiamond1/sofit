@@ -22,6 +22,10 @@ function createDatabase() {
   const databaseUrl = process.env.DATABASE_URL?.trim();
   const sslEnabled = ["1", "true", "required"].includes((process.env.DB_SSL || "").toLowerCase());
   const poolMax = Math.max(1, Number(process.env.DB_POOL_MAX || 3));
+  // Stays 0 (the serverless-safe default, see rule 2 above) unless a deployment
+  // opts in — e.g. local dev over a slow/remote link, where reconnecting from
+  // scratch on every request after a short idle gap is the dominant source of lag.
+  const poolMin = Math.min(poolMax, Math.max(0, Number(process.env.DB_POOL_MIN || 0)));
 
   if (process.env.NODE_ENV === "production" && !databaseUrl && !process.env.DB_HOST) {
     throw new Error("Configure DATABASE_URL or the DB_HOST/DB_NAME/DB_USER/DB_PASSWORD variables.");
@@ -48,7 +52,7 @@ function createDatabase() {
           ...driverOptions,
         },
     pool: {
-      min: 0,
+      min: poolMin,
       max: poolMax,
       // Give up rather than queue forever behind a dead connection.
       acquireTimeoutMillis: CONNECT_TIMEOUT_MS,

@@ -1,4 +1,4 @@
-import { Activity, Database, Dumbbell, ReceiptText, ShieldCheck, TrendingUp, Users } from "lucide-react";
+import { Activity, Dumbbell, ReceiptText, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { HorizontalBars, RingChart, TrendLineChart } from "./charts";
 import { Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
 
@@ -55,8 +55,7 @@ export function CoachAnalyticsDashboard({ data }: { data: CoachAnalyticsData }) 
   const activeRate = data.totalClients ? Math.round((data.activeClients / data.totalClients) * 100) : 0;
   const averageAdherence = Math.round((data.averageDiet + data.averageWorkout) / 2);
   return <div className="coach-analytics-dashboard">
-    <PageHeader eyebrow="Business intelligence" title="Analytics centre" description="Revenue, client health, coaching delivery, and service demand in one decision-ready view." actions={<div className="analytics-live-source" title="Queried directly from the SoFit MySQL database"><i><Database size={15} /></i><span><strong>Live database</strong><small>No external analytics API</small></span></div>} />
-    <div className="analytics-source-strip"><div><span className="analytics-live-dot" /><strong>MySQL data is live</strong><small>Last prepared {data.generatedAt}</small></div><p>Sources: <b>invoices</b>, <b>clients</b>, <b>check_ins</b>, <b>services</b>, and <b>sessions</b>.</p><Badge tone="success">Server verified</Badge></div>
+    <PageHeader eyebrow="Business intelligence" title="Analytics centre" description="Revenue, client health, coaching delivery, and service demand in one decision-ready view." />
     <div className="analytics-kpi-grid">
       <StatCard label="Revenue this month" value={money.format(data.currentRevenue)} change={revenueDelta.change} trend={revenueDelta.trend} note={`${money.format(data.lifetimeRevenue)} lifetime paid`} icon={<TrendingUp size={18} />} accent="green" points={data.revenueTrend.map((point) => point.value)} />
       <StatCard label="Active clients" value={String(data.activeClients)} change={`${activeRate}% of all clients`} note={`${data.totalClients} client records`} icon={<Users size={18} />} points={data.clientGrowth.map((point) => point.value)} />

@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Dumbbell,
+  Flame,
   Mail,
   Moon,
   Scale,
@@ -16,7 +17,7 @@ import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { HorizontalBars, TrendLineChart } from "./charts";
 import { Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
-import { WorkoutExerciseList, MealTimeline } from "@/components/plans/client-plan-views";
+import { WorkoutExerciseLogList, DietMealLogList, PlanCardShell } from "@/components/plans/client-plan-views";
 import { TodayWorkout } from "@/components/schedule/today-workout";
 import { MonthCalendar, type DaySchedule } from "@/components/schedule/month-calendar";
 import { exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
@@ -55,6 +56,20 @@ function tone(status: string): "success" | "warning" | "danger" | "neutral" | "b
 function EmptyState({ text }: { text: string }) {
   return <Card className="empty-state"><ClipboardList size={24} /><h3>Nothing here yet</h3><p>{text}</p></Card>;
 }
+
+/** MySQL DATE columns come back as local-midnight Date objects; re-read the
+ *  parts with local getters so this never drifts a day via UTC conversion. */
+function normalizeDate(value: unknown): string {
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+type PlanCompletionRow = { item_key: string; scheduled_on: unknown; details: unknown };
 
 async function getClientContext() {
   const session = await requireRole("client");
@@ -232,66 +247,132 @@ async function ClientHome() {
   );
 }
 
-function DietPlanCard({ plan }: { plan: Record<string, unknown> }) {
+function DietPlanCard({ plan, today, completions }: { plan: Record<string, unknown>; today: string; completions: PlanCompletionRow[] }) {
   const meals = jsonArray(plan.meals);
+  const assignedOn = plan.starts_on || plan.created_at;
   return (
     <Card className="client-detailed-plan">
-      <div className="client-plan-title">
-        <div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Diet plan - version {String(plan.version)}</span><h2>{String(plan.title)}</h2></div>
-        <div className="plan-metrics"><div><strong>{String(plan.daily_calories || "-")}</strong><span>kcal</span></div><div><strong>{String(plan.protein_g || "-")}</strong><span>protein g</span></div><div><strong>{String(plan.carbs_g || "-")}</strong><span>carbs g</span></div></div>
-      </div>
-      <MealTimeline meals={meals.map((meal) => ({
-        name: String(meal.name || "Meal"),
-        type: String(meal.type || "meal"),
-        time: String(meal.time || ""),
-        calories: meal.calories ? String(meal.calories) : "",
-        protein: meal.protein_g ? String(meal.protein_g) : "",
-        carbs: meal.carbs_g ? String(meal.carbs_g) : "",
-        fat: meal.fat_g ? String(meal.fat_g) : "",
-        mediaUrl: meal.media_url ? String(meal.media_url) : null,
-        ingredients: Array.isArray(meal.ingredients) ? meal.ingredients.map(String) : Array.isArray(meal.items) ? (meal.items as unknown[]).map(String) : [],
-        instructions: meal.instructions ? String(meal.instructions) : null,
-      }))} />
+      <PlanCardShell
+        title={<div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Diet plan - version {String(plan.version)}{assignedOn ? ` · Assigned ${dateOnly.format(new Date(String(assignedOn)))}` : ""}</span><h2>{String(plan.title)}</h2></div>}
+        metrics={<div className="plan-metrics"><div><strong>{String(plan.daily_calories || "-")}</strong><span>kcal</span></div><div><strong>{String(plan.protein_g || "-")}</strong><span>protein g</span></div><div><strong>{String(plan.carbs_g || "-")}</strong><span>carbs g</span></div></div>}
+      >
+        <DietMealLogList
+          today={today}
+          meals={meals.map((meal, index) => {
+            const key = String(meal.meal_id ?? index);
+            const rows = completions.filter((row) => row.item_key === key);
+            const history = rows.map((row) => normalizeDate(row.scheduled_on));
+            return {
+              name: String(meal.name || "Meal"),
+              type: String(meal.type || "meal"),
+              time: String(meal.time || ""),
+              calories: meal.calories ? String(meal.calories) : "",
+              protein: meal.protein_g ? String(meal.protein_g) : "",
+              carbs: meal.carbs_g ? String(meal.carbs_g) : "",
+              fat: meal.fat_g ? String(meal.fat_g) : "",
+              mediaUrl: meal.media_url ? String(meal.media_url) : null,
+              ingredients: Array.isArray(meal.ingredients) ? meal.ingredients.map(String) : Array.isArray(meal.items) ? (meal.items as unknown[]).map(String) : [],
+              instructions: meal.instructions ? String(meal.instructions) : null,
+              key,
+              dietPlanId: Number(plan.id),
+              doneToday: history.includes(today),
+              history,
+            };
+          })}
+        />
+      </PlanCardShell>
     </Card>
   );
 }
 
-function WorkoutPlanCard({ plan }: { plan: Record<string, unknown> }) {
+function WorkoutPlanCard({ plan, today, completions }: { plan: Record<string, unknown>; today: string; completions: PlanCompletionRow[] }) {
   const exercises = jsonArray(plan.exercises);
   const days = jsonArray(plan.weekly_split);
+  const assignedOn = plan.starts_on || plan.created_at;
   return (
     <Card className="client-detailed-plan training">
-      <div className="client-plan-title">
-        <div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Workout program - version {String(plan.version)}</span><h2>{String(plan.title)}</h2></div>
-        <div className="plan-metrics"><div><strong>{String(plan.weeks || "-")}</strong><span>weeks</span></div><div><strong>{days.length || new Set(exercises.map((item) => String(item.day))).size}</strong><span>days</span></div><div><strong>{exercises.length}</strong><span>exercises</span></div></div>
-      </div>
-      <WorkoutExerciseList exercises={exercises.map((exercise) => ({
-        name: String(exercise.exercise || "Exercise"),
-        muscleGroup: String(exercise.muscle_group || ""),
-        equipment: String(exercise.equipment || "Bodyweight"),
-        difficulty: String(exercise.difficulty || "beginner"),
-        mediaUrl: exercise.media_url ? String(exercise.media_url) : null,
-        day: String(exercise.day || "Training day"),
-        sets: String(exercise.sets ?? "-"),
-        reps: String(exercise.reps ?? "-"),
-        rpe: String(exercise.rpe ?? "-"),
-        restSeconds: Number(exercise.rest_seconds ?? 0),
-        instructions: exercise.instructions ? String(exercise.instructions) : null,
-      }))} />
+      <PlanCardShell
+        title={<div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Workout program - version {String(plan.version)}{assignedOn ? ` · Assigned ${dateOnly.format(new Date(String(assignedOn)))}` : ""}</span><h2>{String(plan.title)}</h2></div>}
+        metrics={<div className="plan-metrics"><div><strong>{String(plan.weeks || "-")}</strong><span>weeks</span></div><div><strong>{days.length || new Set(exercises.map((item) => String(item.day))).size}</strong><span>days</span></div><div><strong>{exercises.length}</strong><span>exercises</span></div></div>}
+      >
+        <WorkoutExerciseLogList exercises={exercises.map((exercise, index) => {
+          const key = String(exercise.exercise_id ?? index);
+          const rows = completions
+            .filter((row) => row.item_key === key)
+            .map((row) => {
+              const details = (typeof row.details === "string" ? safeParseJson(row.details) : row.details) as Record<string, unknown> | null;
+              return {
+                date: normalizeDate(row.scheduled_on),
+                setsCompleted: details?.setsCompleted ? String(details.setsCompleted) : null,
+                repsCompleted: details?.repsCompleted ? String(details.repsCompleted) : null,
+                weightKg: details?.weightKg ? String(details.weightKg) : null,
+                notes: details?.notes ? String(details.notes) : null,
+              };
+            })
+            .sort((a, b) => (a.date < b.date ? 1 : -1));
+          const todayEntry = rows.find((row) => row.date === today) || null;
+          return {
+            name: String(exercise.exercise || "Exercise"),
+            muscleGroup: String(exercise.muscle_group || ""),
+            equipment: String(exercise.equipment || "Bodyweight"),
+            difficulty: String(exercise.difficulty || "beginner"),
+            mediaUrl: exercise.media_url ? String(exercise.media_url) : null,
+            day: String(exercise.day || "Training day"),
+            sets: String(exercise.sets ?? "-"),
+            reps: String(exercise.reps ?? "-"),
+            rpe: String(exercise.rpe ?? "-"),
+            restSeconds: Number(exercise.rest_seconds ?? 0),
+            instructions: exercise.instructions ? String(exercise.instructions) : null,
+            key,
+            workoutPlanId: Number(plan.id),
+            doneToday: Boolean(todayEntry),
+            loggedToday: todayEntry,
+            history: rows,
+          };
+        })} />
+      </PlanCardShell>
     </Card>
   );
+}
+
+function safeParseJson(value: string): unknown {
+  try { return JSON.parse(value); } catch { return null; }
 }
 
 async function ClientDietPlans() {
   const { client } = await getClientContext();
+  const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
+  const today = todayISO(String(settingsRow?.timezone || "Africa/Nairobi"));
   const dietPlans = await database()("diet_plans").where({ client_id: client.id }).orderBy("updated_at", "desc");
-  return <><PageHeader eyebrow="Nutrition" title="My diet plan" description="Meals, calories, and macro targets assigned by your coach." />{dietPlans.length ? <div className="client-plan-stack">{dietPlans.map((plan) => <DietPlanCard key={plan.id} plan={plan} />)}</div> : <EmptyState text="Your coach has not assigned a diet plan yet." />}</>;
+  const planIds = dietPlans.map((plan) => Number(plan.id));
+  const completions: PlanCompletionRow[] = planIds.length
+    ? await database()("plan_completions").select("plan_id", "item_key", "scheduled_on", "details").where({ client_id: client.id, plan_type: "diet" }).whereIn("plan_id", planIds)
+    : [];
+  const byPlan = new Map<number, PlanCompletionRow[]>();
+  for (const row of completions as Array<PlanCompletionRow & { plan_id: number }>) {
+    const list = byPlan.get(Number(row.plan_id)) || [];
+    list.push(row);
+    byPlan.set(Number(row.plan_id), list);
+  }
+  return <><PageHeader eyebrow="Nutrition" title="My diet plan" description="Meals, calories, and macro targets assigned by your coach." />{dietPlans.length ? <div className="client-plan-stack">{dietPlans.map((plan) => <DietPlanCard key={plan.id} plan={plan} today={today} completions={byPlan.get(Number(plan.id)) || []} />)}</div> : <EmptyState text="Your coach has not assigned a diet plan yet." />}</>;
 }
 
 async function ClientWorkoutPlans() {
   const { client } = await getClientContext();
+  const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
+  const today = todayISO(String(settingsRow?.timezone || "Africa/Nairobi"));
   const workoutPlans = await database()("workout_plans").where({ client_id: client.id }).orderBy("updated_at", "desc");
-  return <><PageHeader eyebrow="Training" title="My workout plan" description="Your weekly split, exercises, sets, reps, RPE, and rest guidance." />{workoutPlans.length ? <div className="client-plan-stack">{workoutPlans.map((plan) => <WorkoutPlanCard key={plan.id} plan={plan} />)}</div> : <EmptyState text="Your coach has not assigned a workout plan yet." />}</>;
+  const planIds = workoutPlans.map((plan) => Number(plan.id));
+  const completions: PlanCompletionRow[] = planIds.length
+    ? await database()("plan_completions").select("plan_id", "item_key", "scheduled_on", "details").where({ client_id: client.id, plan_type: "workout" }).whereIn("plan_id", planIds)
+    : [];
+  const byPlan = new Map<number, PlanCompletionRow[]>();
+  for (const row of completions as Array<PlanCompletionRow & { plan_id: number }>) {
+    const list = byPlan.get(Number(row.plan_id)) || [];
+    list.push(row);
+    byPlan.set(Number(row.plan_id), list);
+  }
+  return <><PageHeader eyebrow="Training" title="My workout plan" description="Your weekly split, exercises, sets, reps, RPE, and rest guidance." />{workoutPlans.length ? <div className="client-plan-stack">{workoutPlans.map((plan) => <WorkoutPlanCard key={plan.id} plan={plan} today={today} completions={byPlan.get(Number(plan.id)) || []} />)}</div> : <EmptyState text="Your coach has not assigned a workout plan yet." />}</>;
 }
 
 async function ClientSessions() {
@@ -395,15 +476,41 @@ async function ClientCheckIn() {
       <PageHeader title="Weekly check-in" description="Share this week's progress, adherence, and notes with your coach." />
       <div className="checkin-form-layout">
         <Card className="checkin-form">
-          <form action={submitClientCheckInAction}>
-            <div className="form-grid">
-              <label><span>Current weight (kg)</span><input name="weight_kg" type="number" min="1" max="500" step="0.1" required /></label>
-              <label><span>Diet adherence (%)</span><input name="diet_adherence_pct" type="number" min="0" max="100" required /></label>
-              <label><span>Workout completion (%)</span><input name="workout_completion_pct" type="number" min="0" max="100" required /></label>
-              <label><span>Energy (1-10)</span><input name="energy_score" type="number" min="1" max="10" required /></label>
-              <label><span>Sleep quality (1-10)</span><input name="sleep_score" type="number" min="1" max="10" required /></label>
-              <label className="full"><span>Wins, challenges, and coach notes</span><textarea name="client_notes" rows={5} required /></label>
+          <form action={submitClientCheckInAction} className="checkin-form-grid">
+            <div className="checkin-section">
+              <span className="checkin-section-label">This week&rsquo;s numbers</span>
+              <div className="checkin-field-grid">
+                <label className="checkin-field">
+                  <span className="checkin-field-copy"><i className="task-icon sky"><Scale size={16} /></i>Current weight (kg)</span>
+                  <input name="weight_kg" type="number" min="1" max="500" step="0.1" required />
+                </label>
+                <label className="checkin-field">
+                  <span className="checkin-field-copy"><i className="task-icon mint"><Utensils size={16} /></i>Diet adherence (%)</span>
+                  <input name="diet_adherence_pct" type="number" min="0" max="100" required />
+                </label>
+                <label className="checkin-field">
+                  <span className="checkin-field-copy"><i className="task-icon sand"><Activity size={16} /></i>Workout completion (%)</span>
+                  <input name="workout_completion_pct" type="number" min="0" max="100" required />
+                </label>
+              </div>
             </div>
+            <div className="checkin-section">
+              <span className="checkin-section-label">How you&rsquo;re feeling</span>
+              <div className="checkin-field-grid">
+                <label className="checkin-field">
+                  <span className="checkin-field-copy"><i className="task-icon rose"><Flame size={16} /></i>Energy (1-10)</span>
+                  <input name="energy_score" type="number" min="1" max="10" required />
+                </label>
+                <label className="checkin-field">
+                  <span className="checkin-field-copy"><i className="task-icon violet"><Moon size={16} /></i>Sleep quality (1-10)</span>
+                  <input name="sleep_score" type="number" min="1" max="10" required />
+                </label>
+              </div>
+            </div>
+            <label className="checkin-notes">
+              <span>Wins, challenges, and coach notes</span>
+              <textarea name="client_notes" rows={5} required placeholder="What went well this week? What was hard? Anything your coach should know?" />
+            </label>
             <div className="form-submit"><span>Your coach can review this after submission.</span><button className="button primary" type="submit">Submit check-in</button></div>
           </form>
         </Card>
