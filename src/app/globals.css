@@ -4,8 +4,8 @@
 @import "../styles/pages.css";
 @import "../styles/client.css";
 @import "../styles/onboarding.css";
-@import "../styles/packages.css";
 @import "../styles/plans.css";
+@import "../styles/tier-packages.css";
 @import "../styles/responsive.css";
 @import "../styles/pro-dashboard.css";
 @import "../styles/clients-invites.css";
@@ -20,4 +20,4 @@
 
 /* Shared portal styles load in dependency order above. */
 /* premium.css elevates the whole UI to the glass/depth system; workout.css adds the training experience. */
-/* css-graph rebuild marker: v4 (forces Turbopack to recompile @imported stylesheets) */
+/* css-graph rebuild marker: v6 (forces Turbopack to recompile @imported stylesheets) */

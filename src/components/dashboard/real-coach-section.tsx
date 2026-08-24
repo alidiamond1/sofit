@@ -13,11 +13,11 @@ import {
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
-import { CoachPackages } from "@/components/packages/coach-packages";
 import { BookConsultationButton, CoachConsultationsWorkspace, type ConsultationRow, type ConsultationClientOption } from "@/components/dashboard/coach-consultations";
 import { BookSessionButton, CoachPersonalTrainingWorkspace, type SessionRow, type SessionClientOption, type SessionServiceOption } from "@/components/dashboard/coach-personal-training";
 import { CoachCheckInsWorkspace, type CheckInRow } from "@/components/dashboard/coach-check-ins";
 import { CoachDietPlansPage, CoachWorkoutPlansPage } from "@/components/plans/coach-plan-pages";
+import { CoachPackagesPage } from "@/components/packages/coach-packages";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
 import { CoachServicesWorkspace, type EditableService } from "@/components/services/coach-services";
 import { ClientDirectory, type ClientDirectoryRow } from "./client-directory";
@@ -33,8 +33,8 @@ export const realCoachSections = [
   "clients",
   "invites",
   "services",
-  "packages",
   "consultations",
+  "packages",
   "diet-plans",
   "workout-plans",
   "schedule",
@@ -635,8 +635,8 @@ export async function RealCoachSection({ section = "home", selectedClientId }: {
   if (section === "home") return <CoachOverview />;
   if (section === "clients") return <CoachClients />;
   if (section === "services") return <CoachServices />;
-  if (section === "packages") return <CoachPackages />;
   if (section === "consultations") return <CoachConsultations />;
+  if (section === "packages") return <CoachPackagesPage />;
   if (section === "personal-training") return <CoachPersonalTraining />;
   if (section === "check-ins") return <CoachCheckIns />;
   if (section === "diet-plans") return <CoachDietPlansPage />;

@@ -39,6 +39,7 @@ export type MealDetail = {
   mediaUrl: string | null;
   ingredients: string[];
   instructions: string | null;
+  day?: string;
 };
 
 export type ClientMeal = MealDetail & {
@@ -263,7 +264,7 @@ function MealRow({ meal, today }: { meal: ClientMeal; today: string }) {
       >
         <time>{meal.time || "--:--"}</time>
         <ExerciseMedia variant="thumb" context="meal" className="meal-row-thumb" url={meal.mediaUrl} name={meal.name} />
-        <div><span className="meal-type">{meal.type}</span><h3>{meal.name}</h3><p>{meal.ingredients.join(" · ") || "Tap to log this meal."}</p></div>
+        <div><span className="meal-type">{[meal.day, meal.type].filter(Boolean).join(" · ")}</span><h3>{meal.name}</h3><p>{meal.ingredients.join(" · ") || "Tap to log this meal."}</p></div>
         <div className="plan-item-side">
           <strong>{meal.calories ? `${meal.calories} kcal` : ""}</strong>
           {done ? <span className="plan-status-chip">Done</span> : null}
@@ -273,7 +274,7 @@ function MealRow({ meal, today }: { meal: ClientMeal; today: string }) {
         <DetailModal label={meal.name} onClose={() => setOpen(false)}>
           <ExerciseMedia variant="hero" context="meal" url={meal.mediaUrl} name={meal.name} />
           <div className="detail-head">
-            <span className="eyebrow">{[meal.type, meal.time].filter(Boolean).join(" · ")}</span>
+            <span className="eyebrow">{[meal.day, meal.type, meal.time].filter(Boolean).join(" · ")}</span>
             <h2>{meal.name}</h2>
           </div>
           <div className="detail-metrics">

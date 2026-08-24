@@ -248,7 +248,10 @@ async function ClientHome() {
 }
 
 function DietPlanCard({ plan, today, completions }: { plan: Record<string, unknown>; today: string; completions: PlanCompletionRow[] }) {
-  const meals = jsonArray(plan.meals);
+  const days = jsonArray(plan.days);
+  const meals: Array<Record<string, unknown>> = days.length
+    ? days.flatMap((day) => jsonArray(day.meals).map((meal) => ({ ...meal, day: day.dayLabel } as Record<string, unknown>)))
+    : jsonArray(plan.meals);
   const assignedOn = plan.starts_on || plan.created_at;
   return (
     <Card className="client-detailed-plan">
@@ -273,6 +276,7 @@ function DietPlanCard({ plan, today, completions }: { plan: Record<string, unkno
               mediaUrl: meal.media_url ? String(meal.media_url) : null,
               ingredients: Array.isArray(meal.ingredients) ? meal.ingredients.map(String) : Array.isArray(meal.items) ? (meal.items as unknown[]).map(String) : [],
               instructions: meal.instructions ? String(meal.instructions) : null,
+              day: meal.day ? String(meal.day) : undefined,
               key,
               dietPlanId: Number(plan.id),
               doneToday: history.includes(today),

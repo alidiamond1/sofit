@@ -1,0 +1,48 @@
+/* Service tier packages (Beginner/Silver/Gold) — Diet plans & Workout plans pages */
+.tier-package-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:28px}
+.tier-package-card{display:flex;flex-direction:column;padding:20px;border:1px solid var(--line);border-top:3px solid var(--primary);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)}
+.tier-package-card.tier-silver{border-top-color:#8492a6}
+.tier-package-card.tier-gold{border-top-color:var(--amber)}
+.tier-package-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tier-badge{padding:5px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary-deep);font-size:10px;font-weight:700}
+.tier-silver .tier-badge{background:#eef1f5;color:#4b5a6c}
+.tier-gold .tier-badge{background:var(--amber-soft);color:#95660f}
+.tier-status{color:var(--muted);font-size:9px;font-weight:650}
+.tier-status.is-set{color:var(--green)}
+.tier-package-card h3{margin:0 0 6px;font-size:16px;letter-spacing:-.02em}
+.tier-package-card>p{min-height:34px;margin:0 0 14px;color:var(--muted);font-size:10px;line-height:1.55}
+.tier-package-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:12px;margin-bottom:14px;border-radius:11px;background:var(--surface-soft)}
+.tier-package-stats>div{text-align:center}
+.tier-package-stats strong{display:block;font-size:15px}
+.tier-package-stats span{color:var(--muted);font-size:8px}
+.tier-package-actions{display:flex;gap:8px;margin-top:auto}
+.tier-package-actions .button{flex:1;justify-content:center}
+
+.day-tab-row{display:flex;gap:6px;margin:18px 0 14px;overflow-x:auto}
+.day-tab{display:flex;align-items:center;gap:4px;flex:0 0 auto;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:10px;font-weight:650;cursor:pointer;transition:border-color .15s ease,background .15s ease}
+.day-tab.is-filled{color:var(--green);border-color:#bfe3cb}
+.day-tab.active{border-color:var(--primary);background:var(--primary-soft);color:var(--primary-deep)}
+.days-progress{color:var(--muted);font-size:9px}
+.day-panel-section{padding:14px 0;border-top:1px solid var(--line)}
+.day-panel-section:first-of-type{border-top:0}
+.template-form-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px}
+
+.tier-editable-table{min-width:0;width:100%}
+.tier-editable-table th{white-space:nowrap}
+.tier-editable-table td{padding:8px 10px;vertical-align:middle}
+.tier-editable-table input,.tier-editable-table select{width:100%;min-width:64px;padding:8px 9px;border:1px solid var(--line-strong);border-radius:9px;background:#fff;color:var(--ink);outline:none;font-size:11px;transition:border-color .15s ease}
+.tier-editable-table input:focus,.tier-editable-table select:focus{border-color:var(--primary)}
+.tier-editable-table td:has(select){min-width:190px}
+.tier-editable-table .composer-thumb{width:38px;height:38px;border-radius:9px}
+.tier-editable-table .icon-button{margin:0 auto}
+
+.tier-assign-form{display:grid;gap:14px}
+.tier-assign-form label>span{display:block;margin-bottom:6px;font-size:9px;font-weight:650}
+.tier-assign-form select{width:100%}
+.tier-assign-form .button{justify-content:center}
+.tier-assign-form .form-message{margin:0}
+.tier-modal-panel>header h2{font-size:22px}
+.tier-modal-panel>header p{max-width:640px;font-size:11px}
+
+@media(max-width:1100px){.tier-package-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.tier-package-actions{flex-direction:column}}
