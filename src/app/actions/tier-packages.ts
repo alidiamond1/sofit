@@ -31,7 +31,7 @@ const dayInputSchema = z.object({
 const tierPackageSchema = z.object({
   tier: z.enum(PACKAGE_TIERS),
   title: z.string().trim().min(2).max(160),
-  days: z.array(dayInputSchema).length(7),
+  days: z.array(dayInputSchema).min(1).max(7),
 });
 
 const assignSchema = z.object({
@@ -49,10 +49,10 @@ export async function saveTierPackageAction(
     title: formData.get("title"),
     days: safeJson(formData.get("days_json")),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Every day needs at least one meal." };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Add at least one day before saving." };
 
   const dayIndexes = new Set(parsed.data.days.map((day) => day.dayIndex));
-  if (dayIndexes.size !== 7) return { error: "Build all 7 days before saving." };
+  if (dayIndexes.size !== parsed.data.days.length) return { error: "Each day can only be added once." };
 
   const db = database();
   const mealIds = [...new Set(parsed.data.days.flatMap((day) => day.meals.map((meal) => meal.mealId)))];
@@ -147,7 +147,7 @@ export async function assignTierPackageAction(
 
     await trx("diet_plans").where({ client_id: client.id, status: "active" }).update({ status: "archived" });
     const latestDiet = await trx("diet_plans").where({ client_id: client.id, title: tierPackage.title }).max({ version: "version" }).first();
-    await trx("diet_plans").insert({
+    const [dietPlanId] = await trx("diet_plans").insert({
       client_id: client.id,
       title: tierPackage.title,
       version: Number(latestDiet?.version || 0) + 1,
@@ -158,12 +158,13 @@ export async function assignTierPackageAction(
       starts_on: today,
     });
 
+    let workoutPlanId: number | null = null;
     if (totalExercises > 0) {
       await trx("workout_plans").where({ client_id: client.id, status: "active" }).update({ status: "archived" });
       const latestWorkout = await trx("workout_plans").where({ client_id: client.id, title: tierPackage.title }).max({ version: "version" }).first();
       const exercises = days.flatMap((day) => day.exercises);
       const weeklySplit = days.filter((day) => day.exercises.length > 0).map((day) => day.dayLabel);
-      await trx("workout_plans").insert({
+      [workoutPlanId] = await trx("workout_plans").insert({
         client_id: client.id,
         title: tierPackage.title,
         version: Number(latestWorkout?.version || 0) + 1,
@@ -174,15 +175,34 @@ export async function assignTierPackageAction(
         starts_on: today,
       });
     }
+
+    const byDayIndex = new Map(days.map((day) => [day.dayIndex, day]));
+    for (let weekday = 0; weekday < 7; weekday += 1) {
+      const day = byDayIndex.get(weekday);
+      const slot = day
+        ? {
+            is_rest: false,
+            diet_plan_id: dietPlanId,
+            workout_plan_id: day.exercises.length > 0 ? workoutPlanId : null,
+            workout_day: day.exercises.length > 0 ? day.dayLabel : null,
+          }
+        : { is_rest: true, diet_plan_id: null, workout_plan_id: null, workout_day: null };
+      await trx("client_week_schedule")
+        .insert({ client_id: client.id, weekday, ...slot })
+        .onConflict(["client_id", "weekday"])
+        .merge(slot);
+    }
   });
 
   revalidatePath("/coach/packages");
   revalidatePath("/coach/diet-plans");
   revalidatePath("/coach/workout-plans");
+  revalidatePath("/coach/schedule");
   revalidatePath("/coach/clients");
   revalidatePath("/client");
   revalidatePath("/client/diet-plan");
   revalidatePath("/client/workout-plan");
+  revalidatePath("/client/sessions");
   return {
     success: totalExercises > 0
       ? `${tierPackage.title} was assigned — this week's diet and workout were built automatically.`

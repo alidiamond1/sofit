@@ -110,7 +110,6 @@ function TierPackageComposer({
   }
 
   const filledDayCount = mealDays.filter((slots) => slots.length > 0).length;
-  const allDaysFilled = filledDayCount === 7;
   const activeMeals = mealDays[activeDay];
   const activeExercises = exerciseDays[activeDay];
 
@@ -193,12 +192,12 @@ function TierPackageComposer({
           dayIndex,
           meals: mealDays[dayIndex].map(({ mealId, time }) => ({ mealId, time })),
           exercises: exerciseDays[dayIndex].map(({ exerciseId, sets, reps, rpe, restSeconds }) => ({ exerciseId, sets, reps, rpe, restSeconds })),
-        })))}
+        })).filter((day) => day.meals.length > 0))}
       />
       <ActionMessage state={state} />
       <div className="template-form-foot">
-        <span className="days-progress">{filledDayCount} of 7 days have meals</span>
-        <button className="button primary" type="submit" disabled={pending || !allDaysFilled}>{pending ? "Saving..." : existing ? "Save package" : "Create package"}</button>
+        <span className="days-progress">{filledDayCount} of 7 days built · save anytime, come back to add the rest</span>
+        <button className="button primary" type="submit" disabled={pending || filledDayCount === 0}>{pending ? "Saving..." : existing ? "Save package" : "Create package"}</button>
       </div>
     </form>
   );

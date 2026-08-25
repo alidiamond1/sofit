@@ -138,17 +138,25 @@ export async function approveApplicationAction(formData: FormData) {
   if (!inviteId) return;
 
   await database().transaction(async (trx) => {
-    const invite = await trx("invites").where({ id: inviteId, status: "submitted" }).forUpdate().first();
+    const invite = await trx("invites").where({ id: inviteId }).forUpdate().first();
     if (!invite?.user_id) throw new Error("Application is not ready for approval.");
+    if (!["submitted", "approved"].includes(invite.status)) throw new Error("Application is not ready for approval.");
     const clientUser = await trx("users")
       .select("id", "name")
       .where({ id: invite.user_id, role: "client" })
       .first();
     if (!clientUser) throw new Error("The client account could not be found.");
 
+    const now = new Date();
+
+    if (invite.status === "approved") {
+      await trx("clients").where({ user_id: invite.user_id }).update({ service_id: serviceId || null, updated_at: now });
+      await trx("invites").where({ id: inviteId }).update({ selected_service_id: serviceId || null, updated_at: now });
+      return;
+    }
+
     const clientName = String(clientUser.name || "").trim();
     const firstName = clientName.split(/\s+/)[0] || "there";
-    const now = new Date();
     const welcomeMessage = `Hi ${firstName}, welcome to SoFit! I am glad to have you here. If you need any help or have questions about your plan, training, nutrition, sessions, or progress, send me a message here anytime. I will get back to you as quickly as possible.`;
 
     await trx("users").where({ id: clientUser.id }).update({ approval_status: "approved", updated_at: now });

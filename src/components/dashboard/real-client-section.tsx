@@ -9,8 +9,10 @@ import {
   Mail,
   Moon,
   Scale,
+  UserRound,
   Utensils,
 } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { submitClientCheckInAction } from "@/app/actions/client";
 import { requireRole } from "@/lib/auth/session";
@@ -20,7 +22,7 @@ import { Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
 import { WorkoutExerciseLogList, DietMealLogList, PlanCardShell } from "@/components/plans/client-plan-views";
 import { TodayWorkout } from "@/components/schedule/today-workout";
 import { MonthCalendar, type DaySchedule } from "@/components/schedule/month-calendar";
-import { exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
+import { WEEKDAYS, exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
 import { MessagingWorkspace } from "@/components/messages/messaging-workspace";
 import { loadClientMessageThreads } from "@/lib/messages";
@@ -55,6 +57,23 @@ function tone(status: string): "success" | "warning" | "danger" | "neutral" | "b
 
 function EmptyState({ text }: { text: string }) {
   return <Card className="empty-state"><ClipboardList size={24} /><h3>Nothing here yet</h3><p>{text}</p></Card>;
+}
+
+/** Bilingual "must complete" nudge shown until a client has a height and
+ *  starting weight on file — their coach needs both to confirm the right
+ *  package for them. */
+function ProfileCompletionNudge({ client }: { client: { height_cm: unknown; starting_weight_kg: unknown } }) {
+  if (client.height_cm != null && client.starting_weight_kg != null) return null;
+  return (
+    <Card className="profile-nudge-card">
+      <span className="profile-nudge-icon"><UserRound size={20} /></span>
+      <div>
+        <strong>Complete your profile · Dhammaystir profile-kaaga</strong>
+        <p>Add your height and weight so your coach can confirm the right package for you. · Geli dhererkaaga iyo miisaankaaga si coach-kaagu ugu ogaado package-ka kuu habboon.</p>
+      </div>
+      <Link className="button primary" href="/client/profile#profile-information">Complete profile · Dhammaystir</Link>
+    </Card>
+  );
 }
 
 /** MySQL DATE columns come back as local-midnight Date objects; re-read the
@@ -136,34 +155,51 @@ async function ClientHome() {
   let todayDayLabel: string | null = null;
   let todayExercises: Array<{ key: string; name: string; muscleGroup: string; equipment: string; difficulty: string; mediaUrl: string | null; day: string; sets: string; reps: string; rpe: string; restSeconds: number; instructions: string | null; done: boolean }> = [];
   try {
-    const scheduleSlot = await database()("client_week_schedule").where({ client_id: client.id, weekday: weekdayIndex(clientTz) }).first();
-    isRestToday = Boolean(scheduleSlot?.is_rest);
-    if (scheduleSlot && !scheduleSlot.is_rest && scheduleSlot.workout_plan_id) {
-      const today = todayISO(clientTz);
-      const [todayPlan, completions] = await Promise.all([
-        database()("workout_plans").select("title", "exercises").where({ id: scheduleSlot.workout_plan_id, client_id: client.id }).first(),
-        database()("workout_completions").select("exercise_key").where({ client_id: client.id, scheduled_on: today }),
-      ]);
-      if (todayPlan) {
-        const doneKeys = new Set(completions.map((row) => String(row.exercise_key)));
-        todayPlanTitle = String(todayPlan.title);
-        todayDayLabel = scheduleSlot.workout_day ? String(scheduleSlot.workout_day) : null;
-        todayExercises = exercisesForDay(todayPlan.exercises, todayDayLabel).map((exercise) => ({
-          key: exercise.key,
-          name: exercise.name,
-          muscleGroup: exercise.muscleGroup,
-          equipment: exercise.equipment,
-          difficulty: exercise.difficulty,
-          mediaUrl: exercise.mediaUrl,
-          day: todayDayLabel || "",
-          sets: exercise.sets,
-          reps: exercise.reps,
-          rpe: exercise.rpe,
-          restSeconds: exercise.restSeconds,
-          instructions: exercise.instructions,
-          done: doneKeys.has(exercise.key),
-        }));
+    const weekday = weekdayIndex(clientTz);
+    const today = todayISO(clientTz);
+    const scheduleSlot = await database()("client_week_schedule").where({ client_id: client.id, weekday }).first();
+
+    let plan: { title: unknown; exercises: unknown } | undefined;
+    let dayLabel: string | null = null;
+
+    if (scheduleSlot) {
+      isRestToday = Boolean(scheduleSlot.is_rest);
+      if (!scheduleSlot.is_rest && scheduleSlot.workout_plan_id) {
+        plan = await database()("workout_plans").select("title", "exercises").where({ id: scheduleSlot.workout_plan_id, client_id: client.id }).first();
+        dayLabel = scheduleSlot.workout_day ? String(scheduleSlot.workout_day) : null;
       }
+    } else {
+      // No explicit schedule row — fall back to the active plan's day-tagged
+      // split (this is how Packages-assigned plans show up without a coach
+      // ever touching the manual /coach/schedule builder).
+      const activeWorkout = await database()("workout_plans").select("title", "exercises").where({ client_id: client.id, status: "active" }).first();
+      const label = WEEKDAYS[weekday];
+      if (activeWorkout && exercisesForDay(activeWorkout.exercises, label).length > 0) {
+        plan = activeWorkout;
+        dayLabel = label;
+      }
+    }
+
+    if (plan) {
+      const completions = await database()("workout_completions").select("exercise_key").where({ client_id: client.id, scheduled_on: today });
+      const doneKeys = new Set(completions.map((row) => String(row.exercise_key)));
+      todayPlanTitle = String(plan.title);
+      todayDayLabel = dayLabel;
+      todayExercises = exercisesForDay(plan.exercises, dayLabel).map((exercise) => ({
+        key: exercise.key,
+        name: exercise.name,
+        muscleGroup: exercise.muscleGroup,
+        equipment: exercise.equipment,
+        difficulty: exercise.difficulty,
+        mediaUrl: exercise.mediaUrl,
+        day: dayLabel || "",
+        sets: exercise.sets,
+        reps: exercise.reps,
+        rpe: exercise.rpe,
+        restSeconds: exercise.restSeconds,
+        instructions: exercise.instructions,
+        done: doneKeys.has(exercise.key),
+      }));
     }
   } catch {
     // Schedule tables not migrated yet — Home still renders without the Today card.
@@ -177,6 +213,7 @@ async function ClientHome() {
         title={`Welcome, ${client.name}.`}
         description="Stay focused on today's plan, your next coaching touchpoint, and the progress you are building."
       />
+      <ProfileCompletionNudge client={client} />
       {client.package_name ? (
         <Card className="client-package-summary">
           <div>
@@ -379,6 +416,34 @@ async function ClientWorkoutPlans() {
   return <><PageHeader eyebrow="Training" title="My workout plan" description="Your weekly split, exercises, sets, reps, RPE, and rest guidance." />{workoutPlans.length ? <div className="client-plan-stack">{workoutPlans.map((plan) => <WorkoutPlanCard key={plan.id} plan={plan} today={today} completions={byPlan.get(Number(plan.id)) || []} />)}</div> : <EmptyState text="Your coach has not assigned a workout plan yet." />}</>;
 }
 
+function toMealDetail(meal: Record<string, unknown>) {
+  return {
+    name: String(meal.name || "Meal"),
+    type: String(meal.type || "meal"),
+    time: String(meal.time || ""),
+    calories: meal.calories ? String(meal.calories) : "",
+    protein: meal.protein_g ? String(meal.protein_g) : "",
+    carbs: meal.carbs_g ? String(meal.carbs_g) : "",
+    fat: meal.fat_g ? String(meal.fat_g) : "",
+    mediaUrl: meal.media_url ? String(meal.media_url) : null,
+    ingredients: Array.isArray(meal.ingredients) ? meal.ingredients.map(String) : Array.isArray(meal.items) ? (meal.items as unknown[]).map(String) : [],
+    instructions: meal.instructions ? String(meal.instructions) : null,
+  };
+}
+
+/** Meals for one weekday of a diet plan. Day-based plans (built via
+ *  Packages) resolve by dayIndex; flat legacy plans only resolve when
+ *  `requireDayMatch` is false (an explicit schedule row picked this day). */
+function mealsForWeekday(plan: { days?: unknown; meals?: unknown } | undefined, weekday: number, requireDayMatch: boolean) {
+  if (!plan) return [];
+  const days = jsonArray(plan.days);
+  if (days.length) {
+    const entry = days.find((day) => Number(day.dayIndex) === weekday);
+    return entry ? jsonArray(entry.meals) : [];
+  }
+  return requireDayMatch ? [] : jsonArray(plan.meals);
+}
+
 async function ClientSessions() {
   const { client } = await getClientContext();
   const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
@@ -390,19 +455,21 @@ async function ClientSessions() {
     .orderBy("starts_at", "desc");
 
   const weekDays: DaySchedule[] = Array.from({ length: 7 }, (_, weekday) => ({ weekday, isRest: false, workout: null, diet: null }));
+  const scheduledWeekdays = new Set<number>();
   try {
     const slots = await database()("client_week_schedule").where({ client_id: client.id });
     const workoutIds = [...new Set(slots.filter((slot) => slot.workout_plan_id).map((slot) => Number(slot.workout_plan_id)))];
     const dietIds = [...new Set(slots.filter((slot) => slot.diet_plan_id).map((slot) => Number(slot.diet_plan_id)))];
     const [workoutPlans, dietPlans] = await Promise.all([
       workoutIds.length ? database()("workout_plans").whereIn("id", workoutIds).where({ client_id: client.id }).select("id", "title", "exercises") : Promise.resolve([]),
-      dietIds.length ? database()("diet_plans").whereIn("id", dietIds).where({ client_id: client.id }).select("id", "title", "meals") : Promise.resolve([]),
+      dietIds.length ? database()("diet_plans").whereIn("id", dietIds).where({ client_id: client.id }).select("id", "title", "meals", "days") : Promise.resolve([]),
     ]);
     const workoutById = new Map(workoutPlans.map((plan) => [Number(plan.id), plan]));
     const dietById = new Map(dietPlans.map((plan) => [Number(plan.id), plan]));
     for (const slot of slots) {
       const weekday = Number(slot.weekday);
       if (weekday < 0 || weekday > 6) continue;
+      scheduledWeekdays.add(weekday);
       const isRest = Boolean(slot.is_rest);
       let workout: DaySchedule["workout"] = null;
       let diet: DaySchedule["diet"] = null;
@@ -432,21 +499,7 @@ async function ClientSessions() {
       if (!isRest && slot.diet_plan_id) {
         const plan = dietById.get(Number(slot.diet_plan_id));
         if (plan) {
-          diet = {
-            title: String(plan.title),
-            meals: jsonArray(plan.meals).map((meal) => ({
-              name: String(meal.name || "Meal"),
-              type: String(meal.type || "meal"),
-              time: String(meal.time || ""),
-              calories: meal.calories ? String(meal.calories) : "",
-              protein: meal.protein_g ? String(meal.protein_g) : "",
-              carbs: meal.carbs_g ? String(meal.carbs_g) : "",
-              fat: meal.fat_g ? String(meal.fat_g) : "",
-              mediaUrl: meal.media_url ? String(meal.media_url) : null,
-              ingredients: Array.isArray(meal.ingredients) ? meal.ingredients.map(String) : Array.isArray(meal.items) ? (meal.items as unknown[]).map(String) : [],
-              instructions: meal.instructions ? String(meal.instructions) : null,
-            })),
-          };
+          diet = { title: String(plan.title), meals: mealsForWeekday(plan, weekday, false).map(toMealDetail) };
         }
       }
       weekDays[weekday] = { weekday, isRest, workout, diet };
@@ -454,6 +507,48 @@ async function ClientSessions() {
   } catch {
     // schedule tables not migrated yet
   }
+
+  // Fallback for weekdays with no explicit client_week_schedule row: derive
+  // straight from the client's active plans, for day-tagged content only
+  // (Packages always tags days as "Monday".."Sunday" — see DAY_LABELS).
+  const remainingWeekdays = Array.from({ length: 7 }, (_, weekday) => weekday).filter((weekday) => !scheduledWeekdays.has(weekday));
+  if (remainingWeekdays.length) {
+    const [activeDiet, activeWorkout] = await Promise.all([
+      database()("diet_plans").select("title", "days", "meals").where({ client_id: client.id, status: "active" }).first(),
+      database()("workout_plans").select("title", "exercises").where({ client_id: client.id, status: "active" }).first(),
+    ]);
+    for (const weekday of remainingWeekdays) {
+      const dayLabel = String(WEEKDAYS[weekday]);
+      const dayMeals = mealsForWeekday(activeDiet, weekday, true);
+      const dayExercises = activeWorkout ? exercisesForDay(activeWorkout.exercises, dayLabel) : [];
+      if (!dayMeals.length && !dayExercises.length) continue;
+      weekDays[weekday] = {
+        weekday,
+        isRest: false,
+        workout: dayExercises.length
+          ? {
+              title: String(activeWorkout!.title),
+              dayLabel,
+              exercises: dayExercises.map((exercise) => ({
+                name: exercise.name,
+                muscleGroup: exercise.muscleGroup,
+                equipment: exercise.equipment,
+                difficulty: exercise.difficulty,
+                mediaUrl: exercise.mediaUrl,
+                day: dayLabel,
+                sets: exercise.sets,
+                reps: exercise.reps,
+                rpe: exercise.rpe,
+                restSeconds: exercise.restSeconds,
+                instructions: exercise.instructions,
+              })),
+            }
+          : null,
+        diet: dayMeals.length ? { title: String(activeDiet!.title), meals: dayMeals.map(toMealDetail) } : null,
+      };
+    }
+  }
+
   const dayFmt = new Intl.DateTimeFormat("en-CA", { timeZone: clientTz, year: "numeric", month: "2-digit", day: "2-digit" });
   const timeFmt = new Intl.DateTimeFormat("en-US", { timeZone: clientTz, hour: "numeric", minute: "2-digit" });
   const calendarSessions = sessions.map((item) => ({
@@ -478,6 +573,7 @@ async function ClientCheckIn() {
   return (
     <>
       <PageHeader title="Weekly check-in" description="Share this week's progress, adherence, and notes with your coach." />
+      <ProfileCompletionNudge client={client} />
       <div className="checkin-form-layout">
         <Card className="checkin-form">
           <form action={submitClientCheckInAction} className="checkin-form-grid">

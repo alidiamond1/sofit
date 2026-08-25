@@ -173,16 +173,17 @@ html[data-theme="dark"] .starter-added{background:var(--green-soft);color:var(--
 @keyframes media-spin{to{transform:rotate(360deg)}}
 
 /* 5 ── Client: today's workout ─────────────────────────────── */
-.workout-day-group{margin-top:6px}
-.workout-day-head{
+.workout-day-group,.plan-day-group{margin-top:6px}
+.workout-day-head,.plan-day-head{
   display:flex;align-items:center;gap:10px;padding:6px 22px 12px;
 }
-.workout-day-head span{
+.workout-day-head span,.plan-day-head span{
   display:inline-flex;align-items:center;gap:7px;
   color:var(--accent);font-size:10px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;
 }
-.workout-day-head:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent-grad)}
-.workout-day-head hr{flex:1;height:1px;border:0;background:var(--line)}
+.workout-day-head:before,.plan-day-head:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent-grad)}
+.workout-day-head hr,.plan-day-head hr{flex:1;height:1px;border:0;background:var(--line)}
+.plan-day-group:first-child{margin-top:0}
 
 .client-exercise-list.rich article{
   grid-template-columns:78px minmax(0,1fr) auto;gap:16px;padding:16px 22px;

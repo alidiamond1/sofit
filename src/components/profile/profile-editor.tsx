@@ -17,6 +17,8 @@ type ProfileEditorProps = {
     goals: string;
     medicalNotes: string;
     avatarPath: string | null;
+    heightCm: string;
+    weightKg: string;
   };
 };
 
@@ -75,6 +77,9 @@ export function ProfileEditor({ role, profile }: ProfileEditorProps) {
           <label className="full"><span>Short bio</span><textarea name="bio" defaultValue={profile.bio} rows={4} placeholder={role === "coach" ? "Tell clients about your coaching approach." : "Share anything useful about your lifestyle or routine."} /></label>
           {role === "client" ? (
             <>
+              <label><span>Height (cm) · Dhererka (cm) <em className="required-mark">*</em></span><input name="height_cm" type="number" step="0.1" min="100" max="250" defaultValue={profile.heightCm} placeholder="e.g. 175" required /></label>
+              <label><span>Weight (kg) · Miisaanka (kg) <em className="required-mark">*</em></span><input name="starting_weight_kg" type="number" step="0.1" min="30" max="300" defaultValue={profile.weightKg} placeholder="e.g. 70" required /></label>
+              <p className="full field-hint">Required so your coach can confirm the right package for you. · Waa lagama maarmaan si coach-kaagu ugu ogaado package-ka kuu habboon.</p>
               <label className="full"><span>Current goals</span><textarea name="goals" defaultValue={profile.goals} rows={4} /></label>
               <label className="full"><span>Medical notes</span><textarea name="medical_notes" defaultValue={profile.medicalNotes} rows={3} placeholder="Add anything your coach should know." /></label>
             </>

@@ -20,7 +20,9 @@ const tabItems: Array<{ id: ProfileTab; label: string; icon: typeof CircleUserRo
 ];
 
 export function ProfileWorkspaceTabs({ role, sidebar, overview, information, intake }: ProfileWorkspaceTabsProps) {
-  const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
+  const [activeTab, setActiveTab] = useState<ProfileTab>(() => (
+    typeof window !== "undefined" && window.location.hash === "#profile-information" ? "information" : "overview"
+  ));
   const visibleTabs = role === "client" ? tabItems : tabItems.filter((item) => item.id !== "intake");
   const activeContent = activeTab === "information" ? information : activeTab === "intake" && intake ? intake : overview;
 

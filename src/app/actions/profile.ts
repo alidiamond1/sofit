@@ -21,6 +21,12 @@ const baseProfileSchema = z.object({
 const clientProfileSchema = baseProfileSchema.extend({
   goals: optionalText(5000),
   medical_notes: optionalText(5000),
+  height_cm: z.coerce.number()
+    .min(100, "Height must be at least 100 cm. / Dhererku waa inuu ka badan yahay 100 cm.")
+    .max(250, "Height must be under 250 cm. / Dhererku waa inuu ka yaraado 250 cm."),
+  starting_weight_kg: z.coerce.number()
+    .min(30, "Weight must be at least 30 kg. / Miisaanku waa inuu ka badan yahay 30 kg.")
+    .max(300, "Weight must be under 300 kg. / Miisaanku waa inuu ka yaraado 300 kg."),
 });
 
 function refreshAccountPages(role: "coach" | "client") {
@@ -49,6 +55,8 @@ export async function updateProfileAction(
         date_of_birth,
         goals: clientData.goals,
         medical_notes: clientData.medical_notes,
+        height_cm: clientData.height_cm,
+        starting_weight_kg: clientData.starting_weight_kg,
         updated_at: new Date(),
       });
     }

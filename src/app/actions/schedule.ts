@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
-import { exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
+import { WEEKDAYS, exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
 
 export type ScheduleActionState = { error?: string; success?: string };
 
@@ -103,13 +103,28 @@ export async function toggleExerciseDoneAction(
   const settingsRow = await db("user_settings").select("timezone").where({ user_id: session.id }).first();
   const tz = String(settingsRow?.timezone || "Africa/Nairobi");
   const today = todayISO(tz);
-  const slot = await db("client_week_schedule").where({ client_id: client.id, weekday: weekdayIndex(tz) }).first();
-  if (!slot || slot.is_rest || !slot.workout_plan_id) return { error: "No workout is scheduled for today." };
+  const weekday = weekdayIndex(tz);
+  const slot = await db("client_week_schedule").where({ client_id: client.id, weekday }).first();
 
-  const plan = await db("workout_plans").select("exercises").where({ id: slot.workout_plan_id, client_id: client.id }).first();
+  let workoutPlanId: number | null = null;
+  let workoutDay: string | null = null;
+  if (slot) {
+    if (slot.is_rest || !slot.workout_plan_id) return { error: "No workout is scheduled for today." };
+    workoutPlanId = Number(slot.workout_plan_id);
+    workoutDay = slot.workout_day || null;
+  } else {
+    // No explicit schedule row — fall back to the active plan's day-tagged split.
+    const activeWorkout = await db("workout_plans").select("id", "exercises").where({ client_id: client.id, status: "active" }).first();
+    const label = WEEKDAYS[weekday];
+    if (!activeWorkout || exercisesForDay(activeWorkout.exercises, label).length === 0) return { error: "No workout is scheduled for today." };
+    workoutPlanId = Number(activeWorkout.id);
+    workoutDay = label;
+  }
+
+  const plan = await db("workout_plans").select("exercises").where({ id: workoutPlanId, client_id: client.id }).first();
   if (!plan) return { error: "Today's scheduled workout is unavailable." };
 
-  const todays = exercisesForDay(plan.exercises, slot.workout_day || null);
+  const todays = exercisesForDay(plan.exercises, workoutDay);
   if (!todays.some((exercise) => exercise.key === parsed.data.exerciseKey)) {
     return { error: "That exercise is not part of today's workout." };
   }

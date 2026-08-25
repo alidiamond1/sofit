@@ -78,6 +78,14 @@ html[data-theme="dark"] .today-streak.is-complete{color:var(--green)}
 .today-rest strong{display:block;font-size:15px}
 .today-rest span{color:var(--muted);font-size:12px}
 
+.profile-nudge-card{display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:16px 20px;border:1px solid var(--amber);background:var(--amber-soft)}
+.profile-nudge-icon{width:44px;height:44px;flex:0 0 auto;display:grid;place-items:center;border-radius:14px;background:#fff;color:#95660f}
+.profile-nudge-card>div{flex:1;min-width:0}
+.profile-nudge-card strong{display:block;margin-bottom:3px;font-size:13px}
+.profile-nudge-card p{margin:0;color:#6b5115;font-size:11px;line-height:1.5}
+.profile-nudge-card .button{flex:0 0 auto}
+@media(max-width:640px){.profile-nudge-card{flex-direction:column;align-items:flex-start}.profile-nudge-card .button{width:100%;justify-content:center}}
+
 /* ── Client: month calendar ─────────────────────────────────── */
 .calendar-card{padding:20px;margin-bottom:16px}
 .calendar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}

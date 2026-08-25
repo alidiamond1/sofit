@@ -67,6 +67,23 @@ function last7Days(today: string) {
   return Array.from({ length: 7 }, (_, index) => shiftDate(today, index - 6));
 }
 
+/** Groups a plan's items into day sections, preserving first-seen order.
+ *  Returns a single unlabeled group when nothing carries a `day` value. */
+function groupByDay<T extends { day?: string }>(items: T[]): Array<{ day: string | null; items: T[] }> {
+  const groups: Array<{ day: string | null; items: T[] }> = [];
+  const indexByKey = new Map<string, number>();
+  for (const item of items) {
+    const day = item.day && item.day.trim() ? item.day.trim() : null;
+    const key = day ?? "";
+    if (!indexByKey.has(key)) {
+      indexByKey.set(key, groups.length);
+      groups.push({ day, items: [] });
+    }
+    groups[indexByKey.get(key) as number].items.push(item);
+  }
+  return groups;
+}
+
 function DetailModal({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
   return (
     <ModalPortal>
@@ -310,9 +327,16 @@ function MealRow({ meal, today }: { meal: ClientMeal; today: string }) {
 /** Full tracking view: used on the client's "My Workout Plan" page, where
  *  every exercise belongs to a concrete plan the client can log against. */
 export function WorkoutExerciseLogList({ exercises }: { exercises: ClientExercise[] }) {
+  const groups = groupByDay(exercises);
+  const showHeadings = groups.length > 1;
   return (
     <div className="client-exercise-list rich">
-      {exercises.map((exercise, index) => <ExerciseRow key={`${exercise.key}-${index}`} exercise={exercise} />)}
+      {groups.map((group, groupIndex) => (
+        <div className="plan-day-group" key={group.day ?? `day-${groupIndex}`}>
+          {showHeadings && group.day ? <div className="plan-day-head"><span>{group.day}</span><hr /></div> : null}
+          {group.items.map((exercise, index) => <ExerciseRow key={`${exercise.key}-${groupIndex}-${index}`} exercise={exercise} />)}
+        </div>
+      ))}
       {exercises.length === 0 ? <p>No exercises are listed in this program.</p> : null}
     </div>
   );
@@ -320,9 +344,16 @@ export function WorkoutExerciseLogList({ exercises }: { exercises: ClientExercis
 
 /** Full tracking view: used on the client's "My diet plan" page. */
 export function DietMealLogList({ meals, today }: { meals: ClientMeal[]; today: string }) {
+  const groups = groupByDay(meals);
+  const showHeadings = groups.length > 1;
   return (
     <div className="client-meal-timeline rich">
-      {meals.map((meal, index) => <MealRow key={`${meal.key}-${index}`} meal={meal} today={today} />)}
+      {groups.map((group, groupIndex) => (
+        <div className="plan-day-group" key={group.day ?? `day-${groupIndex}`}>
+          {showHeadings && group.day ? <div className="plan-day-head"><span>{group.day}</span><hr /></div> : null}
+          {group.items.map((meal, index) => <MealRow key={`${meal.key}-${groupIndex}-${index}`} meal={meal} today={today} />)}
+        </div>
+      ))}
       {meals.length === 0 ? <p>No meals are listed in this plan.</p> : null}
     </div>
   );
