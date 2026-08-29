@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Check, Dumbbell, Library, Pencil, Plus, Search, Trash2, Utensils, X } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Dumbbell, Library, Pencil, Plus, Search, Trash2, Utensils, X } from "lucide-react";
 import { useActionState, useState } from "react";
 import {
   addStarterExercisesAction,
@@ -193,6 +193,7 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
   const [starterModal, setStarterModal] = useState(false);
   const [editingExercise, setEditingExercise] = useState<ExerciseOption | null>(null);
   const [deletingExercise, setDeletingExercise] = useState<ExerciseOption | null>(null);
+  const [viewingExercise, setViewingExercise] = useState<ExerciseOption | null>(null);
   const [exerciseState, exerciseAction, exercisePending] = useActionState(async (previous: PlanActionState, formData: FormData) => {
     const result = await createExerciseAction(previous, formData);
     if (result.success) setExerciseModal(false);
@@ -218,7 +219,45 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
   }, initialState);
   const [query, setQuery] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("all");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [selectedExercises, setSelectedExercises] = useState<Array<{ key: string; exerciseId: number; day: string; sets: number; reps: string; rpe: number; restSeconds: number }>>([]);
+
+  function toggleGroup(group: string) {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(group)) next.delete(group); else next.add(group);
+      return next;
+    });
+  }
+
+  function renderExerciseCard(exercise: ExerciseOption) {
+    return (
+      <article
+        className="exercise-tile is-clickable"
+        key={exercise.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => setViewingExercise(exercise)}
+        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setViewingExercise(exercise); } }}
+      >
+        <div className="exercise-tile-media">
+          <div className="exercise-tile-actions record-actions" onClick={(event) => event.stopPropagation()}>
+            <button className="mini-action" type="button" title="Edit exercise" aria-label={`Edit ${exercise.name}`} onClick={() => setEditingExercise(exercise)}><Pencil size={13} /></button>
+            <button className="mini-action danger-action" type="button" title="Delete exercise" aria-label={`Delete ${exercise.name}`} onClick={() => setDeletingExercise(exercise)}><Trash2 size={13} /></button>
+          </div>
+          <ExerciseMedia variant="tile" url={exercise.media_url} name={exercise.name} muscleGroup={exercise.muscle_group} />
+          <span className="exercise-tile-badge">{exercise.muscle_group}</span>
+        </div>
+        <div className="exercise-tile-body">
+          <h3>{exercise.name}</h3>
+          <div className="exercise-tile-tags">
+            <span className="exercise-tag">{exercise.equipment}</span>
+            <span className={`exercise-tag diff-${exercise.difficulty}`}>{exercise.difficulty}</span>
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   function addExercise() {
     if (!exercises[0]) return;
@@ -230,12 +269,26 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
   }
 
   const existingExerciseNames = new Set(exercises.map((exercise) => exercise.name.toLowerCase()));
-  const muscleGroups = ["all", ...Array.from(new Set(exercises.map((exercise) => exercise.muscle_group)))];
+  const muscleGroups = ["all", ...Array.from(new Set(exercises.map((exercise) => exercise.muscle_group))).sort((a, b) => a.localeCompare(b))];
+  const isSearching = query.trim() !== "";
   const filteredExercises = exercises.filter((exercise) => {
     const matchesMuscle = muscleFilter === "all" || exercise.muscle_group === muscleFilter;
     const haystack = `${exercise.name} ${exercise.muscle_group} ${exercise.equipment}`.toLowerCase();
-    return matchesMuscle && (query.trim() === "" || haystack.includes(query.trim().toLowerCase()));
+    return matchesMuscle && (!isSearching || haystack.includes(query.trim().toLowerCase()));
   });
+  // Grouped, collapsible sections only make sense for the unfiltered "All" view —
+  // a flat wall of 300+ cards was the exact "endless scroll" complaint. A single
+  // chip or an active search already narrows things down, so keep those flat.
+  const groupedExercises = muscleFilter === "all" && !isSearching
+    ? Array.from(
+        filteredExercises.reduce((map, exercise) => {
+          const list = map.get(exercise.muscle_group) || [];
+          list.push(exercise);
+          map.set(exercise.muscle_group, list);
+          return map;
+        }, new Map<string, ExerciseOption[]>()),
+      ).sort(([a], [b]) => a.localeCompare(b))
+    : null;
 
   return (
     <>
@@ -252,31 +305,55 @@ export function WorkoutPlanBuilder({ clients, exercises, defaultDate }: { client
         </div>
       ) : null}
       <div className="exercise-gallery">
-        {filteredExercises.map((exercise) => (
-          <article className="exercise-tile" key={exercise.id}>
-            <div className="exercise-tile-media">
-              <div className="exercise-tile-actions record-actions">
-                <button className="mini-action" type="button" title="Edit exercise" aria-label={`Edit ${exercise.name}`} onClick={() => setEditingExercise(exercise)}><Pencil size={13} /></button>
-                <button className="mini-action danger-action" type="button" title="Delete exercise" aria-label={`Delete ${exercise.name}`} onClick={() => setDeletingExercise(exercise)}><Trash2 size={13} /></button>
-              </div>
-              <ExerciseMedia variant="tile" url={exercise.media_url} name={exercise.name} muscleGroup={exercise.muscle_group} />
-              <span className="exercise-tile-badge">{exercise.muscle_group}</span>
-            </div>
-            <div className="exercise-tile-body">
-              <h3>{exercise.name}</h3>
-              <div className="exercise-tile-tags">
-                <span className="exercise-tag">{exercise.equipment}</span>
-                <span className={`exercise-tag diff-${exercise.difficulty}`}>{exercise.difficulty}</span>
-              </div>
-            </div>
-          </article>
-        ))}
+        {groupedExercises ? (
+          groupedExercises.map(([group, items]) => {
+            const isOpen = expandedGroups.has(group);
+            return (
+              <section className={`exercise-group${isOpen ? " is-open" : ""}`} key={group}>
+                <button type="button" className="exercise-group-head" onClick={() => toggleGroup(group)} aria-expanded={isOpen}>
+                  <span className="exercise-group-name">{group}</span>
+                  <span className="exercise-group-count">{items.length}</span>
+                  <ChevronDown size={16} className="exercise-group-chevron" />
+                </button>
+                {isOpen ? <div className="exercise-group-grid">{items.map((exercise) => renderExerciseCard(exercise))}</div> : null}
+              </section>
+            );
+          })
+        ) : (
+          filteredExercises.map((exercise) => renderExerciseCard(exercise))
+        )}
         {exercises.length === 0 ? (
           <div className="exercise-gallery-empty"><span className="media-empty-icon"><Dumbbell size={24} /></span><strong>No exercises yet</strong><span>Add your own, or start with {STARTER_EXERCISES.length} ready-made exercises that already include real demos.</span><button className="button primary" type="button" onClick={() => setStarterModal(true)}><Library size={15} /> Browse starter library</button></div>
         ) : filteredExercises.length === 0 ? (
           <div className="exercise-gallery-empty"><span className="media-empty-icon"><Search size={22} /></span><strong>No matches</strong><span>Try another muscle group or a different search term.</span></div>
         ) : null}
       </div>
+
+      {viewingExercise ? (
+        <div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setViewingExercise(null)}>
+          <div className="plan-modal detail-modal" role="dialog" aria-modal="true" aria-label={viewingExercise.name} onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setViewingExercise(null)}><X size={18} /></button>
+            <div className="detail-panel">
+              <ExerciseMedia variant="hero" url={viewingExercise.media_url} name={viewingExercise.name} muscleGroup={viewingExercise.muscle_group} />
+              <div className="detail-head">
+                <span className="eyebrow">{viewingExercise.muscle_group}</span>
+                <h2>{viewingExercise.name}</h2>
+                <div className="detail-tags">
+                  <span className="exercise-tag">{viewingExercise.equipment}</span>
+                  <span className={`exercise-tag diff-${viewingExercise.difficulty}`}>{viewingExercise.difficulty}</span>
+                </div>
+              </div>
+              <div className="detail-instructions">
+                <h4>How to perform</h4>
+                <p>{viewingExercise.instructions || "No coaching cues added yet. Edit this exercise to add setup, movement, breathing, and common mistakes."}</p>
+              </div>
+              <div className="detail-actions">
+                <button className="button secondary" type="button" onClick={() => { setEditingExercise(viewingExercise); setViewingExercise(null); }}><Pencil size={14} /> Edit exercise</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {editingExercise ? <div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setEditingExercise(null)}><div className="plan-modal" role="dialog" aria-modal="true" aria-label={`Edit ${editingExercise.name}`} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setEditingExercise(null)}><X size={18} /></button>
       <section className="builder-panel library-panel exercise-library-panel">

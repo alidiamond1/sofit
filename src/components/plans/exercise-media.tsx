@@ -84,6 +84,7 @@ export function ExerciseMedia({
   }
 
   const kind = failed ? "none" : mediaKind(url);
+  const isIllustration = kind === "image" && Boolean(url) && (url as string).toLowerCase().endsWith(".svg");
   const root = `exercise-media as-${variant} ${className}`.trim();
 
   if (kind === "video") {
@@ -97,7 +98,7 @@ export function ExerciseMedia({
 
   if (kind === "image") {
     return (
-      <div className={`${root} has-media is-image`}>
+      <div className={`${root} has-media is-image${isIllustration ? " is-illustration" : ""}`}>
         <img
           src={url as string}
           alt={`${name} demonstration`}

@@ -170,6 +170,7 @@ html[data-theme="dark"] .client-plan-title .plan-metrics>div{background:var(--su
 .detail-instructions p{margin:0;font-size:13px;line-height:1.7;color:var(--ink)}
 .detail-ingredients{margin:0;padding-left:18px;display:grid;gap:5px}
 .detail-ingredients li{font-size:13px;line-height:1.5;color:var(--ink)}
+.detail-actions{display:flex;justify-content:flex-end;padding-top:2px;border-top:1px solid var(--line)}
 @media(max-width:560px){.detail-metrics{grid-template-columns:repeat(2,1fr)}.detail-panel{padding:22px 18px}}
 
 @media(max-width:640px){

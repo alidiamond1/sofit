@@ -21,6 +21,13 @@
 .exercise-media.as-hero{width:100%;aspect-ratio:16/10;border-radius:16px}
 .exercise-media.composer-thumb{width:54px;height:54px;border-radius:11px}
 
+/* Imported illustration SVGs are white line-art on a transparent canvas — they
+   need a fixed dark tile regardless of light/dark theme, or the white lines
+   disappear against a light --surface-soft. */
+.exercise-media.is-illustration{background:linear-gradient(165deg,#233242,#0d151f)}
+.exercise-media.is-illustration img{background:transparent;object-fit:contain;padding:12%}
+.exercise-media.is-illustration.as-thumb img{padding:8%}
+
 .exercise-media.is-empty{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:8px;text-align:center;padding:12px;
@@ -82,6 +89,8 @@ html[data-theme="dark"] .exercise-chip{background:var(--surface-soft);color:var(
   transition:transform .22s cubic-bezier(.22,.8,.34,1),box-shadow .22s ease,border-color .22s ease;
 }
 .exercise-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-float);border-color:var(--ring)}
+.exercise-tile.is-clickable{cursor:pointer}
+.exercise-tile.is-clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 html[data-theme="dark"] .exercise-tile{background:linear-gradient(180deg,rgba(23,34,48,.72),rgba(17,26,37,.62))}
 .exercise-tile-media{position:relative;overflow:hidden}
 .exercise-tile:hover .exercise-tile-media img,
@@ -123,6 +132,29 @@ html[data-theme="dark"] .exercise-tag{background:var(--surface-soft);border-colo
 html[data-theme="dark"] .exercise-tag.diff-beginner{color:#5fd48a}
 html[data-theme="dark"] .exercise-tag.diff-intermediate{color:#f0c674}
 html[data-theme="dark"] .exercise-tag.diff-advanced{color:#f2a1a1}
+
+/* 3b ── Coach: grouped/collapsible muscle-group sections (the "All" view) ── */
+.exercise-group{grid-column:1/-1}
+.exercise-group-head{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:13px 16px;border:1px solid var(--line);border-radius:14px;
+  background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;
+  font:inherit;transition:border-color .15s ease;
+}
+.exercise-group-head:hover{border-color:var(--line-strong)}
+.exercise-group-name{font-size:13px;font-weight:700;letter-spacing:-.01em}
+.exercise-group-count{
+  margin-left:auto;padding:2px 9px;border-radius:999px;
+  background:var(--surface-soft);color:var(--muted);font-size:10px;font-weight:700;
+}
+.exercise-group-chevron{color:var(--faint);flex:0 0 auto;transition:transform .18s ease}
+.exercise-group.is-open .exercise-group-chevron{transform:rotate(180deg)}
+.exercise-group.is-open .exercise-group-head{border-radius:14px 14px 0 0;border-bottom-color:transparent}
+.exercise-group-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:16px;
+  padding:16px;border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;
+  background:var(--surface-soft);
+}
 
 .exercise-gallery-empty{
   grid-column:1/-1;min-height:240px;display:grid;place-items:center;align-content:center;gap:10px;
@@ -223,6 +255,7 @@ html[data-theme="dark"] .starter-added{background:var(--green-soft);color:var(--
 /* 6 ── Responsive ──────────────────────────────────────────── */
 @media(max-width:760px){
   .exercise-gallery{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .exercise-group-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:12px}
   .exercise-filter-bar{padding:12px}
   .client-exercise-list.rich article{grid-template-columns:64px minmax(0,1fr);gap:12px}
   .client-exercise-list.rich .exercise-media.as-thumb{height:64px}

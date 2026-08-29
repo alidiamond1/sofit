@@ -6,6 +6,7 @@ import {
   Clock3,
   Eye,
   EyeOff,
+  ImageIcon,
   KeyRound,
   MonitorCog,
   Moon,
@@ -177,6 +178,18 @@ export function SettingsWorkspace({ role, settings, createdAt, recipients, notif
         <footer className="settings-security-footer">
           <div><span className="account-heading-icon"><Clock3 size={17} /></span><span><strong>Account created</strong><small>{createdAt}</small></span></div>
           <div><ShieldCheck size={16} /><span><strong>Protected workspace</strong><small>Your account details stay private.</small></span></div>
+          {role === "coach" ? (
+            <div>
+              <ImageIcon size={16} />
+              <span>
+                <strong>Exercise illustrations</strong>
+                <small>
+                  By <a href="https://bryllim.com" target="_blank" rel="noopener noreferrer">Bryl Lim</a>, adapted from Everkinetic — licensed{" "}
+                  <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.
+                </small>
+              </span>
+            </div>
+          ) : null}
         </footer>
       </main>
     </div>
