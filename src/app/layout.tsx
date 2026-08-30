@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1f75b9",
+  themeColor: "#000000",
 };
 
 /* Caps every page render and Server Action under this layout. Without it a

@@ -60,7 +60,7 @@ export async function readSession(): Promise<SessionUser | null> {
 
 export async function requireRole(role: UserRole) {
   const session = await readSession();
-  if (!session) redirect("/");
+  if (!session) redirect("/login");
   if (session.role !== role) redirect(session.role === "coach" ? "/coach" : "/client");
   if (session.role === "client" && session.approvalStatus !== "approved") {
     redirect("/application-pending");

@@ -4,8 +4,8 @@ import { ArrowLeft, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { submitIntakeAction } from "@/app/actions/onboarding";
-import logo from "@/assets/png.png";
 import { intakeSections } from "@/lib/onboarding/intake-fields";
+import logo from "@/assets/sofit-logo.png";
 
 export function IntakeForm({ token, email }: { token: string; email: string }) {
   const action = submitIntakeAction.bind(null, token);

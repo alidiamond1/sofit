@@ -72,10 +72,9 @@
 }
 .exercise-chip:hover{color:var(--ink);border-color:var(--line-strong);transform:translateY(-1px)}
 .exercise-chip.active{
-  color:#fff;border-color:transparent;background:var(--accent-grad);
+  color:#000;border-color:transparent;background:var(--accent-grad);
   box-shadow:0 8px 18px -8px var(--accent-glow);
 }
-html[data-theme="dark"] .exercise-chip{background:var(--surface-soft);color:var(--muted)}
 
 /* 3 ── Coach: exercise gallery ─────────────────────────────── */
 .exercise-gallery{
@@ -91,7 +90,6 @@ html[data-theme="dark"] .exercise-chip{background:var(--surface-soft);color:var(
 .exercise-tile:hover{transform:translateY(-4px);box-shadow:var(--shadow-float);border-color:var(--ring)}
 .exercise-tile.is-clickable{cursor:pointer}
 .exercise-tile.is-clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-html[data-theme="dark"] .exercise-tile{background:linear-gradient(180deg,rgba(23,34,48,.72),rgba(17,26,37,.62))}
 .exercise-tile-media{position:relative;overflow:hidden}
 .exercise-tile:hover .exercise-tile-media img,
 .exercise-tile:hover .exercise-tile-media video{transform:scale(1.05)}
@@ -111,27 +109,22 @@ html[data-theme="dark"] .exercise-tile{background:linear-gradient(180deg,rgba(23
 .exercise-tile-actions{
   position:absolute;z-index:3;top:9px;right:9px;
   display:flex;gap:5px;padding:4px;border-radius:12px;
-  background:rgba(255,255,255,.86);box-shadow:0 6px 18px rgba(8,20,35,.14);
+  background:rgba(20,23,20,.88);box-shadow:0 6px 18px rgba(0,0,0,.4);
   backdrop-filter:blur(8px);
   opacity:0;transform:translateY(-4px);transition:opacity .18s ease,transform .18s ease;
 }
 .exercise-tile:hover .exercise-tile-actions,.exercise-tile:focus-within .exercise-tile-actions{opacity:1;transform:none}
-html[data-theme="dark"] .exercise-tile-actions{background:rgba(17,26,37,.9)}
 .exercise-tile-body{padding:14px 15px 16px;display:flex;flex-direction:column;gap:9px}
 .exercise-tile-body h3{margin:0;font-size:14px;letter-spacing:-.01em;line-height:1.25}
 .exercise-tile-tags{display:flex;flex-wrap:wrap;gap:6px}
 .exercise-tag{
   padding:4px 9px;border-radius:8px;background:var(--surface-soft);
-  border:1px solid var(--line);color:var(--muted);
+  border:1px solid var(--line-strong);color:var(--muted);
   font-size:9px;font-weight:640;text-transform:capitalize;
 }
-.exercise-tag.diff-beginner{color:#218b44;border-color:#cee9d6;background:var(--green-soft)}
-.exercise-tag.diff-intermediate{color:#9b6816;border-color:#f0dfb8;background:var(--amber-soft)}
-.exercise-tag.diff-advanced{color:#b84d4d;border-color:#f1d0d0;background:var(--red-soft)}
-html[data-theme="dark"] .exercise-tag{background:var(--surface-soft);border-color:var(--line-strong)}
-html[data-theme="dark"] .exercise-tag.diff-beginner{color:#5fd48a}
-html[data-theme="dark"] .exercise-tag.diff-intermediate{color:#f0c674}
-html[data-theme="dark"] .exercise-tag.diff-advanced{color:#f2a1a1}
+.exercise-tag.diff-beginner{color:#5fd48a;border-color:rgba(58,211,102,.3);background:var(--green-soft)}
+.exercise-tag.diff-intermediate{color:#f0c674;border-color:rgba(224,168,58,.3);background:var(--amber-soft)}
+.exercise-tag.diff-advanced{color:#f2a1a1;border-color:rgba(226,88,93,.3);background:var(--red-soft)}
 
 /* 3b ── Coach: grouped/collapsible muscle-group sections (the "All" view) ── */
 .exercise-group{grid-column:1/-1}
@@ -172,10 +165,9 @@ html[data-theme="dark"] .exercise-tag.diff-advanced{color:#f2a1a1}
 .starter-added{
   display:inline-flex;align-items:center;gap:6px;
   padding:7px 10px;border-radius:9px;
-  background:var(--green-soft);color:#218b44;border:1px solid #cee9d6;
+  background:var(--green-soft);color:var(--green);border:1px solid transparent;
   font-size:10px;font-weight:650;
 }
-html[data-theme="dark"] .starter-added{background:var(--green-soft);color:var(--green);border-color:transparent}
 
 /* 4 ── Cloudinary uploader ─────────────────────────────────── */
 .media-uploader{display:grid;gap:12px;margin-bottom:6px}

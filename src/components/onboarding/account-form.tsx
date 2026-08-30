@@ -4,7 +4,7 @@ import { ArrowRight, LockKeyhole, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import { useActionState } from "react";
 import { createInvitedAccountAction } from "@/app/actions/onboarding";
-import logo from "@/assets/png.png";
+import logo from "@/assets/sofit-logo.png";
 
 export function AccountForm({ token, email, name }: { token: string; email: string; name: string }) {
   const action = createInvitedAccountAction.bind(null, token);

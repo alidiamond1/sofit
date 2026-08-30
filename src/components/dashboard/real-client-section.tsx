@@ -117,7 +117,7 @@ async function getClientContext() {
     .leftJoin("invites", "invites.user_id", "users.id")
     .where("users.id", session.id)
     .first();
-  if (!client) redirect("/");
+  if (!client) redirect("/login");
   return { session, client };
 }
 

@@ -145,8 +145,7 @@ export async function updateThemeAction(
 
   const values = { theme: parsed.data, updated_at: new Date() };
   await database()("user_settings").insert({ user_id: session.id, ...values }).onConflict("user_id").merge(values);
-  revalidatePath(`/${role}`, "layout");
-  revalidatePath(`/${role}/settings`);
+  refreshAccountPages(role);
   return { success: "Theme updated." };
 }
 

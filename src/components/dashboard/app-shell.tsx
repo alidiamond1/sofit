@@ -37,10 +37,10 @@ import { logoutAction } from "@/app/actions/auth";
 import { markNotificationReadAction } from "@/app/actions/notifications";
 import { markMessageReadAction } from "@/app/actions/messages";
 import { updateThemeAction } from "@/app/actions/profile";
-import logo from "@/assets/png.png";
-import logoIcon from "@/assets/icon.png";
 import { Avatar } from "./primitives";
 import { ThemeSync, type ThemePreference } from "./theme-sync";
+import logo from "@/assets/sofit-logo.png";
+import logoIcon from "@/assets/icon.png";
 
 type NavItem = { label: string; mobileLabel?: string; href: string; icon: LucideIcon; section: string };
 type ShellNotification = { id: number; kind: "notification" | "message"; title: string; message: string; createdLabel: string; isRead: boolean; senderName: string; href: string };

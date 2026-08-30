@@ -219,13 +219,13 @@ export async function rejectApplicationAction(formData: FormData) {
 
 export async function refreshApprovalAction() {
   const session = await readSession();
-  if (!session || session.role !== "client") redirect("/");
+  if (!session || session.role !== "client") redirect("/login");
 
   const user = await database()("users")
     .select("approval_status")
     .where({ id: session.id, role: "client" })
     .first();
-  if (!user) redirect("/");
+  if (!user) redirect("/login");
 
   if (user.approval_status === "approved") {
     await createSession({ ...session, approvalStatus: "approved" });
