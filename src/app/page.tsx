@@ -18,16 +18,12 @@ import {
   Utensils,
   Zap,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingNavbar } from "@/components/landing/landing-navbar";
 import { readSession } from "@/lib/auth/session";
 import { database } from "@/lib/db";
-import logo from "@/assets/sofit-logo.png";
-
-// Placeholder contact address — replace with the coach's real inbox before launch.
-const COACH_CONTACT_EMAIL = "hello@sofit.example";
 
 type TierCategory = "elite" | "business" | "athlete";
 type TierPricing = { price: number; billingInterval: string } | null;
@@ -472,19 +468,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <footer id="contact" className="lp-footer">
-        <div className="lp-footer-inner">
-          <div className="lp-footer-brand">
-            <Image src={logo} alt="SoFit" />
-            <p>Build strength. Keep life in balance.</p>
-          </div>
-          <div className="lp-footer-links">
-            <Link href="/login">Log in</Link>
-            <a href={`mailto:${COACH_CONTACT_EMAIL}`}>{COACH_CONTACT_EMAIL}</a>
-          </div>
-        </div>
-        <p className="lp-footer-copyright">© 2026 SoFit. All rights reserved.</p>
-      </footer>
+      <LandingFooter />
     </main>
   );
 }

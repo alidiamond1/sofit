@@ -7,9 +7,9 @@ import { useState } from "react";
 import logo from "@/assets/sofit-logo.png";
 
 const NAV_LINKS = [
-  { href: "#services", label: "Coaching" },
-  { href: "#services", label: "Diet Coach" },
-  { href: "#contact", label: "Contact" },
+  { href: "/#services", label: "Coaching" },
+  { href: "/dietcoach", label: "Diet Coach" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function LandingNavbar() {
