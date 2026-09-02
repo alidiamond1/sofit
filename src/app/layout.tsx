@@ -14,11 +14,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sofit.so"),
   applicationName: "SoFit",
   title: { default: "SoFit — Fitness & Nutrition Coaching", template: "%s · SoFit" },
   description: "Personal training, custom diet & workout plans, and daily accountability — all in one calm coaching app.",
   appleWebApp: { capable: true, title: "SoFit", statusBarStyle: "default" },
   formatDetection: { telephone: false },
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "SoFit",
+    url: "/",
+    title: "SoFit — Fitness & Nutrition Coaching",
+    description: "Personal coaching, clear plans, and progress you can read.",
+    images: [{ url: "/brand/coach-training-03.jpg", width: 2560, height: 1707, alt: "Coach Ali at SoFit." }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SoFit — Fitness & Nutrition Coaching",
+    description: "Personal coaching, clear plans, and progress you can read.",
+    images: ["/brand/coach-training-03.jpg"],
+  },
 };
 
 export const viewport: Viewport = {

@@ -28,8 +28,6 @@
   color: var(--lp-ink);
 }
 
-.lp img { filter: grayscale(.85) contrast(1.15) brightness(.9); }
-
 /* Navbar --------------------------------------------------------- */
 .lp-nav{position:sticky;top:0;z-index:40;background:rgba(11,13,12,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--lp-line)}
 .lp-nav-inner{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
