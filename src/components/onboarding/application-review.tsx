@@ -1,12 +1,16 @@
 import { ArrowLeft, Check, X } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { approveApplicationAction, rejectApplicationAction } from "@/app/actions/onboarding";
+import { statusLabel } from "@/lib/status-labels";
 import { Badge, Card, PageHeader } from "@/components/dashboard/primitives";
 import { database } from "@/lib/db";
 import { intakeSections } from "@/lib/onboarding/intake-fields";
 
 export async function ApplicationReview({ inviteId }: { inviteId: number }) {
+  const t = await getTranslations("Invites");
+  const ts = await getTranslations("Common.status");
   const [application, services] = await Promise.all([
     database()("invites")
       .select("invites.*", "users.name", "users.email as user_email", "clients.service_id as current_service_id")
@@ -25,17 +29,17 @@ export async function ApplicationReview({ inviteId }: { inviteId: number }) {
 
   return (
     <>
-      <Link href="/coach/invites" className="button secondary review-back"><ArrowLeft size={15} /> Back to applications</Link>
-      <PageHeader eyebrow="Application review" title={applicationName} description={applicationEmail} actions={<Badge tone={application.status === "approved" ? "success" : "warning"}>{application.status}</Badge>} />
+      <Link href="/coach/invites" className="button secondary review-back"><ArrowLeft size={15} /> {t("backToApplications")}</Link>
+      <PageHeader eyebrow={t("applicationReview")} title={applicationName} description={applicationEmail} actions={<Badge tone={application.status === "approved" ? "success" : "warning"}>{statusLabel(ts, application.status)}</Badge>} />
       <div className="application-review-grid">
         <div className="application-answers">
           {intakeSections.map((section) => <Card key={section.id}><div className="card-head"><div><span className="eyebrow">{section.subtitle}</span><h2>{section.title}</h2></div></div><dl>{section.fields.map((field) => <div key={field.name}><dt>{field.label}</dt><dd>{answers?.[field.name] || "?"}</dd></div>)}</dl></Card>)}
         </div>
         <aside>
-          <Card className="approval-card"><span className="eyebrow">Coach decision</span><h2>Review and decide</h2><p>{alreadyApproved ? "This client is already approved. You can still change their assigned service below." : accountReady ? "The client account is ready. Approval unlocks the client dashboard." : "The intake is ready for review. Approval becomes available after the client creates their account."}</p>
-            <form action={approveApplicationAction}><input type="hidden" name="invite_id" value={application.id} /><label><span>Service or PT tier</span><select name="service_id" defaultValue={application.current_service_id ? String(application.current_service_id) : ""} disabled={!accountReady}><option value="">No service assigned</option>{services.map((service) => <option key={service.id} value={service.id}>{service.name} - ${Number(service.price).toFixed(0)} {service.billing_interval === "monthly" ? "/ month" : ""}</option>)}</select></label><button className="button primary full" disabled={!accountReady}><Check size={15} /> {!accountReady ? "Waiting for account signup" : alreadyApproved ? "Update service" : "Approve & open portal"}</button></form>
-            <div className="decision-divider"><span>or</span></div>
-            <form action={rejectApplicationAction}><input type="hidden" name="invite_id" value={application.id} /><label><span>Reason or private review note</span><textarea name="review_notes" rows={3} /></label><button className="button danger full" disabled={application.status !== "submitted"}><X size={15} /> Decline application</button></form>
+          <Card className="approval-card"><span className="eyebrow">{t("coachDecision")}</span><h2>{t("reviewAndDecide")}</h2><p>{alreadyApproved ? t("alreadyApprovedHint") : accountReady ? t("accountReadyHint") : t("notReadyHint")}</p>
+            <form action={approveApplicationAction}><input type="hidden" name="invite_id" value={application.id} /><label><span>{t("serviceOrTier")}</span><select name="service_id" defaultValue={application.current_service_id ? String(application.current_service_id) : ""} disabled={!accountReady}><option value="">{t("noServiceAssigned")}</option>{services.map((service) => <option key={service.id} value={service.id}>{service.name} - ${Number(service.price).toFixed(0)} {service.billing_interval === "monthly" ? t("perMonth") : ""}</option>)}</select></label><button className="button primary full" disabled={!accountReady}><Check size={15} /> {!accountReady ? t("waitingForSignup") : alreadyApproved ? t("updateService") : t("approveAndOpenPortal")}</button></form>
+            <div className="decision-divider"><span>{t("or")}</span></div>
+            <form action={rejectApplicationAction}><input type="hidden" name="invite_id" value={application.id} /><label><span>{t("reasonLabel")}</span><textarea name="review_notes" rows={3} /></label><button className="button danger full" disabled={application.status !== "submitted"}><X size={15} /> {t("declineApplication")}</button></form>
           </Card>
         </aside>
       </div>

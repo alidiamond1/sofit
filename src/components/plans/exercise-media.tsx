@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { ImagePlus, Loader2, Link2, Trash2, Dumbbell, Play, Utensils } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRef, useState, type ChangeEvent } from "react";
 
 /* ------------------------------------------------------------------
@@ -141,6 +142,7 @@ export function MediaUploader({
   muscleGroup?: string | null;
   context?: "exercise" | "meal";
 }) {
+  const t = useTranslations("Packages.mediaUploader");
   const [url, setUrl] = useState<string>(defaultUrl || "");
   const [status, setStatus] = useState<"idle" | "uploading" | "error">("idle");
   const [message, setMessage] = useState<string>("");
@@ -149,7 +151,7 @@ export function MediaUploader({
   async function uploadToImageKit(file: File) {
     if (file.size > MAX_BYTES) {
       setStatus("error");
-      setMessage("File is larger than 25 MB. Compress it or use a shorter clip.");
+      setMessage(t("fileTooLarge"));
       return;
     }
     setStatus("uploading");
@@ -176,7 +178,7 @@ export function MediaUploader({
       setStatus("idle");
     } catch {
       setStatus("error");
-      setMessage("Upload failed. Check your ImageKit keys, or paste a direct media URL below.");
+      setMessage(t("uploadFailed"));
     }
   }
 
@@ -196,14 +198,14 @@ export function MediaUploader({
         ) : (
           <div className="media-dropzone-empty">
             <span className="media-empty-icon"><ImagePlus size={22} /></span>
-            <strong>{context === "meal" ? "Add a food photo" : "Add a photo, GIF, or video"}</strong>
-            <span>{context === "meal" ? "Show the client exactly what the meal looks like." : "Show the movement so your client trains with perfect form."}</span>
+            <strong>{context === "meal" ? t("addFoodPhoto") : t("addPhotoGifVideo")}</strong>
+            <span>{context === "meal" ? t("showMealHint") : t("showMovementHint")}</span>
           </div>
         )}
 
         {status === "uploading" ? (
           <div className="media-uploading" role="status">
-            <Loader2 size={18} className="spin" /> Uploading…
+            <Loader2 size={18} className="spin" /> {t("uploading")}
           </div>
         ) : null}
       </div>
@@ -211,12 +213,12 @@ export function MediaUploader({
       <div className="media-uploader-actions">
         {IMAGEKIT_READY ? (
           <button type="button" className="button secondary small" onClick={() => fileRef.current?.click()} disabled={status === "uploading"}>
-            <ImagePlus size={14} /> {url ? "Replace media" : "Upload media"}
+            <ImagePlus size={14} /> {url ? t("replaceMedia") : t("uploadMedia")}
           </button>
         ) : null}
         {url ? (
           <button type="button" className="button secondary small danger-text" onClick={() => { setUrl(""); setStatus("idle"); setMessage(""); }}>
-            <Trash2 size={14} /> Remove
+            <Trash2 size={14} /> {t("remove")}
           </button>
         ) : null}
       </div>
@@ -224,7 +226,7 @@ export function MediaUploader({
       <input ref={fileRef} type="file" accept="image/*,video/*" hidden onChange={onPick} />
 
       <label className="media-url-field">
-        <span><Link2 size={12} /> Or paste a direct image / GIF / video URL</span>
+        <span><Link2 size={12} /> {t("pasteUrlLabel")}</span>
         <input
           type="text"
           inputMode="url"
@@ -236,7 +238,7 @@ export function MediaUploader({
 
       {!IMAGEKIT_READY ? (
         <p className="media-hint">
-          Tip: set <code>NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY</code> and <code>IMAGEKIT_PRIVATE_KEY</code> to enable one-click uploads.
+          {t("envTip", { publicKey: "NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY", privateKey: "IMAGEKIT_PRIVATE_KEY" })}
         </p>
       ) : null}
       {status === "error" ? <p className="media-hint error">{message}</p> : null}

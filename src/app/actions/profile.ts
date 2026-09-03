@@ -1,10 +1,12 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSession, requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
+import { LOCALE_COOKIE } from "@/i18n/config";
 
 export type ProfileActionState = { error?: string; success?: string };
 
@@ -147,6 +149,25 @@ export async function updateThemeAction(
   await database()("user_settings").insert({ user_id: session.id, ...values }).onConflict("user_id").merge(values);
   refreshAccountPages(role);
   return { success: "Theme updated." };
+}
+
+export async function updateLanguageAction(
+  role: "coach" | "client",
+  language: "en" | "so",
+): Promise<ProfileActionState> {
+  const session = await requireRole(role);
+  const parsed = z.enum(["en", "so"]).safeParse(language);
+  if (!parsed.success) return { error: "Choose a valid language." };
+
+  const values = { language: parsed.data, updated_at: new Date() };
+  await database()("user_settings").insert({ user_id: session.id, ...values }).onConflict("user_id").merge(values);
+  (await cookies()).set(LOCALE_COOKIE, parsed.data, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+  });
+  refreshAccountPages(role);
+  return { success: "Language updated." };
 }
 
 export async function updateNotificationsAction(

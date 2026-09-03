@@ -54,12 +54,18 @@ export function TrendLineChart({
   data,
   valueLabel,
   formatValue = (value) => String(value),
+  highestLabel = "Highest",
+  latestLabel = "Latest",
+  emptyLabel = "Not enough data to show a trend yet.",
 }: {
   data: ChartPoint[];
   valueLabel: string;
   formatValue?: (value: number) => string;
+  highestLabel?: string;
+  latestLabel?: string;
+  emptyLabel?: string;
 }) {
-  if (!data.length) return <p className="chart-empty">Not enough data to show a trend yet.</p>;
+  if (!data.length) return <p className="chart-empty">{emptyLabel}</p>;
   const width = 720;
   const height = 250;
   const paddingX = 38;
@@ -77,8 +83,8 @@ export function TrendLineChart({
   return (
     <div className="trend-chart">
       <div className="chart-summary">
-        <div><span>Highest</span><strong>{formatValue(max)}</strong></div>
-        <div><span>Latest</span><strong>{formatValue(values.at(-1) || 0)}</strong></div>
+        <div><span>{highestLabel}</span><strong>{formatValue(max)}</strong></div>
+        <div><span>{latestLabel}</span><strong>{formatValue(values.at(-1) || 0)}</strong></div>
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${valueLabel} trend from ${data[0].label} to ${data.at(-1)?.label}. Lowest ${formatValue(min)}, highest ${formatValue(max)}.`}>
         {[0, 1, 2, 3].map((line) => {
@@ -99,12 +105,14 @@ export function TrendLineChart({
 export function HorizontalBars({
   items,
   valueLabel = "clients",
+  emptyLabel = "No category data is available yet.",
 }: {
   items: BarItem[];
   valueLabel?: string;
+  emptyLabel?: string;
 }) {
   const max = Math.max(...items.map((item) => finite(item.value)), 1);
-  if (!items.length) return <p className="chart-empty">No category data is available yet.</p>;
+  if (!items.length) return <p className="chart-empty">{emptyLabel}</p>;
   return (
     <div className="horizontal-bars" role="img" aria-label={`${valueLabel} by category`}>
       {items.map((item) => (

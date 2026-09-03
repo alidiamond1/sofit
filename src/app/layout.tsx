@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 
@@ -46,12 +48,15 @@ export const viewport: Viewport = {
    the visitor experiences as a page that loads forever and then 503s. */
 export const maxDuration = 20;
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`}>
       <body suppressHydrationWarning>
-        {children}
-        <PwaRegister />
+        <NextIntlClientProvider>
+          {children}
+          <PwaRegister />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

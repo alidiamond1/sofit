@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import {
   deleteDietPlanAction,
@@ -90,6 +91,8 @@ export function DietPlanRecordActions({
   clients: PlanClient[];
   meals: MealOption[];
 }) {
+  const t = useTranslations("Packages.recordActions");
+  const tc = useTranslations("Common");
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [selectedMeals, setSelectedMeals] = useState(() => dietSelections(plan, meals));
@@ -117,34 +120,34 @@ export function DietPlanRecordActions({
   return (
     <>
       <div className="record-actions table-record-actions">
-        <button className="mini-action" type="button" title="Edit plan" aria-label={`Edit ${plan.title}`} onClick={openEditor}><Pencil size={13} /></button>
-        <button className="mini-action danger-action" type="button" title="Delete plan" aria-label={`Delete ${plan.title}`} onClick={() => setDeleting(true)}><Trash2 size={13} /></button>
+        <button className="mini-action" type="button" title={tc("edit")} aria-label={t("editPlanAria", { title: plan.title })} onClick={openEditor}><Pencil size={13} /></button>
+        <button className="mini-action danger-action" type="button" title={tc("delete")} aria-label={t("deletePlanAria", { title: plan.title })} onClick={() => setDeleting(true)}><Trash2 size={13} /></button>
       </div>
-      {editing ? <ModalPortal><div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setEditing(false)}><div className="plan-modal wide" role="dialog" aria-modal="true" aria-label={`Edit ${plan.title}`} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setEditing(false)}><X size={18} /></button><section className="builder-panel composer-panel">
-        <header><span className="eyebrow">Edit diet plan</span><h2>{plan.title}</h2><p>Update the client, targets, status, dates, and the meals in this assigned plan.</p></header>
+      {editing ? <ModalPortal><div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setEditing(false)}><div className="plan-modal wide" role="dialog" aria-modal="true" aria-label={t("editPlanAria", { title: plan.title })} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label={tc("close")} onClick={() => setEditing(false)}><X size={18} /></button><section className="builder-panel composer-panel">
+        <header><span className="eyebrow">{t("editDietPlanEyebrow")}</span><h2>{plan.title}</h2><p>{t("editDietPlanHint")}</p></header>
         <form action={editAction} className="builder-form">
           <input type="hidden" name="id" value={plan.id} />
           <div className="form-grid">
-            <label><span>Client</span><select name="client_id" defaultValue={plan.client_id} required>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
-            <label><span>Plan title</span><input name="title" defaultValue={plan.title} required /></label>
-            <label><span>Daily calories</span><input name="daily_calories" type="number" min="0" defaultValue={plan.daily_calories ?? 0} required /></label>
-            <label><span>Protein (g)</span><input name="protein_g" type="number" min="0" defaultValue={plan.protein_g ?? ""} /></label>
-            <label><span>Carbs (g)</span><input name="carbs_g" type="number" min="0" defaultValue={plan.carbs_g ?? ""} /></label>
-            <label><span>Fat (g)</span><input name="fat_g" type="number" min="0" defaultValue={plan.fat_g ?? ""} /></label>
-            <label><span>Starts on</span><input name="starts_on" type="date" defaultValue={plan.starts_on} required /></label>
-            <label><span>Status</span><select name="status" defaultValue={plan.status === "active" ? "active" : "draft"}><option value="active">Active plan</option><option value="draft">Draft</option></select></label>
+            <label><span>{t("client")}</span><select name="client_id" defaultValue={plan.client_id} required>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
+            <label><span>{t("planTitle")}</span><input name="title" defaultValue={plan.title} required /></label>
+            <label><span>{t("dailyCalories")}</span><input name="daily_calories" type="number" min="0" defaultValue={plan.daily_calories ?? 0} required /></label>
+            <label><span>{t("proteinG")}</span><input name="protein_g" type="number" min="0" defaultValue={plan.protein_g ?? ""} /></label>
+            <label><span>{t("carbsG")}</span><input name="carbs_g" type="number" min="0" defaultValue={plan.carbs_g ?? ""} /></label>
+            <label><span>{t("fatG")}</span><input name="fat_g" type="number" min="0" defaultValue={plan.fat_g ?? ""} /></label>
+            <label><span>{t("startsOn")}</span><input name="starts_on" type="date" defaultValue={plan.starts_on} required /></label>
+            <label><span>{t("status")}</span><select name="status" defaultValue={plan.status === "active" ? "active" : "draft"}><option value="active">{t("activePlan")}</option><option value="draft">{t("draft")}</option></select></label>
           </div>
-          <div className="composer-list-head"><div><strong>Daily meals</strong><span>{selectedMeals.length} selected</span></div><button className="button secondary small" type="button" onClick={addMeal} disabled={meals.length === 0}><Plus size={14} /> Add meal</button></div>
+          <div className="composer-list-head"><div><strong>{t("dailyMeals")}</strong><span>{t("selectedCount", { count: selectedMeals.length })}</span></div><button className="button secondary small" type="button" onClick={addMeal} disabled={meals.length === 0}><Plus size={14} /> {t("addMeal")}</button></div>
           <div className="composer-rows">
-            {selectedMeals.map((selection, index) => <div className="composer-row meal-row" key={selection.key}><span className="row-number">{index + 1}</span><label><span>Meal</span><select value={selection.mealId} onChange={(event) => setSelectedMeals((current) => current.map((item) => item.key === selection.key ? { ...item, mealId: Number(event.target.value) } : item))}>{meals.map((meal) => <option key={meal.id} value={meal.id}>{meal.meal_type} - {meal.name}</option>)}</select></label><label><span>Time</span><input type="time" value={selection.time} onChange={(event) => setSelectedMeals((current) => current.map((item) => item.key === selection.key ? { ...item, time: event.target.value } : item))} /></label><div className="row-preview"><strong>{meals.find((meal) => meal.id === selection.mealId)?.calories || "-"}</strong><span>kcal</span></div><button className="icon-button" type="button" aria-label="Remove meal" onClick={() => setSelectedMeals((current) => current.filter((item) => item.key !== selection.key))}><Trash2 size={15} /></button></div>)}
-            {selectedMeals.length === 0 ? <div className="builder-empty">Add at least one meal to save this plan.</div> : null}
+            {selectedMeals.map((selection, index) => <div className="composer-row meal-row" key={selection.key}><span className="row-number">{index + 1}</span><label><span>{t("meal")}</span><select value={selection.mealId} onChange={(event) => setSelectedMeals((current) => current.map((item) => item.key === selection.key ? { ...item, mealId: Number(event.target.value) } : item))}>{meals.map((meal) => <option key={meal.id} value={meal.id}>{meal.meal_type} - {meal.name}</option>)}</select></label><label><span>{t("time")}</span><input type="time" value={selection.time} onChange={(event) => setSelectedMeals((current) => current.map((item) => item.key === selection.key ? { ...item, time: event.target.value } : item))} /></label><div className="row-preview"><strong>{meals.find((meal) => meal.id === selection.mealId)?.calories || "-"}</strong><span>kcal</span></div><button className="icon-button" type="button" aria-label={t("removeMeal")} onClick={() => setSelectedMeals((current) => current.filter((item) => item.key !== selection.key))}><Trash2 size={15} /></button></div>)}
+            {selectedMeals.length === 0 ? <div className="builder-empty">{t("emptyMealsHint")}</div> : null}
           </div>
           <input type="hidden" name="meals_json" value={JSON.stringify(selectedMeals.map(({ mealId, time }) => ({ mealId, time })))} />
           <ActionMessage state={editState} />
-          <button className="button primary" type="submit" disabled={editPending || selectedMeals.length === 0}>{editPending ? "Saving..." : "Save diet plan"}</button>
+          <button className="button primary" type="submit" disabled={editPending || selectedMeals.length === 0}>{editPending ? tc("saving") : t("saveDietPlan")}</button>
         </form>
       </section></div></div></ModalPortal> : null}
-      {deleting ? <DeletePlanModal kind="diet plan" title={plan.title} id={plan.id} state={deleteState} action={deleteAction} pending={deletePending} onClose={() => setDeleting(false)} /> : null}
+      {deleting ? <DeletePlanModal kind={t("deleteDietPlanKind")} title={plan.title} id={plan.id} state={deleteState} action={deleteAction} pending={deletePending} onClose={() => setDeleting(false)} /> : null}
     </>
   );
 }
@@ -158,6 +161,8 @@ export function WorkoutPlanRecordActions({
   clients: PlanClient[];
   exercises: ExerciseOption[];
 }) {
+  const t = useTranslations("Packages.recordActions");
+  const tc = useTranslations("Common");
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [selectedExercises, setSelectedExercises] = useState(() => workoutSelections(plan, exercises));
@@ -189,34 +194,34 @@ export function WorkoutPlanRecordActions({
   return (
     <>
       <div className="record-actions table-record-actions">
-        <button className="mini-action" type="button" title="Edit program" aria-label={`Edit ${plan.title}`} onClick={openEditor}><Pencil size={13} /></button>
-        <button className="mini-action danger-action" type="button" title="Delete program" aria-label={`Delete ${plan.title}`} onClick={() => setDeleting(true)}><Trash2 size={13} /></button>
+        <button className="mini-action" type="button" title={tc("edit")} aria-label={t("editPlanAria", { title: plan.title })} onClick={openEditor}><Pencil size={13} /></button>
+        <button className="mini-action danger-action" type="button" title={tc("delete")} aria-label={t("deletePlanAria", { title: plan.title })} onClick={() => setDeleting(true)}><Trash2 size={13} /></button>
       </div>
-      {editing ? <ModalPortal><div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setEditing(false)}><div className="plan-modal extra-wide" role="dialog" aria-modal="true" aria-label={`Edit ${plan.title}`} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setEditing(false)}><X size={18} /></button><section className="builder-panel composer-panel">
-        <header><span className="eyebrow">Edit workout plan</span><h2>{plan.title}</h2><p>Update the client, program length, status, and every exercise prescription.</p></header>
+      {editing ? <ModalPortal><div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setEditing(false)}><div className="plan-modal extra-wide" role="dialog" aria-modal="true" aria-label={t("editPlanAria", { title: plan.title })} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label={tc("close")} onClick={() => setEditing(false)}><X size={18} /></button><section className="builder-panel composer-panel">
+        <header><span className="eyebrow">{t("editWorkoutPlanEyebrow")}</span><h2>{plan.title}</h2><p>{t("editWorkoutPlanHint")}</p></header>
         <form action={editAction} className="builder-form">
           <input type="hidden" name="id" value={plan.id} />
           <div className="form-grid">
-            <label><span>Client</span><select name="client_id" defaultValue={plan.client_id} required>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
-            <label><span>Program title</span><input name="title" defaultValue={plan.title} required /></label>
-            <label><span>Program length</span><input name="weeks" type="number" min="1" max="52" defaultValue={plan.weeks} required /></label>
-            <label><span>Starts on</span><input name="starts_on" type="date" defaultValue={plan.starts_on} required /></label>
-            <label><span>Status</span><select name="status" defaultValue={plan.status === "active" ? "active" : "draft"}><option value="active">Active program</option><option value="draft">Draft</option></select></label>
+            <label><span>{t("client")}</span><select name="client_id" defaultValue={plan.client_id} required>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
+            <label><span>{t("programTitle")}</span><input name="title" defaultValue={plan.title} required /></label>
+            <label><span>{t("programLength")}</span><input name="weeks" type="number" min="1" max="52" defaultValue={plan.weeks} required /></label>
+            <label><span>{t("startsOn")}</span><input name="starts_on" type="date" defaultValue={plan.starts_on} required /></label>
+            <label><span>{t("status")}</span><select name="status" defaultValue={plan.status === "active" ? "active" : "draft"}><option value="active">{t("activeProgram")}</option><option value="draft">{t("draft")}</option></select></label>
           </div>
-          <div className="composer-list-head"><div><strong>Program exercises</strong><span>{selectedExercises.length} movements</span></div><button className="button secondary small" type="button" onClick={addExercise} disabled={exercises.length === 0}><Plus size={14} /> Add exercise</button></div>
+          <div className="composer-list-head"><div><strong>{t("programExercises")}</strong><span>{t("movementsCount", { count: selectedExercises.length })}</span></div><button className="button secondary small" type="button" onClick={addExercise} disabled={exercises.length === 0}><Plus size={14} /> {t("addExercise")}</button></div>
           <div className="composer-rows workout-composer-rows">
             {selectedExercises.map((selection, index) => {
               const exercise = exercises.find((item) => item.id === selection.exerciseId) || exercises[0];
-              return <div className="composer-row workout-row" key={selection.key}><span className="row-number">{index + 1}</span>{exercise ? <ExerciseMedia variant="thumb" className="composer-thumb" url={exercise.media_url} name={exercise.name} muscleGroup={exercise.muscle_group} /> : null}<label className="exercise-select"><span>Exercise</span><select value={selection.exerciseId} onChange={(event) => updateSelection(selection.key, { exerciseId: Number(event.target.value) })}>{exercises.map((item) => <option key={item.id} value={item.id}>{item.name} - {item.muscle_group}</option>)}</select></label><label><span>Day</span><input value={selection.day} onChange={(event) => updateSelection(selection.key, { day: event.target.value })} /></label><label><span>Sets</span><input type="number" min="1" max="20" value={selection.sets} onChange={(event) => updateSelection(selection.key, { sets: Number(event.target.value) })} /></label><label><span>Reps</span><input value={selection.reps} onChange={(event) => updateSelection(selection.key, { reps: event.target.value })} /></label><label><span>RPE</span><input type="number" min="1" max="10" step=".5" value={selection.rpe} onChange={(event) => updateSelection(selection.key, { rpe: Number(event.target.value) })} /></label><label><span>Rest sec</span><input type="number" min="0" max="1200" value={selection.restSeconds} onChange={(event) => updateSelection(selection.key, { restSeconds: Number(event.target.value) })} /></label><button className="icon-button" type="button" aria-label="Remove exercise" onClick={() => setSelectedExercises((current) => current.filter((item) => item.key !== selection.key))}><Trash2 size={15} /></button></div>;
+              return <div className="composer-row workout-row" key={selection.key}><span className="row-number">{index + 1}</span>{exercise ? <ExerciseMedia variant="thumb" className="composer-thumb" url={exercise.media_url} name={exercise.name} muscleGroup={exercise.muscle_group} /> : null}<label className="exercise-select"><span>{t("exercise")}</span><select value={selection.exerciseId} onChange={(event) => updateSelection(selection.key, { exerciseId: Number(event.target.value) })}>{exercises.map((item) => <option key={item.id} value={item.id}>{item.name} - {item.muscle_group}</option>)}</select></label><label><span>{t("day")}</span><input value={selection.day} onChange={(event) => updateSelection(selection.key, { day: event.target.value })} /></label><label><span>{t("sets")}</span><input type="number" min="1" max="20" value={selection.sets} onChange={(event) => updateSelection(selection.key, { sets: Number(event.target.value) })} /></label><label><span>{t("reps")}</span><input value={selection.reps} onChange={(event) => updateSelection(selection.key, { reps: event.target.value })} /></label><label><span>{t("rpe")}</span><input type="number" min="1" max="10" step=".5" value={selection.rpe} onChange={(event) => updateSelection(selection.key, { rpe: Number(event.target.value) })} /></label><label><span>{t("restSec")}</span><input type="number" min="0" max="1200" value={selection.restSeconds} onChange={(event) => updateSelection(selection.key, { restSeconds: Number(event.target.value) })} /></label><button className="icon-button" type="button" aria-label={t("removeExercise")} onClick={() => setSelectedExercises((current) => current.filter((item) => item.key !== selection.key))}><Trash2 size={15} /></button></div>;
             })}
-            {selectedExercises.length === 0 ? <div className="builder-empty">Add at least one exercise to save this program.</div> : null}
+            {selectedExercises.length === 0 ? <div className="builder-empty">{t("emptyExercisesHint")}</div> : null}
           </div>
           <input type="hidden" name="exercises_json" value={JSON.stringify(selectedExercises.map(({ exerciseId, day, sets, reps, rpe, restSeconds }) => ({ exerciseId, day, sets, reps, rpe, restSeconds })))} />
           <ActionMessage state={editState} />
-          <button className="button primary" type="submit" disabled={editPending || selectedExercises.length === 0}>{editPending ? "Saving..." : "Save workout plan"}</button>
+          <button className="button primary" type="submit" disabled={editPending || selectedExercises.length === 0}>{editPending ? tc("saving") : t("saveWorkoutPlan")}</button>
         </form>
       </section></div></div></ModalPortal> : null}
-      {deleting ? <DeletePlanModal kind="workout plan" title={plan.title} id={plan.id} state={deleteState} action={deleteAction} pending={deletePending} onClose={() => setDeleting(false)} /> : null}
+      {deleting ? <DeletePlanModal kind={t("deleteWorkoutPlanKind")} title={plan.title} id={plan.id} state={deleteState} action={deleteAction} pending={deletePending} onClose={() => setDeleting(false)} /> : null}
     </>
   );
 }
@@ -238,5 +243,7 @@ function DeletePlanModal({
   pending: boolean;
   onClose: () => void;
 }) {
-  return <ModalPortal><div className="plan-modal-backdrop" role="presentation" onMouseDown={onClose}><div className="plan-modal confirm-modal" role="alertdialog" aria-modal="true" aria-label={`Delete ${title}`} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label="Close" onClick={onClose}><X size={18} /></button><section className="builder-panel destructive-panel"><span className="destructive-icon"><AlertTriangle size={22} /></span><span className="eyebrow">Delete {kind}</span><h2>Delete {title}?</h2><p>This removes the assigned {kind} from both the coach history and the client portal. This action cannot be undone.</p><form action={action}><input type="hidden" name="id" value={id} /><ActionMessage state={state} /><div className="confirm-actions"><button className="button secondary" type="button" onClick={onClose}>Cancel</button><button className="button danger" type="submit" disabled={pending}>{pending ? "Deleting..." : `Delete ${kind}`}</button></div></form></section></div></div></ModalPortal>;
+  const t = useTranslations("Packages.recordActions");
+  const tc = useTranslations("Common");
+  return <ModalPortal><div className="plan-modal-backdrop" role="presentation" onMouseDown={onClose}><div className="plan-modal confirm-modal" role="alertdialog" aria-modal="true" aria-label={t("deletePlanAria", { title })} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close icon-button" type="button" aria-label={tc("close")} onClick={onClose}><X size={18} /></button><section className="builder-panel destructive-panel"><span className="destructive-icon"><AlertTriangle size={22} /></span><span className="eyebrow">{t("deleteEyebrow", { kind })}</span><h2>{t("deleteTitle", { title })}</h2><p>{t("deleteBody", { kind })}</p><form action={action}><input type="hidden" name="id" value={id} /><ActionMessage state={state} /><div className="confirm-actions"><button className="button secondary" type="button" onClick={onClose}>{tc("cancel")}</button><button className="button danger" type="submit" disabled={pending}>{pending ? tc("deleting") : t("deleteButton", { kind })}</button></div></form></section></div></div></ModalPortal>;
 }

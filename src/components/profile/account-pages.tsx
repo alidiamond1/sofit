@@ -6,10 +6,12 @@ import {
   MapPin,
 } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Avatar, Badge, PageHeader } from "@/components/dashboard/primitives";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { intakeSections } from "@/lib/onboarding/intake-fields";
+import { statusLabel } from "@/lib/status-labels";
 import { ProfileEditor } from "./profile-editor";
 import { ProfileWorkspaceTabs } from "./profile-workspace-tabs";
 import { SettingsWorkspace } from "./settings-workspace";
@@ -28,16 +30,16 @@ function dateInput(value: unknown) {
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
-function displayDate(value: unknown) {
-  if (!value) return "Not added";
+function displayDate(value: unknown, fallback: string) {
+  if (!value) return fallback;
   const date = new Date(String(value));
-  return Number.isNaN(date.getTime()) ? "Not added" : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+  return Number.isNaN(date.getTime()) ? fallback : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
-function notificationDate(value: unknown) {
-  if (!value) return "Just now";
+function notificationDate(value: unknown, fallback: string) {
+  if (!value) return fallback;
   const date = new Date(String(value));
-  return Number.isNaN(date.getTime()) ? "Recently" : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+  return Number.isNaN(date.getTime()) ? fallback : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
 }
 
 function splitQuestion(label: string) {
@@ -46,6 +48,8 @@ function splitQuestion(label: string) {
 }
 
 export async function AccountProfilePage({ role }: { role: "coach" | "client" }) {
+  const t = await getTranslations("Account");
+  const ts = await getTranslations("Common.status");
   const session = await requireRole(role);
   const record = await database()("users")
     .select(
@@ -82,25 +86,25 @@ export async function AccountProfilePage({ role }: { role: "coach" | "client" })
 
   return (
     <>
-      <PageHeader eyebrow="Account profile" title="Profile" description={role === "client" ? "Your account details and every answer submitted through your private intake form." : "Manage the identity clients see across your SoFit workspace."} />
+      <PageHeader eyebrow={t("profileEyebrow")} title={t("profileTitle")} description={role === "client" ? t("profileDescriptionClient") : t("profileDescriptionCoach")} />
       <section className={`account-profile-workspace ${role}`}>
         <ProfileWorkspaceTabs
           role={role}
           sidebar={<>
           <section className="profile-context-card">
-            <span className="eyebrow">Account snapshot</span>
+            <span className="eyebrow">{t("accountSnapshot")}</span>
             <div className="profile-context-list">
-              <div><span className="account-heading-icon"><CircleUserRound size={17} /></span><p><small>Role</small><strong>{role === "coach" ? "Coach administrator" : "Client member"}</strong></p></div>
-              <div><span className="account-heading-icon"><CalendarDays size={17} /></span><p><small>Member since</small><strong>{displayDate(record.joined_at || record.created_at)}</strong></p></div>
-              <div><span className="account-heading-icon"><MapPin size={17} /></span><p><small>Location</small><strong>{profile.location || "Not added"}</strong></p></div>
+              <div><span className="account-heading-icon"><CircleUserRound size={17} /></span><p><small>{t("role")}</small><strong>{role === "coach" ? t("roleCoach") : t("roleClient")}</strong></p></div>
+              <div><span className="account-heading-icon"><CalendarDays size={17} /></span><p><small>{t("memberSince")}</small><strong>{displayDate(record.joined_at || record.created_at, t("notAdded"))}</strong></p></div>
+              <div><span className="account-heading-icon"><MapPin size={17} /></span><p><small>{t("location")}</small><strong>{profile.location || t("notAdded")}</strong></p></div>
             </div>
           </section>
           {role === "client" ? (
             <section className="profile-program-card">
-              <span className="eyebrow">Current coaching</span>
-              <h3>{record.package_name || record.service_name || "Program not assigned"}</h3>
-              <p>{record.package_name && record.service_name ? record.service_name : "Your coach will add the right service here."}</p>
-              <div><Badge tone={record.status === "active" ? "success" : "warning"}>{record.status || "onboarding"}</Badge><span>{record.pipeline_stage || "onboarding"}</span></div>
+              <span className="eyebrow">{t("currentCoaching")}</span>
+              <h3>{record.package_name || record.service_name || t("programNotAssigned")}</h3>
+              <p>{record.package_name && record.service_name ? record.service_name : t("coachWillAddService")}</p>
+              <div><Badge tone={record.status === "active" ? "success" : "warning"}>{statusLabel(ts, record.status || "onboarding")}</Badge><span>{statusLabel(ts, record.pipeline_stage || "onboarding")}</span></div>
             </section>
           ) : null}
           </>}
@@ -109,11 +113,11 @@ export async function AccountProfilePage({ role }: { role: "coach" | "client" })
             <div className="profile-cover" aria-hidden="true" />
             <div className="profile-identity-row">
               <Avatar name={profile.name} src={profile.avatarPath} className="profile-avatar-hero" />
-              <div className="profile-identity-copy"><span className="eyebrow">{role === "coach" ? "Head coach" : "SoFit client"}</span><h2>{profile.name}</h2><p><Mail size={14} /> {profile.email}</p></div>
+              <div className="profile-identity-copy"><span className="eyebrow">{role === "coach" ? t("headCoach") : t("sofitClient")}</span><h2>{profile.name}</h2><p><Mail size={14} /> {profile.email}</p></div>
               <div className="profile-completion">
-                <div><span>Profile completeness</span><strong>{completion}%</strong></div>
+                <div><span>{t("profileCompleteness")}</span><strong>{completion}%</strong></div>
                 <div className="profile-completion-track"><i style={{ width: `${completion}%` }} /></div>
-                <small>{completion === 100 ? "Your profile is complete." : "Add your photo and missing contact details."}</small>
+                <small>{completion === 100 ? t("profileComplete") : t("profileIncomplete")}</small>
               </div>
             </div>
           </section>
@@ -121,7 +125,7 @@ export async function AccountProfilePage({ role }: { role: "coach" | "client" })
           information={<ProfileEditor role={role} profile={profile} />}
           intake={role === "client" ? (
             <section className="profile-intake-panel" aria-labelledby="intake-profile-title">
-              <div className="section-row intake-profile-heading"><div><span className="eyebrow">Original application</span><h2 id="intake-profile-title">Your intake answers</h2><p>Every answer from your private application, kept with your profile for easy reference.</p></div><Badge tone="success">Intake complete</Badge></div>
+              <div className="section-row intake-profile-heading"><div><span className="eyebrow">{t("originalApplication")}</span><h2 id="intake-profile-title">{t("yourIntakeAnswers")}</h2><p>{t("intakeAnswersHint")}</p></div><Badge tone="success">{t("intakeComplete")}</Badge></div>
               <div className="intake-profile-groups">
                 {intakeSections.map((section, index) => (
                   <details className="account-card intake-profile-group" key={section.id} open={index === 0}>
@@ -129,7 +133,7 @@ export async function AccountProfilePage({ role }: { role: "coach" | "client" })
                     <dl>
                       {section.fields.map((field) => {
                         const label = splitQuestion(field.label);
-                        return <div key={field.name}><dt>{label.question}{label.translation ? <small>{label.translation}</small> : null}</dt><dd>{answers[field.name] || "Not answered"}</dd></div>;
+                        return <div key={field.name}><dt>{label.question}{label.translation ? <small>{label.translation}</small> : null}</dt><dd>{answers[field.name] || t("notAnswered")}</dd></div>;
                       })}
                     </dl>
                   </details>
@@ -144,6 +148,8 @@ export async function AccountProfilePage({ role }: { role: "coach" | "client" })
 }
 
 export async function AccountSettingsPage({ role }: { role: "coach" | "client" }) {
+  const t = await getTranslations("Account");
+  const tc = await getTranslations("Common");
   const session = await requireRole(role);
   const notificationQuery = database()("notifications")
     .select("notifications.id", "notifications.title", "notifications.message", "notifications.read_at", "notifications.created_at", "person.name as person_name")
@@ -172,20 +178,20 @@ export async function AccountSettingsPage({ role }: { role: "coach" | "client" }
     id: Number(item.id),
     title: String(item.title),
     message: String(item.message),
-    createdLabel: notificationDate(item.created_at),
+    createdLabel: notificationDate(item.created_at, tc("notRecorded")),
     isRead: Boolean(item.read_at),
     personName: item.person_name ? String(item.person_name) : null,
   }));
 
   return (
     <>
-      <PageHeader eyebrow="Account control" title="Settings" description="Manage preferences, notifications, and account security from one clear place." actions={<Link className="button secondary" href={`/${role}/profile`}><CircleUserRound size={16} /> Open profile</Link>} />
+      <PageHeader eyebrow={t("settingsEyebrow")} title={t("settingsTitle")} description={t("settingsDescription")} actions={<Link className="button secondary" href={`/${role}/profile`}><CircleUserRound size={16} /> {t("openProfile")}</Link>} />
       <section className="account-settings-workspace">
         <header className="settings-workspace-head">
           <div className="settings-identity-card"><Avatar name={user.name} src={user.avatar_path} /><div><strong>{user.name}</strong><span>{user.email}</span></div></div>
-          <div className="settings-account-state"><span>Private account</span><Badge tone={user.is_active ? "success" : "danger"}>{user.is_active ? "Active" : "Disabled"}</Badge></div>
+          <div className="settings-account-state"><span>{t("privateAccount")}</span><Badge tone={user.is_active ? "success" : "danger"}>{user.is_active ? t("active") : t("disabled")}</Badge></div>
         </header>
-        <SettingsWorkspace role={role} settings={settings} createdAt={displayDate(user.created_at)} recipients={recipients.map((client) => ({ id: Number(client.id), name: String(client.name), email: String(client.email) }))} notifications={notifications} />
+        <SettingsWorkspace role={role} settings={settings} createdAt={displayDate(user.created_at, tc("notRecorded"))} recipients={recipients.map((client) => ({ id: Number(client.id), name: String(client.name), email: String(client.email) }))} notifications={notifications} />
       </section>
     </>
   );

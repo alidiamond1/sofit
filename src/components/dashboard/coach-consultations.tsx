@@ -1,8 +1,10 @@
 "use client";
 
 import { CalendarPlus, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { bookConsultationAction, updateConsultationStatusAction, type ConsultationActionState } from "@/app/actions/consultations";
+import { statusLabel } from "@/lib/status-labels";
 import { ModalPortal } from "./modal-portal";
 import { Badge, Card } from "./primitives";
 
@@ -29,6 +31,9 @@ function tone(status: string): "success" | "warning" | "danger" | "neutral" {
 const dateTime = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
 export function BookConsultationButton({ clients }: { clients: ConsultationClientOption[] }) {
+  const t = useTranslations("Consultations");
+  const tc = useTranslations("Common");
+  const ts = useTranslations("Common.status");
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(async (previous: ConsultationActionState, formData: FormData) => {
     const result = await bookConsultationAction(previous, formData);
@@ -39,36 +44,36 @@ export function BookConsultationButton({ clients }: { clients: ConsultationClien
   return (
     <>
       <button className="button primary" type="button" onClick={() => setOpen(true)}>
-        <CalendarPlus size={15} /> Book consultation
+        <CalendarPlus size={15} /> {t("bookConsultation")}
       </button>
       {open ? (
         <ModalPortal>
           <div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setOpen(false)}>
-            <div className="plan-modal" role="dialog" aria-modal="true" aria-label="Book a consultation" onMouseDown={(event) => event.stopPropagation()}>
-              <button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setOpen(false)}><X size={18} /></button>
+            <div className="plan-modal" role="dialog" aria-modal="true" aria-label={t("modalAria")} onMouseDown={(event) => event.stopPropagation()}>
+              <button className="modal-close icon-button" type="button" aria-label={tc("close")} onClick={() => setOpen(false)}><X size={18} /></button>
               <section className="builder-panel">
                 <header>
-                  <span className="eyebrow">Consultations</span>
-                  <h2>Book a consultation</h2>
-                  <p>Schedule an intake call or assessment with a client.</p>
+                  <span className="eyebrow">{t("modalEyebrow")}</span>
+                  <h2>{t("modalTitle")}</h2>
+                  <p>{t("modalHint")}</p>
                 </header>
                 <form action={formAction} className="client-edit-form">
                   <div className="form-grid">
                     <label className="full">
-                      <span>Client</span>
+                      <span>{t("client")}</span>
                       <select name="client_id" required defaultValue="">
-                        <option value="" disabled>Choose a client</option>
-                        {clients.map((client) => <option key={client.id} value={client.id}>{client.name} — {client.status}</option>)}
+                        <option value="" disabled>{t("chooseAClient")}</option>
+                        {clients.map((client) => <option key={client.id} value={client.id}>{client.name} — {statusLabel(ts, client.status)}</option>)}
                       </select>
                     </label>
-                    <label><span>Date &amp; time</span><input name="starts_at" type="datetime-local" required /></label>
-                    <label><span>Duration (minutes)</span><input name="duration_minutes" type="number" min={15} max={240} step={5} defaultValue={45} required /></label>
-                    <label className="full"><span>Notes (optional)</span><textarea name="notes" rows={3} maxLength={2000} placeholder="What should this consultation cover?" /></label>
+                    <label><span>{t("dateTime")}</span><input name="starts_at" type="datetime-local" required /></label>
+                    <label><span>{t("durationMinutes")}</span><input name="duration_minutes" type="number" min={15} max={240} step={5} defaultValue={45} required /></label>
+                    <label className="full"><span>{t("notesOptional")}</span><textarea name="notes" rows={3} maxLength={2000} placeholder={t("notesPlaceholder")} /></label>
                   </div>
                   {state.error ? <p className="form-message error" role="alert">{state.error}</p> : null}
                   <div className="form-submit">
-                    <span>The client isn&rsquo;t notified automatically yet — let them know directly.</span>
-                    <button className="button primary" type="submit" disabled={pending}>{pending ? "Booking..." : "Book consultation"}</button>
+                    <span>{t("notNotifiedHint")}</span>
+                    <button className="button primary" type="submit" disabled={pending}>{pending ? tc("booking") : t("bookConsultation")}</button>
                   </div>
                 </form>
               </section>
@@ -80,15 +85,15 @@ export function BookConsultationButton({ clients }: { clients: ConsultationClien
   );
 }
 
-const statusLabels: Record<ConsultationRow["status"], string> = {
-  scheduled: "Mark scheduled",
-  completed: "Mark completed",
-  no_show: "No-show",
-  cancelled: "Cancel",
-};
-
 function ConsultationStatusActions({ consultation }: { consultation: ConsultationRow }) {
+  const t = useTranslations("Consultations");
   const [state, formAction, pending] = useActionState(updateConsultationStatusAction, initialActionState);
+  const statusLabels: Record<ConsultationRow["status"], string> = {
+    scheduled: t("markScheduled"),
+    completed: t("markCompleted"),
+    no_show: t("noShow"),
+    cancelled: t("cancel"),
+  };
   const otherStatuses = (Object.keys(statusLabels) as ConsultationRow["status"][]).filter((status) => status !== consultation.status);
   return (
     <form action={formAction} className="consultation-status-actions">
@@ -111,26 +116,28 @@ function ConsultationStatusActions({ consultation }: { consultation: Consultatio
 }
 
 export function CoachConsultationsWorkspace({ consultations }: { consultations: ConsultationRow[] }) {
+  const t = useTranslations("Consultations");
+  const ts = useTranslations("Common.status");
   return (
     <>
       {consultations.length === 0 ? (
         <Card className="empty-state">
           <CalendarPlus size={24} />
-          <h3>No consultations yet</h3>
-          <p>Book your first intake call or assessment to get started.</p>
+          <h3>{t("noConsultationsTitle")}</h3>
+          <p>{t("noConsultationsHint")}</p>
         </Card>
       ) : (
         <Card>
           <div className="data-table-wrap">
             <table className="data-table">
-              <thead><tr><th>Client</th><th>Starts</th><th>Minutes</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+              <thead><tr><th>{t("colClient")}</th><th>{t("colStarts")}</th><th>{t("colMinutes")}</th><th>{t("colStatus")}</th><th>{t("colNotes")}</th><th></th></tr></thead>
               <tbody>
                 {consultations.map((row) => (
                   <tr key={row.id}>
                     <td>{row.client}</td>
                     <td>{dateTime.format(new Date(row.startsAt))}</td>
                     <td>{row.durationMinutes}</td>
-                    <td><Badge tone={tone(row.status)}>{row.status.replace("_", " ")}</Badge></td>
+                    <td><Badge tone={tone(row.status)}>{statusLabel(ts, row.status)}</Badge></td>
                     <td>{row.notes || "-"}</td>
                     <td><ConsultationStatusActions consultation={row} /></td>
                   </tr>

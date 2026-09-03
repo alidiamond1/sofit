@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Sun,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { markNotificationReadAction, sendNotificationAction } from "@/app/actions/notifications";
 import { changePasswordAction, updateNotificationsAction, updatePreferencesAction } from "@/app/actions/profile";
@@ -46,13 +47,14 @@ type SettingsWorkspaceProps = {
   }>;
 };
 
-const steps = [
-  { id: "preferences" as const, number: "01", label: "Preferences", description: "Theme, language & region", icon: SlidersHorizontal },
-  { id: "notifications" as const, number: "02", label: "Notifications", description: "Alerts and coach updates", icon: BellRing },
-  { id: "security" as const, number: "03", label: "Security", description: "Password & login", icon: ShieldCheck },
-];
-
 export function SettingsWorkspace({ role, settings, createdAt, recipients, notifications }: SettingsWorkspaceProps) {
+  const t = useTranslations("Account");
+  const tc = useTranslations("Common");
+  const steps = [
+    { id: "preferences" as const, number: "01", label: t("stepPreferences"), description: t("stepPreferencesDesc"), icon: SlidersHorizontal },
+    { id: "notifications" as const, number: "02", label: t("stepNotifications"), description: t("stepNotificationsDesc"), icon: BellRing },
+    { id: "security" as const, number: "03", label: t("stepSecurity"), description: t("stepSecurityDesc"), icon: ShieldCheck },
+  ];
   const [activeStep, setActiveStep] = useState<SettingsStep>("preferences");
   const [themeChoice, setThemeChoice] = useState<ThemePreference>(settings.theme);
   const initialTheme = useRef(settings.theme);
@@ -96,7 +98,7 @@ export function SettingsWorkspace({ role, settings, createdAt, recipients, notif
 
   return (
     <div className="settings-workspace-body">
-      <nav className="settings-step-nav" aria-label="Settings steps">
+      <nav className="settings-step-nav" aria-label={t("settingsStepsAria")}>
         {steps.map((step) => {
           const Icon = step.icon;
           const active = activeStep === step.id;
@@ -113,76 +115,76 @@ export function SettingsWorkspace({ role, settings, createdAt, recipients, notif
       <main className="settings-step-content">
         {activeStep === "preferences" ? (
           <section className="settings-step-panel" id="preferences">
-            <SettingsHeading eyebrow="Step 1 of 3" title="Workspace preferences" description="Choose your appearance, language, timezone, and regional formatting." icon={<SlidersHorizontal size={19} />} />
+            <SettingsHeading eyebrow={t("step1of3")} title={t("workspacePreferences")} description={t("workspacePreferencesDesc")} icon={<SlidersHorizontal size={19} />} />
             <form action={preferencesFormAction} className="account-form-grid settings-panel-form">
               <fieldset className="theme-fieldset full">
-                <legend>Appearance</legend>
-                <p>Use a calm light workspace, a focused dark workspace, or follow your device.</p>
+                <legend>{t("appearance")}</legend>
+                <p>{t("appearanceHint")}</p>
                 <div className="theme-choice-grid">
-                  <ThemeChoice value="light" title="Light" description="Bright and clean" icon={<Sun size={18} />} checked={themeChoice === "light"} onChange={previewTheme} />
-                  <ThemeChoice value="dark" title="Dark" description="Low-light comfort" icon={<Moon size={18} />} checked={themeChoice === "dark"} onChange={previewTheme} />
-                  <ThemeChoice value="system" title="System" description="Match your device" icon={<MonitorCog size={18} />} checked={themeChoice === "system"} onChange={previewTheme} />
+                  <ThemeChoice value="light" title={t("themeLight")} description={t("themeLightDesc")} icon={<Sun size={18} />} checked={themeChoice === "light"} onChange={previewTheme} />
+                  <ThemeChoice value="dark" title={t("themeDark")} description={t("themeDarkDesc")} icon={<Moon size={18} />} checked={themeChoice === "dark"} onChange={previewTheme} />
+                  <ThemeChoice value="system" title={t("themeSystem")} description={t("themeSystemDesc")} icon={<MonitorCog size={18} />} checked={themeChoice === "system"} onChange={previewTheme} />
                 </div>
               </fieldset>
-              <label><span>Timezone</span><select name="timezone" defaultValue={settings.timezone}><option value="Africa/Nairobi">Africa / Nairobi</option><option value="UTC">UTC</option><option value="Europe/London">Europe / London</option><option value="America/New_York">America / New York</option></select></label>
-              <label><span>Language</span><select name="language" defaultValue={settings.language}><option value="en">English</option><option value="so">Somali</option></select></label>
-              <div className="settings-panel-note full"><MonitorCog size={17} /><div><strong>Personal to your account</strong><p>Coach and client accounts save their own theme and regional preferences independently.</p></div></div>
-              <div className="account-form-footer full"><FormMessage error={preferencesState.error} success={preferencesState.success} /><button className="button primary" disabled={preferencesPending} type="submit"><Save size={15} /> {preferencesPending ? "Saving..." : "Save preferences"}</button></div>
+              <label><span>{t("timezone")}</span><select name="timezone" defaultValue={settings.timezone}><option value="Africa/Nairobi">Africa / Nairobi</option><option value="UTC">UTC</option><option value="Europe/London">Europe / London</option><option value="America/New_York">America / New York</option></select></label>
+              <label><span>{t("language")}</span><select name="language" defaultValue={settings.language}><option value="en">{t("englishOption")}</option><option value="so">{t("somaliOption")}</option></select></label>
+              <div className="settings-panel-note full"><MonitorCog size={17} /><div><strong>{t("personalToAccount")}</strong><p>{t("personalToAccountHint")}</p></div></div>
+              <div className="account-form-footer full"><FormMessage error={preferencesState.error} success={preferencesState.success} /><button className="button primary" disabled={preferencesPending} type="submit"><Save size={15} /> {preferencesPending ? tc("saving") : t("savePreferences")}</button></div>
             </form>
           </section>
         ) : null}
 
         {activeStep === "notifications" ? (
           <section className="settings-step-panel" id="notifications">
-            <SettingsHeading eyebrow="Step 2 of 3" title="Notifications" description={role === "coach" ? "Send important updates to a client and control your own alerts." : "Messages from your coach and the alerts you want to receive."} icon={<BellRing size={19} />} />
+            <SettingsHeading eyebrow={t("step2of3")} title={t("stepNotifications")} description={role === "coach" ? t("notificationsDescCoach") : t("notificationsDescClient")} icon={<BellRing size={19} />} />
             {role === "coach" ? (
               <form action={sendFormAction} className="notification-compose">
-                <div className="settings-subheading"><div><strong>Send to a client</strong><span>The notification appears immediately in their dashboard bell and inbox.</span></div><Send size={17} /></div>
+                <div className="settings-subheading"><div><strong>{t("sendToClient")}</strong><span>{t("sendToClientHint")}</span></div><Send size={17} /></div>
                 <div className="account-form-grid">
-                  <label><span>Client</span><select name="recipient_id" required defaultValue=""><option value="" disabled>Select a client</option>{recipients.map((client) => <option value={client.id} key={client.id}>{client.name} - {client.email}</option>)}</select></label>
-                  <label><span>Title</span><input name="title" maxLength={120} placeholder="Example: Your new plan is ready" required /></label>
-                  <label className="full"><span>Message</span><textarea name="message" rows={3} maxLength={1000} placeholder="Write a short, useful update for the client." required /></label>
+                  <label><span>{t("recipientClient")}</span><select name="recipient_id" required defaultValue=""><option value="" disabled>{t("selectAClient")}</option>{recipients.map((client) => <option value={client.id} key={client.id}>{client.name} - {client.email}</option>)}</select></label>
+                  <label><span>{t("notificationTitle")}</span><input name="title" maxLength={120} placeholder={t("notificationTitlePlaceholder")} required /></label>
+                  <label className="full"><span>{t("notificationMessage")}</span><textarea name="message" rows={3} maxLength={1000} placeholder={t("notificationMessagePlaceholder")} required /></label>
                 </div>
-                <div className="account-form-footer"><FormMessage error={sendState.error} success={sendState.success} /><button className="button primary" disabled={sendPending || recipients.length === 0} type="submit"><Send size={15} /> {sendPending ? "Sending..." : "Send notification"}</button></div>
+                <div className="account-form-footer"><FormMessage error={sendState.error} success={sendState.success} /><button className="button primary" disabled={sendPending || recipients.length === 0} type="submit"><Send size={15} /> {sendPending ? tc("sending") : t("sendNotification")}</button></div>
               </form>
             ) : null}
 
             <NotificationFeed role={role} notifications={notifications} />
 
             <form action={notificationsFormAction} className="settings-panel-form notification-preferences">
-              <div className="settings-subheading"><div><strong>Delivery preferences</strong><span>Control which supporting reminders reach your account.</span></div></div>
+              <div className="settings-subheading"><div><strong>{t("deliveryPreferences")}</strong><span>{t("deliveryPreferencesHint")}</span></div></div>
               <div className="settings-toggle-list">
-                <Toggle name="in_app_notifications" title="In-app notifications" description="Coach updates and important activity inside your SoFit dashboard." defaultChecked={settings.inAppNotifications} />
-                <Toggle name="email_notifications" title="Email notifications" description="Account and coaching updates sent to your email." defaultChecked={settings.emailNotifications} />
-                <Toggle name="session_reminders" title="Session reminders" description="Reminder before consultations and personal-training sessions." defaultChecked={settings.sessionReminders} />
-                <Toggle name="weekly_summary" title="Weekly summary" description="A concise weekly overview of activity and progress." defaultChecked={settings.weeklySummary} />
+                <Toggle name="in_app_notifications" title={t("inAppNotifications")} description={t("inAppNotificationsDesc")} defaultChecked={settings.inAppNotifications} />
+                <Toggle name="email_notifications" title={t("emailNotifications")} description={t("emailNotificationsDesc")} defaultChecked={settings.emailNotifications} />
+                <Toggle name="session_reminders" title={t("sessionReminders")} description={t("sessionRemindersDesc")} defaultChecked={settings.sessionReminders} />
+                <Toggle name="weekly_summary" title={t("weeklySummary")} description={t("weeklySummaryDesc")} defaultChecked={settings.weeklySummary} />
               </div>
-              <div className="account-form-footer"><FormMessage error={notificationsState.error} success={notificationsState.success} /><button className="button primary" disabled={notificationsPending} type="submit"><Save size={15} /> {notificationsPending ? "Saving..." : "Save notification settings"}</button></div>
+              <div className="account-form-footer"><FormMessage error={notificationsState.error} success={notificationsState.success} /><button className="button primary" disabled={notificationsPending} type="submit"><Save size={15} /> {notificationsPending ? tc("saving") : t("saveNotificationSettings")}</button></div>
             </form>
           </section>
         ) : null}
 
         {activeStep === "security" ? (
           <section className="settings-step-panel" id="security">
-            <SettingsHeading eyebrow="Step 3 of 3" title="Password & security" description="Confirm your current password before creating a secure replacement." icon={<ShieldCheck size={19} />} />
+            <SettingsHeading eyebrow={t("step3of3")} title={t("passwordSecurity")} description={t("passwordSecurityDesc")} icon={<ShieldCheck size={19} />} />
             <form ref={passwordForm} action={passwordFormAction} className="account-form-grid settings-panel-form password-form">
-              <PasswordField className="full" name="current_password" title="Current password" autoComplete="current-password" />
-              <PasswordField name="new_password" title="New password" autoComplete="new-password" minLength={8} />
-              <PasswordField name="confirm_password" title="Confirm new password" autoComplete="new-password" minLength={8} />
-              <div className="settings-panel-note full"><KeyRound size={17} /><div><strong>Secure password guidance</strong><p>Use at least eight characters and avoid names, birthdays, or a password used elsewhere.</p></div></div>
-              <div className="account-form-footer full"><FormMessage error={passwordState.error} success={passwordState.success} /><button className="button primary" disabled={passwordPending} type="submit"><KeyRound size={15} /> {passwordPending ? "Updating..." : "Update password"}</button></div>
+              <PasswordField className="full" name="current_password" title={t("currentPassword")} autoComplete="current-password" />
+              <PasswordField name="new_password" title={t("newPassword")} autoComplete="new-password" minLength={8} />
+              <PasswordField name="confirm_password" title={t("confirmNewPassword")} autoComplete="new-password" minLength={8} />
+              <div className="settings-panel-note full"><KeyRound size={17} /><div><strong>{t("securePasswordGuidance")}</strong><p>{t("securePasswordGuidanceHint")}</p></div></div>
+              <div className="account-form-footer full"><FormMessage error={passwordState.error} success={passwordState.success} /><button className="button primary" disabled={passwordPending} type="submit"><KeyRound size={15} /> {passwordPending ? tc("updating") : t("updatePassword")}</button></div>
             </form>
           </section>
         ) : null}
 
         <footer className="settings-security-footer">
-          <div><span className="account-heading-icon"><Clock3 size={17} /></span><span><strong>Account created</strong><small>{createdAt}</small></span></div>
-          <div><ShieldCheck size={16} /><span><strong>Protected workspace</strong><small>Your account details stay private.</small></span></div>
+          <div><span className="account-heading-icon"><Clock3 size={17} /></span><span><strong>{t("accountCreated")}</strong><small>{createdAt}</small></span></div>
+          <div><ShieldCheck size={16} /><span><strong>{t("protectedWorkspace")}</strong><small>{t("protectedWorkspaceHint")}</small></span></div>
           {role === "coach" ? (
             <div>
               <ImageIcon size={16} />
               <span>
-                <strong>Exercise illustrations</strong>
+                <strong>{t("exerciseIllustrations")}</strong>
                 <small>
                   By <a href="https://bryllim.com" target="_blank" rel="noopener noreferrer">Bryl Lim</a>, adapted from Everkinetic — licensed{" "}
                   <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.
@@ -201,23 +203,25 @@ function ThemeChoice({ value, title, description, icon, checked, onChange }: { v
 }
 
 function NotificationFeed({ role, notifications }: { role: "coach" | "client"; notifications: SettingsWorkspaceProps["notifications"] }) {
+  const t = useTranslations("Account");
   return (
     <section className="settings-notification-feed">
-      <div className="settings-subheading"><div><strong>{role === "coach" ? "Recently sent" : "Recent coach updates"}</strong><span>{role === "coach" ? "A delivery record for your latest client notifications." : "Unread updates stay highlighted until you mark them as read."}</span></div><BellRing size={17} /></div>
+      <div className="settings-subheading"><div><strong>{role === "coach" ? t("recentlySent") : t("recentCoachUpdates")}</strong><span>{role === "coach" ? t("recentlySentHint") : t("recentCoachUpdatesHint")}</span></div><BellRing size={17} /></div>
       {notifications.length ? <div className="settings-notification-list">{notifications.map((item) => (
         <article className={item.isRead ? "is-read" : "is-unread"} key={item.id}>
           <span className="notification-feed-icon"><BellRing size={16} /></span>
-          <div><div><strong>{item.title}</strong><time>{item.createdLabel}</time></div><p>{item.message}</p>{item.personName ? <small>{role === "coach" ? `Sent to ${item.personName}` : `From ${item.personName}`}</small> : null}</div>
-          {role === "client" && !item.isRead ? <form action={markNotificationReadAction.bind(null, role, item.id)}><button type="submit">Mark read</button></form> : null}
+          <div><div><strong>{item.title}</strong><time>{item.createdLabel}</time></div><p>{item.message}</p>{item.personName ? <small>{role === "coach" ? t("sentTo", { name: item.personName }) : t("fromName", { name: item.personName })}</small> : null}</div>
+          {role === "client" && !item.isRead ? <form action={markNotificationReadAction.bind(null, role, item.id)}><button type="submit">{t("markRead")}</button></form> : null}
         </article>
-      ))}</div> : <div className="settings-empty-notifications"><BellRing size={18} /><span>{role === "coach" ? "No notifications sent yet." : "No coach notifications yet."}</span></div>}
+      ))}</div> : <div className="settings-empty-notifications"><BellRing size={18} /><span>{role === "coach" ? t("noNotificationsSent") : t("noCoachNotifications")}</span></div>}
     </section>
   );
 }
 
 function PasswordField({ className, name, title, autoComplete, minLength }: { className?: string; name: string; title: string; autoComplete: string; minLength?: number }) {
+  const t = useTranslations("Account");
   const [visible, setVisible] = useState(false);
-  return <label className={className}><span>{title}</span><div className="account-password-field"><input name={name} type={visible ? "text" : "password"} minLength={minLength} autoComplete={autoComplete} required /><button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? `Hide ${title.toLowerCase()}` : `Show ${title.toLowerCase()}`}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></label>;
+  return <label className={className}><span>{title}</span><div className="account-password-field"><input name={name} type={visible ? "text" : "password"} minLength={minLength} autoComplete={autoComplete} required /><button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? t("hidePassword", { field: title }) : t("showPassword", { field: title })}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></label>;
 }
 
 function SettingsHeading({ eyebrow, title, description, icon }: { eyebrow: string; title: string; description: string; icon: ReactNode }) {

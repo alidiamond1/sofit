@@ -74,6 +74,12 @@ html[data-theme="dark"] .topbar-theme-toggle{background:var(--surface);border-co
 html[data-theme="dark"] .theme-toggle-icon{background:#3a3218;color:#f3c95c}
 @media(max-width:520px){.topbar-theme-toggle{width:38px;height:38px;flex-basis:38px}.theme-toggle-icon{width:27px;height:27px}}
 
+.topbar-language-toggle{position:relative;width:40px;height:40px;display:grid;place-items:center;flex:0 0 40px;padding:0;border-color:var(--line-strong);background:var(--surface)}
+.language-toggle-code{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:var(--primary-soft);color:var(--primary);font-size:10px;font-weight:700;letter-spacing:.03em;transition:transform .22s ease,background .18s ease}
+.topbar-language-toggle:hover .language-toggle-code{transform:scale(1.06)}.topbar-language-toggle:disabled{opacity:.58;cursor:wait}
+html[data-theme="dark"] .topbar-language-toggle{background:var(--surface);border-color:var(--line-strong)}
+@media(max-width:520px){.topbar-language-toggle{width:38px;height:38px;flex-basis:38px}.language-toggle-code{width:27px;height:27px;font-size:9px}}
+
 /* Complete dark-mode coverage: no light dashboard surfaces bleed through */
 html[data-theme="dark"] .portal-shell{background:var(--canvas);color:var(--ink)}
 html[data-theme="dark"] .portal-main,html[data-theme="dark"] .portal-content{background:var(--canvas)}

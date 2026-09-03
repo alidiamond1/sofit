@@ -1,6 +1,8 @@
 import "server-only";
 
+import { getTranslations } from "next-intl/server";
 import { database } from "@/lib/db";
+import { statusLabel } from "@/lib/status-labels";
 
 export type ChatMessage = {
   id: number;
@@ -64,6 +66,7 @@ function buildThread(
 
 export async function loadCoachMessageThreads(coachId: number) {
   const db = database();
+  const tMessages = await getTranslations("MessagesPanel");
   const clients = (await db("users")
     .select(
       "users.id",
@@ -71,7 +74,7 @@ export async function loadCoachMessageThreads(coachId: number) {
       "users.email",
       "users.avatar_path",
       "clients.status as status_label",
-      db.raw("COALESCE(packages.name, services.name, 'Coaching client') as context_label"),
+      db.raw("COALESCE(packages.name, services.name, ?) as context_label", [tMessages("coachingClientFallback")]),
     )
     .innerJoin("clients", "clients.user_id", "users.id")
     .leftJoin("services", "services.id", "clients.service_id")
@@ -83,6 +86,11 @@ export async function loadCoachMessageThreads(coachId: number) {
     })
     .whereNot("clients.status", "churned")
     .orderBy("users.name")) as Array<Record<string, unknown>>;
+
+  const ts = await getTranslations("Common.status");
+  for (const client of clients) {
+    client.status_label = statusLabel(ts, String(client.status_label || "active"));
+  }
 
   const clientIds = clients.map((client) => Number(client.id));
   const rows = clientIds.length

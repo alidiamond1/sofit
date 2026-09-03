@@ -11,8 +11,10 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
+import { statusLabel } from "@/lib/status-labels";
 import { BookConsultationButton, CoachConsultationsWorkspace, type ConsultationRow, type ConsultationClientOption } from "@/components/dashboard/coach-consultations";
 import { BookSessionButton, CoachPersonalTrainingWorkspace, type SessionRow, type SessionClientOption, type SessionServiceOption } from "@/components/dashboard/coach-personal-training";
 import { CoachCheckInsWorkspace, type CheckInRow } from "@/components/dashboard/coach-check-ins";
@@ -69,11 +71,15 @@ function tone(status: string): "success" | "warning" | "danger" | "neutral" {
   return "neutral";
 }
 
-function EmptyState({ text }: { text: string }) {
-  return <Card className="empty-state"><ClipboardList size={24} /><h3>No records yet</h3><p>{text}</p></Card>;
+async function EmptyState({ text }: { text: string }) {
+  const t = await getTranslations("Common");
+  return <Card className="empty-state"><ClipboardList size={24} /><h3>{t("noRecordsYet")}</h3><p>{text}</p></Card>;
 }
 
 async function CoachOverview() {
+  const t = await getTranslations("Overview");
+  const tc = await getTranslations("Common");
+  const ts = await getTranslations("Common.status");
   const db = database();
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
@@ -150,7 +156,7 @@ async function CoachOverview() {
     return { label: date.toLocaleDateString("en-US", { month: "short" }), value: revenueByMonth.get(key) || 0 };
   });
   const clientStatuses = (clientStatusRows as Array<{ status: string; total: number | string }>).map((row, index) => ({
-    label: row.status,
+    label: statusLabel(ts, row.status),
     value: numeric(row.total),
     tone: (["green", "amber", "slate", "blue"][index % 4]) as "green" | "amber" | "slate" | "blue",
   }));
@@ -159,66 +165,66 @@ async function CoachOverview() {
     <>
       <PageHeader
         eyebrow={dateOnly.format(new Date())}
-        title="Coach overview"
-        description="Your coaching business, client momentum, and next priorities in one calm workspace."
-        actions={<><Link className="button secondary" href="/coach/diet-plans">Build a plan</Link><Link className="button primary" href="/coach/invites"><Mail size={15} /> Invite client</Link></>}
+        title={t("title")}
+        description={t("description")}
+        actions={<><Link className="button secondary" href="/coach/diet-plans">{t("buildPlan")}</Link><Link className="button primary" href="/coach/invites"><Mail size={15} /> {t("inviteClient")}</Link></>}
       />
       <div className="stats-grid">
-        <StatCard label="Active clients" value={String(numeric(activeClients?.total))} note="Currently coaching" icon={<Users size={18} />} accent="blue" />
-        <StatCard label="Monthly revenue" value={money.format(numeric(monthlyRevenue?.total))} note="Paid this month" icon={<TrendingUp size={18} />} accent="green" points={revenueTrend.map((point) => point.value)} />
-        <StatCard label="Plans to deliver" value={String(numeric(draftDietPlans?.total) + numeric(draftWorkoutPlans?.total))} note="Diet + workout drafts" icon={<Dumbbell size={18} />} accent="blue" />
-        <StatCard label="Open reviews" value={String(numeric(pendingApplications?.total) + numeric(submittedCheckIns?.total) + numeric(overdueInvoices?.total))} note="Items needing attention" icon={<ClipboardList size={18} />} accent="amber" />
+        <StatCard label={t("statActiveClients")} value={String(numeric(activeClients?.total))} note={t("statActiveClientsNote")} icon={<Users size={18} />} accent="blue" />
+        <StatCard label={t("statMonthlyRevenue")} value={money.format(numeric(monthlyRevenue?.total))} note={t("statMonthlyRevenueNote")} icon={<TrendingUp size={18} />} accent="green" points={revenueTrend.map((point) => point.value)} />
+        <StatCard label={t("statPlansToDeliver")} value={String(numeric(draftDietPlans?.total) + numeric(draftWorkoutPlans?.total))} note={t("statPlansToDeliverNote")} icon={<Dumbbell size={18} />} accent="blue" />
+        <StatCard label={t("statOpenReviews")} value={String(numeric(pendingApplications?.total) + numeric(submittedCheckIns?.total) + numeric(overdueInvoices?.total))} note={t("statOpenReviewsNote")} icon={<ClipboardList size={18} />} accent="amber" />
       </div>
       <div className="dashboard-insight-grid">
         <Card className="chart-card">
-          <CardHead title="Revenue pulse" meta="Paid invoices - last 6 months" action={<Link className="text-button" href="/coach/analytics">Full analytics</Link>} />
-          <TrendLineChart data={revenueTrend} valueLabel="Revenue" formatValue={(value) => money.format(value)} />
+          <CardHead title={t("revenuePulse")} meta={t("revenuePulseMeta")} action={<Link className="text-button" href="/coach/analytics">{t("fullAnalytics")}</Link>} />
+          <TrendLineChart data={revenueTrend} valueLabel="Revenue" formatValue={(value) => money.format(value)} highestLabel={tc("chartHighest")} latestLabel={tc("chartLatest")} emptyLabel={tc("chartNoTrend")} />
         </Card>
         <Card className="chart-card status-card">
-          <CardHead title="Client health" meta="Current account status" action={<BarChart3 size={18} />} />
-          <RingChart segments={clientStatuses} centerValue={String(numeric(activeClients?.total))} centerLabel="active" />
+          <CardHead title={t("clientHealth")} meta={t("clientHealthMeta")} action={<BarChart3 size={18} />} />
+          <RingChart segments={clientStatuses} centerValue={String(numeric(activeClients?.total))} centerLabel={t("activeRingLabel")} />
         </Card>
       </div>
       <div className="overview-grid">
         <Card>
-          <CardHead title="Today's schedule" meta={`${schedule.length} scheduled items`} />
+          <CardHead title={t("todaysSchedule")} meta={t("scheduledItemsMeta", { count: schedule.length })} />
           <div className="simple-rows">
             {schedule.map((item, index) => (
               <div key={`${item.starts_at}-${index}`}>
                 <span className="task-icon mint"><CalendarDays size={16} /></span>
-                <div><strong>{item.name}</strong><span>{item.service || "Personal training"} - {dateTime.format(new Date(item.starts_at))}</span></div>
-                <Badge tone={tone(item.status)}>{item.status}</Badge>
+                <div><strong>{item.name}</strong><span>{item.service || t("personalTrainingFallback")} - {dateTime.format(new Date(item.starts_at))}</span></div>
+                <Badge tone={tone(item.status)}>{statusLabel(ts, item.status)}</Badge>
               </div>
             ))}
-            {schedule.length === 0 ? <div><span>No sessions or consultations scheduled today.</span></div> : null}
+            {schedule.length === 0 ? <div><span>{t("noSessionsToday")}</span></div> : null}
           </div>
         </Card>
         <Card>
-          <CardHead title="Needs attention" meta="Live task counts" />
+          <CardHead title={t("needsAttention")} meta={t("liveTaskCounts")} />
           <div className="task-summary">
-            <div><span className="task-icon mint"><ClipboardList size={18} /></span><p><strong>{numeric(draftDietPlans?.total) + numeric(draftWorkoutPlans?.total)} plans</strong><small>Drafts to complete</small></p></div>
-            <div><span className="task-icon mint"><Mail size={18} /></span><p><strong>{numeric(pendingApplications?.total)} applications</strong><small>Waiting for your decision</small></p></div>
-            <div><span className="task-icon sand"><CheckCircle2 size={18} /></span><p><strong>{numeric(submittedCheckIns?.total)} check-ins</strong><small>Waiting for review</small></p></div>
-            <div><span className="task-icon rose"><CircleDollarSign size={18} /></span><p><strong>{numeric(overdueInvoices?.total)} invoices</strong><small>Marked overdue</small></p></div>
+            <div><span className="task-icon mint"><ClipboardList size={18} /></span><p><strong>{t("plansCount", { count: numeric(draftDietPlans?.total) + numeric(draftWorkoutPlans?.total) })}</strong><small>{t("draftsToComplete")}</small></p></div>
+            <div><span className="task-icon mint"><Mail size={18} /></span><p><strong>{t("applicationsCount", { count: numeric(pendingApplications?.total) })}</strong><small>{t("waitingForDecision")}</small></p></div>
+            <div><span className="task-icon sand"><CheckCircle2 size={18} /></span><p><strong>{t("checkInsCount", { count: numeric(submittedCheckIns?.total) })}</strong><small>{t("waitingForReview")}</small></p></div>
+            <div><span className="task-icon rose"><CircleDollarSign size={18} /></span><p><strong>{t("invoicesCount", { count: numeric(overdueInvoices?.total) })}</strong><small>{t("markedOverdue")}</small></p></div>
           </div>
         </Card>
       </div>
       <Card>
-        <CardHead title="New applications" meta={`${numeric(pendingApplications?.total)} awaiting review`} action={<Link className="text-button" href="/coach/invites">View all applications</Link>} />
+        <CardHead title={t("newApplications")} meta={t("awaitingReviewMeta", { count: numeric(pendingApplications?.total) })} action={<Link className="text-button" href="/coach/invites">{t("viewAllApplications")}</Link>} />
         <div className="simple-rows">
           {recentApplications.map((application) => {
             const answers = typeof application.intake_answers === "string" ? JSON.parse(application.intake_answers) : application.intake_answers || {};
             const name = answers.full_name || application.email;
-            return <div key={application.id}><Avatar name={name} /><div><strong>{name}</strong><span>{application.email} - {application.user_id ? "account created" : "awaiting signup"}</span></div><Badge tone="warning">Review</Badge><Link className="button secondary small" href={`/coach/invites/${application.id}`}>Open</Link></div>;
+            return <div key={application.id}><Avatar name={name} /><div><strong>{name}</strong><span>{application.email} - {application.user_id ? t("accountCreated") : t("awaitingSignup")}</span></div><Badge tone="warning">{t("reviewBadge")}</Badge><Link className="button secondary small" href={`/coach/invites/${application.id}`}>{t("open")}</Link></div>;
           })}
-          {recentApplications.length === 0 ? <div><span>No submitted applications are waiting.</span></div> : null}
+          {recentApplications.length === 0 ? <div><span>{t("noApplicationsWaiting")}</span></div> : null}
         </div>
       </Card>
       <Card>
-        <CardHead title="Newest clients" meta="Most recently added clients" />
+        <CardHead title={t("newestClients")} meta={t("mostRecentlyAdded")} />
         <div className="simple-rows">
-          {recentClients.map((client, index) => <div key={client.id}><Avatar name={client.name} tone={index} /><div><strong>{client.name}</strong><span>{client.email} - {client.service || "No service assigned"}</span></div><Badge tone={tone(client.status)}>{client.status}</Badge><Badge>{client.pipeline_stage}</Badge></div>)}
-          {recentClients.length === 0 ? <div><span>No clients have been created yet.</span></div> : null}
+          {recentClients.map((client, index) => <div key={client.id}><Avatar name={client.name} tone={index} /><div><strong>{client.name}</strong><span>{client.email} - {client.service || t("noServiceAssigned")}</span></div><Badge tone={tone(client.status)}>{statusLabel(ts, client.status)}</Badge><Badge>{statusLabel(ts, client.pipeline_stage)}</Badge></div>)}
+          {recentClients.length === 0 ? <div><span>{t("noClientsYet")}</span></div> : null}
         </div>
       </Card>
     </>
@@ -226,6 +232,8 @@ async function CoachOverview() {
 }
 
 async function CoachClients() {
+  const t = await getTranslations("Clients");
+  const tc = await getTranslations("Common");
   const db = database();
   const [clients, serviceOptions, packageOptions] = await Promise.all([
     db("clients")
@@ -267,7 +275,7 @@ async function CoachClients() {
     medicalNotes: String(client.medical_notes || ""),
     status: String(client.status),
     pipelineStage: String(client.pipeline_stage),
-    joined: client.joined_at ? dateOnly.format(new Date(client.joined_at)) : "Not recorded",
+    joined: client.joined_at ? dateOnly.format(new Date(client.joined_at)) : tc("notRecorded"),
     serviceId: client.service_id ? numeric(client.service_id) : null,
     packageId: client.package_id ? numeric(client.package_id) : null,
     service: client.service ? String(client.service) : null,
@@ -279,12 +287,12 @@ async function CoachClients() {
   return (
     <>
       <PageHeader
-        eyebrow="Client management"
-        title="Your clients"
-        description="Track every client from first contact to renewal, then focus on the people who need attention today."
-        actions={<Link className="button primary" href="/coach/invites"><UserPlus size={16} /> Invite a client</Link>}
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
+        actions={<Link className="button primary" href="/coach/invites"><UserPlus size={16} /> {t("inviteAClient")}</Link>}
       />
-      {directoryRows.length === 0 ? <EmptyState text="Invite a client to begin onboarding." /> : (
+      {directoryRows.length === 0 ? <EmptyState text={t("emptyInviteHint")} /> : (
         <ClientDirectory
           clients={directoryRows}
           services={serviceOptions.map((service) => ({ id: numeric(service.id), name: String(service.name), isActive: Boolean(service.is_active) }))}
@@ -296,6 +304,7 @@ async function CoachClients() {
 }
 
 async function CoachServices() {
+  const t = await getTranslations("Services");
   const db = database();
   const services = await db("services")
     .select("services.*")
@@ -315,10 +324,11 @@ async function CoachServices() {
     clientCount: numeric(service.client_count),
     packageCount: numeric(service.package_count),
   }));
-  return <><PageHeader eyebrow="Coach controlled" title="Services" description="Create and manage coaching offers, pricing, availability, and client assignments." /><CoachServicesWorkspace services={rows} /></>;
+  return <><PageHeader eyebrow={t("pageEyebrow")} title={t("pageTitle")} description={t("pageDescription")} /><CoachServicesWorkspace services={rows} /></>;
 }
 
 async function CoachConsultations() {
+  const t = await getTranslations("Consultations");
   const db = database();
   const [consultationRows, clientRows] = await Promise.all([
     db("consultations")
@@ -345,9 +355,9 @@ async function CoachConsultations() {
   return (
     <>
       <PageHeader
-        eyebrow="Coaching"
-        title="Consultations"
-        description="Book intake calls and assessments, then track them through to completion."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
         actions={<BookConsultationButton clients={clients} />}
       />
       <CoachConsultationsWorkspace consultations={consultations} />
@@ -356,6 +366,7 @@ async function CoachConsultations() {
 }
 
 async function CoachPersonalTraining() {
+  const t = await getTranslations("PersonalTraining");
   const db = database();
   const [sessionRows, clientRows, serviceRows] = await Promise.all([
     db("sessions")
@@ -386,9 +397,9 @@ async function CoachPersonalTraining() {
   return (
     <>
       <PageHeader
-        eyebrow="Coaching"
-        title="Personal training"
-        description="Log 1:1 sessions, track attendance, and keep a record of every client you train."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
         actions={<BookSessionButton clients={clients} services={services} />}
       />
       <CoachPersonalTrainingWorkspace sessions={sessions} />
@@ -407,6 +418,7 @@ function normalizeDate(value: unknown): string {
 }
 
 async function CoachCheckIns() {
+  const t = await getTranslations("CheckIns");
   const db = database();
   const rows = await db("check_ins")
     .select("check_ins.*", "clients.id as client_id", "users.name as client")
@@ -431,39 +443,48 @@ async function CoachCheckIns() {
 
   return (
     <>
-      <PageHeader eyebrow="Coaching" title="Check-ins" description="Weekly submissions from every client, grouped and trended over time." />
+      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
       <CoachCheckInsWorkspace checkIns={checkIns} />
     </>
   );
 }
 
 async function CoachListSection({ section }: { section: string }) {
+  const tPayments = await getTranslations("Payments");
+  const tPackages = await getTranslations("Packages");
+  const tMessages = await getTranslations("MessagesPanel");
+  const ts = await getTranslations("Common.status");
   const db = database();
   let title = "";
   let description = "";
   let rows: Array<Record<string, unknown>> = [];
   let columns: Array<{ key: string; label: string; format?: (value: unknown, row: Record<string, unknown>) => React.ReactNode }> = [];
+  let emptyText = "";
 
   if (section === "diet-plans" || section === "workout-plans") {
     const diet = section === "diet-plans";
-    title = diet ? "Diet plans" : "Workout plans"; description = `${title} created and assigned to your clients.`;
+    title = diet ? tPackages("dietPlans.title") : tPackages("workoutPlans.title");
+    description = diet ? tPackages("dietPlans.description") : tPackages("workoutPlans.description");
     const table = diet ? "diet_plans" : "workout_plans";
     rows = await db(table).select(`${table}.*`, "users.name as client").join("clients", "clients.id", `${table}.client_id`).join("users", "users.id", "clients.user_id").orderBy(`${table}.updated_at`, "desc");
-    columns = [{ key: "title", label: "Plan" }, { key: "client", label: "Client" }, { key: "version", label: "Version" }, { key: diet ? "daily_calories" : "weeks", label: diet ? "Calories" : "Weeks" }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }, { key: "starts_on", label: "Starts", format: (v) => v ? dateOnly.format(new Date(String(v))) : "-" }];
+    columns = [{ key: "title", label: diet ? tPackages("dietPlans.colPlan") : tPackages("workoutPlans.colProgram") }, { key: "client", label: tPackages("dietPlans.colClient") }, { key: "version", label: tPackages("dietPlans.colVersion") }, { key: diet ? "daily_calories" : "weeks", label: diet ? tPackages("dietPlans.colCalories") : tPackages("workoutPlans.colWeeks") }, { key: "status", label: tPackages("dietPlans.colStatus"), format: (v) => <Badge tone={tone(String(v))}>{statusLabel(ts, String(v))}</Badge> }, { key: "starts_on", label: tPackages("dietPlans.colStarts"), format: (v) => v ? dateOnly.format(new Date(String(v))) : "-" }];
+    emptyText = diet ? tPackages("dietPlans.noPlansHint") : tPackages("workoutPlans.noPlansHint");
   } else if (section === "payments") {
-    title = "Payments"; description = "Client invoices, due dates, and payment status.";
+    title = tPayments("title"); description = tPayments("description");
     rows = await db("invoices").select("invoices.*", "users.name as client", "services.name as service").join("clients", "clients.id", "invoices.client_id").join("users", "users.id", "clients.user_id").leftJoin("services", "services.id", "invoices.service_id").orderBy("due_on", "desc");
-    columns = [{ key: "number", label: "Invoice" }, { key: "client", label: "Client" }, { key: "service", label: "Service", format: (v) => String(v || "-") }, { key: "amount", label: "Amount", format: (v) => money.format(numeric(v)) }, { key: "due_on", label: "Due", format: (v) => dateOnly.format(new Date(String(v))) }, { key: "status", label: "Status", format: (v) => <Badge tone={tone(String(v))}>{String(v)}</Badge> }];
+    columns = [{ key: "number", label: tPayments("colInvoice") }, { key: "client", label: tPayments("colClient") }, { key: "service", label: tPayments("colService"), format: (v) => String(v || "-") }, { key: "amount", label: tPayments("colAmount"), format: (v) => money.format(numeric(v)) }, { key: "due_on", label: tPayments("colDue"), format: (v) => dateOnly.format(new Date(String(v))) }, { key: "status", label: tPayments("colStatus"), format: (v) => <Badge tone={tone(String(v))}>{statusLabel(ts, String(v))}</Badge> }];
+    emptyText = tPayments("noRecordsYet");
   } else if (section === "messages") {
-    title = "Messages"; description = "Private conversations between you and your clients.";
+    title = tMessages("title"); description = tMessages("description");
     rows = await db("messages").select("messages.*", "sender.name as sender", "recipient.name as recipient").join("users as sender", "sender.id", "messages.sender_id").join("users as recipient", "recipient.id", "messages.recipient_id").orderBy("messages.created_at", "desc").limit(100);
-    columns = [{ key: "sender", label: "From" }, { key: "recipient", label: "To" }, { key: "body", label: "Message" }, { key: "created_at", label: "Sent", format: (v) => dateTime.format(new Date(String(v))) }];
+    columns = [{ key: "sender", label: tMessages("colFrom") }, { key: "recipient", label: tMessages("colTo") }, { key: "body", label: tMessages("colMessage") }, { key: "created_at", label: tMessages("colSent"), format: (v) => dateTime.format(new Date(String(v))) }];
   }
 
-  return <><PageHeader title={title} description={description} />{rows.length === 0 ? <EmptyState text={`No ${title.toLowerCase()} records exist yet.`} /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={String(row.id || index)}>{columns.map((column) => <td key={column.key}>{column.format ? column.format(row[column.key], row) : String(row[column.key] ?? "-")}</td>)}</tr>)}</tbody></table></div></Card>}</>;
+  return <><PageHeader title={title} description={description} />{rows.length === 0 ? <EmptyState text={emptyText} /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={String(row.id || index)}>{columns.map((column) => <td key={column.key}>{column.format ? column.format(row[column.key], row) : String(row[column.key] ?? "-")}</td>)}</tr>)}</tbody></table></div></Card>}</>;
 }
 
 async function CoachAnalytics() {
+  const ts = await getTranslations("Common.status");
   const db = database();
   const monthStart = new Date();
   monthStart.setDate(1);
@@ -538,7 +559,7 @@ async function CoachAnalytics() {
   const churnedClients = numeric(clientSummary?.churned);
   const tones = ["green", "amber", "slate", "blue"] as const;
   const statusSegments = statusData.map((row, index) => ({
-    label: row.status,
+    label: statusLabel(ts, row.status),
     value: numeric(row.total),
     tone: tones[index % tones.length],
   }));
@@ -554,7 +575,7 @@ async function CoachAnalytics() {
     averageEnergy: numeric(adherence?.energy), averageSleep: numeric(adherence?.sleep),
     revenueTrend: months.map((month) => ({ label: month.label, value: revenueMap.get(month.key) || 0 })),
     clientGrowth: months.map((month) => ({ label: month.label, value: clientMap.get(month.key) || 0 })),
-    pipeline: ["lead", "onboarding", "active", "renewal"].map((stage) => ({ label: stage, value: numeric(pipelineData.find((row) => row.pipeline_stage === stage)?.total) })),
+    pipeline: ["lead", "onboarding", "active", "renewal"].map((stage) => ({ label: statusLabel(ts, stage), value: numeric(pipelineData.find((row) => row.pipeline_stage === stage)?.total) })),
     statusSegments,
     revenueSegments,
     services: (serviceRows as Array<Record<string, unknown>>).map((row) => ({ id: numeric(row.id), name: String(row.name), type: String(row.type), tier: row.tier ? String(row.tier) : null, clients: numeric(row.client_count), paidRevenue: numeric(row.paid_revenue), attendedSessions: numeric(row.attended_sessions) })),
@@ -571,15 +592,16 @@ async function CoachSettings() {
 async function CoachProfile() { return <AccountProfilePage role="coach" />; }
 
 async function CoachMessages({ coachId, initialClientId }: { coachId: number; initialClientId?: number | null }) {
+  const t = await getTranslations("MessagesPanel");
   const threads = await loadCoachMessageThreads(coachId);
   const unread = threads.reduce((total, thread) => total + thread.unreadCount, 0);
   return (
     <>
       <PageHeader
-        eyebrow="Private coaching inbox"
-        title="Messages"
-        description="Keep every client conversation organized, respond to coaching needs, and see new messages immediately."
-        actions={<Badge tone={unread ? "blue" : "success"}>{unread ? `${unread} unread` : "Inbox clear"}</Badge>}
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
+        actions={<Badge tone={unread ? "blue" : "success"}>{unread ? t("unreadCount", { count: unread }) : t("inboxClear")}</Badge>}
       />
       <MessagingWorkspace role="coach" currentUserId={coachId} threads={threads} initialParticipantId={initialClientId} />
     </>
@@ -587,6 +609,7 @@ async function CoachMessages({ coachId, initialClientId }: { coachId: number; in
 }
 
 async function CoachSchedule({ selectedClientId }: { selectedClientId?: number | null }) {
+  const t = await getTranslations("Schedule");
   const db = database();
   const clientRows = await db("clients")
     .select("clients.id", "users.name")
@@ -624,7 +647,7 @@ async function CoachSchedule({ selectedClientId }: { selectedClientId?: number |
 
   return (
     <>
-      <PageHeader eyebrow="Training workspace" title="Weekly schedule" description="Assign each client a workout and diet for every day of the week. Clients see today's plan and tick off each exercise on their dashboard." />
+      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
       <WeekScheduler clients={clients} selectedClientId={selectedClientId ?? null} workoutPlans={workoutPlans} dietPlans={dietPlans} schedule={schedule} />
     </>
   );

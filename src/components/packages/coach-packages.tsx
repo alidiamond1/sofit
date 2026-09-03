@@ -1,8 +1,9 @@
+import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { PageHeader } from "@/components/dashboard/primitives";
-import type { ExerciseOption, MealOption, PlanClient } from "@/components/plans/plan-builders";
-import { TierPackages, type PackageTier, type TierPackageSummary } from "./tier-packages";
+import type { PlanClient } from "@/components/plans/plan-builders";
+import { PackagesWorkspace, type PackageGroupOption, type PackageRow } from "./package-workspace";
 
 async function clients(): Promise<PlanClient[]> {
   const rows = await database()("clients")
@@ -15,41 +16,43 @@ async function clients(): Promise<PlanClient[]> {
 
 export async function CoachPackagesPage() {
   await requireRole("coach");
+  const t = await getTranslations("Packages.page");
   const db = database();
-  const [clientRows, mealRows, exerciseRows, tierPackageRows] = await Promise.all([
+  const [clientRows, packageRows, dietGroupRows, workoutGroupRows] = await Promise.all([
     clients(),
-    db("meal_library").select("id", "name", "meal_type", "calories", "protein_g", "carbs_g", "fat_g", "ingredients", "instructions", "media_url").where({ is_active: true }).orderByRaw("FIELD(meal_type, 'breakfast', 'lunch', 'dinner', 'snack')").orderBy("name"),
-    db("exercise_library").select("id", "name", "muscle_group", "equipment", "difficulty", "motion_type", "media_url", "instructions").where({ is_active: true }).orderBy("muscle_group").orderBy("name"),
-    db("tier_packages").select("*"),
+    db("packages")
+      .select("packages.*", "diet_groups.name as diet_group_name", "workout_groups.name as workout_group_name")
+      .leftJoin("diet_groups", "diet_groups.id", "packages.diet_group_id")
+      .leftJoin("workout_groups", "workout_groups.id", "packages.workout_group_id")
+      .orderBy("packages.name"),
+    db("diet_groups").select("id", "name").where({ is_active: true }).orderBy("name"),
+    db("workout_groups").select("id", "name").where({ is_active: true }).orderBy("name"),
   ]);
 
-  const meals = mealRows.map((row) => ({
-    ...row,
+  const packages: PackageRow[] = packageRows.map((row) => ({
     id: Number(row.id),
-    calories: row.calories == null ? null : Number(row.calories),
-    protein_g: row.protein_g == null ? null : Number(row.protein_g),
-    carbs_g: row.carbs_g == null ? null : Number(row.carbs_g),
-    fat_g: row.fat_g == null ? null : Number(row.fat_g),
-  })) as MealOption[];
-  const exercises = exerciseRows.map((row) => ({ ...row, id: Number(row.id) })) as ExerciseOption[];
-
-  const packages: Record<PackageTier, TierPackageSummary | null> = { beginner: null, silver: null, gold: null };
-  for (const row of tierPackageRows) {
-    packages[row.tier as PackageTier] = {
-      tier: row.tier as PackageTier,
-      title: row.title,
-      days: Array.isArray(row.days) ? row.days : [],
-    };
-  }
+    name: String(row.name),
+    category: String(row.category),
+    description: String(row.description || ""),
+    price: Number(row.price),
+    billingInterval: String(row.billing_interval),
+    isActive: Boolean(row.is_active),
+    dietGroupId: row.diet_group_id ? Number(row.diet_group_id) : null,
+    workoutGroupId: row.workout_group_id ? Number(row.workout_group_id) : null,
+    dietGroupName: row.diet_group_name ? String(row.diet_group_name) : null,
+    workoutGroupName: row.workout_group_name ? String(row.workout_group_name) : null,
+  }));
+  const dietGroups: PackageGroupOption[] = dietGroupRows.map((row) => ({ id: Number(row.id), name: String(row.name) }));
+  const workoutGroups: PackageGroupOption[] = workoutGroupRows.map((row) => ({ id: Number(row.id), name: String(row.name) }));
 
   return (
     <>
       <PageHeader
-        eyebrow="Ready-made offers"
-        title="Packages"
-        description="Add a Beginner, Silver, and Gold package once — workout and diet built together, day by day. Assign a client to a tier and their whole week is filled in automatically."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
       />
-      <TierPackages meals={meals} exercises={exercises} clients={clientRows} packages={packages} />
+      <PackagesWorkspace packages={packages} dietGroups={dietGroups} workoutGroups={workoutGroups} clients={clientRows} />
     </>
   );
 }

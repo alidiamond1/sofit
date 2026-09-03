@@ -10,6 +10,7 @@ import {
   SendHorizontal,
   ShieldCheck,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   useActionState,
@@ -55,12 +56,15 @@ function dayKey(value: string) {
   return dayKeyFormat.format(new Date(value));
 }
 
-function relativeMessageTime(value: string | null) {
-  if (!value) return "New chat";
-  const date = new Date(value);
-  const now = new Date();
-  const sameDay = dayKey(date.toISOString()) === dayKey(now.toISOString());
-  return sameDay ? timeFormat.format(date) : shortDateFormat.format(date);
+function useRelativeMessageTime() {
+  const t = useTranslations("MessagesPanel");
+  return (value: string | null) => {
+    if (!value) return t("newChat");
+    const date = new Date(value);
+    const now = new Date();
+    const sameDay = dayKey(date.toISOString()) === dayKey(now.toISOString());
+    return sameDay ? timeFormat.format(date) : shortDateFormat.format(date);
+  };
 }
 
 function ConversationMessages({
@@ -70,12 +74,13 @@ function ConversationMessages({
   messages: ChatMessage[];
   currentUserId: number;
 }) {
+  const t = useTranslations("MessagesPanel");
   if (!messages.length) {
     return (
       <div className="message-empty-state">
         <span><MessageCircleMore size={24} /></span>
-        <strong>Start the conversation</strong>
-        <p>Ask a question, share an update, or discuss the client&apos;s current coaching needs.</p>
+        <strong>{t("startConversation")}</strong>
+        <p>{t("startConversationHint")}</p>
       </div>
     );
   }
@@ -93,7 +98,7 @@ function ConversationMessages({
             <footer>
               <time dateTime={message.createdAt}>{timeFormat.format(new Date(message.createdAt))}</time>
               {outgoing ? (
-                <span aria-label={message.readAt ? "Read" : "Sent"} title={message.readAt ? "Read" : "Sent"}>
+                <span aria-label={message.readAt ? t("read") : t("sent")} title={message.readAt ? t("read") : t("sent")}>
                   {message.readAt ? <CheckCheck size={13} /> : <Check size={13} />}
                 </span>
               ) : null}
@@ -116,6 +121,8 @@ export function MessagingWorkspace({
   threads: MessageThread[];
   initialParticipantId?: number | null;
 }) {
+  const t = useTranslations("MessagesPanel");
+  const relativeMessageTime = useRelativeMessageTime();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const initialId = threads.some((thread) => thread.participantId === initialParticipantId)
@@ -184,12 +191,12 @@ export function MessagingWorkspace({
   const totalUnread = threads.reduce((total, thread) => total + thread.unreadCount, 0);
   return (
     <section className={chatOpen ? "messaging-workspace is-chat-open" : "messaging-workspace"}>
-      <aside className="messaging-directory" aria-label={role === "coach" ? "Client conversations" : "Coach conversation"}>
+      <aside className="messaging-directory" aria-label={role === "coach" ? t("clientConversationsAria") : t("coachConversationAria")}>
         <header className="messaging-directory-head">
           <div>
-            <span className="eyebrow">Inbox</span>
-            <strong>{role === "coach" ? "Client conversations" : "Your coach"}</strong>
-            <small>{totalUnread ? `${totalUnread} unread message${totalUnread === 1 ? "" : "s"}` : "All messages are read"}</small>
+            <span className="eyebrow">{t("inbox")}</span>
+            <strong>{role === "coach" ? t("clientConversations") : t("yourCoach")}</strong>
+            <small>{totalUnread ? t("unreadMessagesCount", { count: totalUnread }) : t("allMessagesRead")}</small>
           </div>
           <span className="message-inbox-icon"><Inbox size={19} /></span>
         </header>
@@ -201,8 +208,8 @@ export function MessagingWorkspace({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search clients"
-              aria-label="Search client conversations"
+              placeholder={t("searchClientsPlaceholder")}
+              aria-label={t("searchClientConversationsAria")}
             />
           </label>
         ) : null}
@@ -224,31 +231,31 @@ export function MessagingWorkspace({
                   <span className="message-thread-title"><strong>{thread.participantName}</strong><time>{relativeMessageTime(thread.lastMessageAt)}</time></span>
                   <span className="message-thread-context">{thread.contextLabel}</span>
                   <span className={unread ? "message-thread-preview has-unread" : "message-thread-preview"}>
-                    {thread.lastMessage || "No messages yet — open the chat to begin."}
+                    {thread.lastMessage || t("noMessagesYet")}
                   </span>
                 </span>
-                {unread ? <b className="message-unread-count" aria-label={`${unread} unread messages`}>{unread > 9 ? "9+" : unread}</b> : null}
+                {unread ? <b className="message-unread-count" aria-label={t("unreadMessagesAria", { count: unread })}>{unread > 9 ? "9+" : unread}</b> : null}
               </button>
             );
           })}
           {!filteredThreads.length ? (
-            <div className="message-directory-empty"><Search size={18} /><strong>No conversations found</strong><span>Try a different client name or email.</span></div>
+            <div className="message-directory-empty"><Search size={18} /><strong>{t("noConversationsFound")}</strong><span>{t("tryDifferentClient")}</span></div>
           ) : null}
         </div>
-        <footer className="message-directory-foot"><ShieldCheck size={15} /><span>Private coach-client conversations</span></footer>
+        <footer className="message-directory-foot"><ShieldCheck size={15} /><span>{t("privateConversations")}</span></footer>
       </aside>
 
       <section className="messaging-panel" aria-label="Selected conversation">
         {selectedThread ? (
           <>
             <header className="messaging-panel-head">
-              <button className="message-back-button" type="button" onClick={() => setChatOpen(false)} aria-label="Back to conversations"><ArrowLeft size={19} /></button>
+              <button className="message-back-button" type="button" onClick={() => setChatOpen(false)} aria-label={t("backToConversations")}><ArrowLeft size={19} /></button>
               <Avatar name={selectedThread.participantName} src={selectedThread.participantAvatarPath} className="message-header-avatar" />
               <div>
                 <strong>{selectedThread.participantName}</strong>
                 <span>{selectedThread.contextLabel} <i /> {selectedThread.statusLabel}</span>
               </div>
-              <span className="message-privacy-label"><ShieldCheck size={14} /> Private</span>
+              <span className="message-privacy-label"><ShieldCheck size={14} /> {t("private")}</span>
             </header>
 
             <div className="message-history-panel" ref={historyRef} aria-live="polite">
@@ -262,17 +269,17 @@ export function MessagingWorkspace({
                   name="body"
                   rows={1}
                   maxLength={5000}
-                  placeholder={role === "coach" ? `Message ${selectedThread.participantName}` : "Message your coach"}
-                  aria-label="Message"
+                  placeholder={role === "coach" ? t("messagePlaceholderCoach", { name: selectedThread.participantName }) : t("messagePlaceholderClient")}
+                  aria-label={t("messageAria")}
                   onKeyDown={submitWithEnter}
                   required
                   disabled={messagePending}
                 />
-                <span>Enter to send · Shift + Enter for a new line</span>
+                <span>{t("enterToSend")}</span>
               </div>
-              <button type="submit" disabled={messagePending} aria-label="Send message">
+              <button type="submit" disabled={messagePending} aria-label={t("sendMessageAria")}>
                 <SendHorizontal size={18} />
-                <span>{messagePending ? "Sending" : "Send"}</span>
+                <span>{messagePending ? t("sending") : t("send")}</span>
               </button>
               {messageState.error ? <p className="message-form-status is-error" role="alert">{messageState.error}</p> : null}
               {messageState.success ? <p className="message-form-status is-success" aria-live="polite">{messageState.success}</p> : null}
@@ -281,8 +288,8 @@ export function MessagingWorkspace({
         ) : (
           <div className="message-no-conversation">
             <span><Inbox size={25} /></span>
-            <strong>No clients are ready to message</strong>
-            <p>Approved coaching clients will appear here automatically.</p>
+            <strong>{t("noClientsToMessage")}</strong>
+            <p>{t("noClientsToMessageHint")}</p>
           </div>
         )}
       </section>
