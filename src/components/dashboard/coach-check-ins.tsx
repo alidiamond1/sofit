@@ -1,12 +1,15 @@
 "use client";
 
-import { ClipboardCheck, X } from "lucide-react";
+import { Camera, ClipboardCheck, ExternalLink, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { reviewCheckInAction, type CheckInActionState } from "@/app/actions/check-ins";
+import { hasAnyProgressPhoto, type ProgressPhotos } from "@/lib/progress-photos";
 import { statusLabel } from "@/lib/status-labels";
 import { ModalPortal } from "./modal-portal";
 import { Badge, Card } from "./primitives";
+import { ProgressPhotoCompare } from "./progress-photos";
 
 const initialActionState: CheckInActionState = {};
 
@@ -23,6 +26,7 @@ export type CheckInRow = {
   clientNotes: string;
   coachFeedback: string;
   status: "pending" | "submitted" | "reviewed";
+  progressPhotos: ProgressPhotos;
 };
 
 type Period = "week" | "month" | "year";
@@ -67,7 +71,7 @@ function aggregate(rows: CheckInRow[], period: Period) {
     .sort((a, b) => b.key.localeCompare(a.key));
 }
 
-function CheckInDetail({ row, onClose }: { row: CheckInRow; onClose: () => void }) {
+function CheckInDetail({ row, previousRow, onClose }: { row: CheckInRow; previousRow: CheckInRow | null; onClose: () => void }) {
   const t = useTranslations("CheckIns");
   const tc = useTranslations("Common");
   const ts = useTranslations("Common.status");
@@ -94,6 +98,18 @@ function CheckInDetail({ row, onClose }: { row: CheckInRow; onClose: () => void 
               <div><strong>{row.workoutPct}%</strong><span>{t("workout")}</span></div>
               <div><strong>{row.energy ?? "—"}</strong><span>{t("energy")}</span></div>
             </div>
+            {hasAnyProgressPhoto(row.progressPhotos) || (previousRow && hasAnyProgressPhoto(previousRow.progressPhotos)) ? (
+              <div className="detail-photos">
+                <h4>{t("progressPhotosTitle")}</h4>
+                <ProgressPhotoCompare
+                  current={row.progressPhotos}
+                  currentLabel={weekLabel.format(new Date(`${row.weekOf}T00:00:00`))}
+                  previous={previousRow ? previousRow.progressPhotos : null}
+                  previousLabel={previousRow ? weekLabel.format(new Date(`${previousRow.weekOf}T00:00:00`)) : undefined}
+                  altPrefix={row.client}
+                />
+              </div>
+            ) : null}
             <div className="detail-instructions">
               <h4>{t("clientNotes")}</h4>
               <p>{row.clientNotes || t("noNotesSubmitted")}</p>
@@ -122,13 +138,21 @@ function ClientCheckInGroup({ client, rows, period }: { client: string; rows: Ch
   const [active, setActive] = useState<CheckInRow | null>(null);
   const periods = useMemo(() => aggregate(rows, period), [rows, period]);
   const latest = rows[0];
+  // `rows` is this client's full history, newest first — the nearest earlier
+  // submission that actually has a photo is the "previous week" comparison.
+  const previousRow = active
+    ? rows.slice(rows.findIndex((row) => row.id === active.id) + 1).find((row) => hasAnyProgressPhoto(row.progressPhotos)) || null
+    : null;
 
   return (
     <Card className="checkin-group">
       <div className="checkin-group-head">
         <div>
           <span className="eyebrow">{t("checkInsCount", { count: rows.length })}</span>
-          <h2>{client}</h2>
+          <Link href={`/coach/clients?client=${latest?.clientId ?? rows[0]?.clientId}`} className="checkin-group-client-link" title={t("viewFullProfile")}>
+            <h2>{client}</h2>
+            <ExternalLink size={14} />
+          </Link>
         </div>
         {latest ? (
           <div className="plan-metrics">
@@ -156,7 +180,10 @@ function ClientCheckInGroup({ client, rows, period }: { client: string; rows: Ch
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className="is-clickable" onClick={() => setActive(row)}>
-                  <td>{weekLabel.format(new Date(`${row.weekOf}T00:00:00`))}</td>
+                  <td>
+                    {weekLabel.format(new Date(`${row.weekOf}T00:00:00`))}
+                    {hasAnyProgressPhoto(row.progressPhotos) ? <Camera size={12} className="checkin-row-photo-flag" aria-label={t("hasPhotosFlag")} /> : null}
+                  </td>
                   <td>{row.weightKg != null ? `${row.weightKg} kg` : "-"}</td>
                   <td>{row.dietPct}%</td>
                   <td>{row.workoutPct}%</td>
@@ -167,7 +194,7 @@ function ClientCheckInGroup({ client, rows, period }: { client: string; rows: Ch
           </table>
         </div>
       ) : null}
-      {active ? <CheckInDetail row={active} onClose={() => setActive(null)} /> : null}
+      {active ? <CheckInDetail row={active} previousRow={previousRow} onClose={() => setActive(null)} /> : null}
     </Card>
   );
 }

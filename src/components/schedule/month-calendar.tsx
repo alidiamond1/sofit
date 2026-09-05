@@ -1,8 +1,9 @@
 "use client";
 
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Dumbbell, Utensils, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { WEEKDAY_SHORT } from "@/lib/schedule";
+import { statusLabel } from "@/lib/status-labels";
 import { ModalPortal } from "@/components/dashboard/modal-portal";
 import { WorkoutExerciseList, MealTimeline, type ExerciseDetail, type MealDetail } from "@/components/plans/client-plan-views";
 
@@ -35,6 +36,11 @@ export function MonthCalendar({
   weekDays: DaySchedule[];
   today: string; // YYYY-MM-DD in the client's timezone
 }) {
+  const t = useTranslations("ClientSchedule");
+  const ts = useTranslations("Schedule");
+  const tc = useTranslations("Common");
+  const tstatus = useTranslations("Common.status");
+  const daysShort = tc.raw("daysShort") as string[];
   const [monthOffset, setMonthOffset] = useState(0);
   const [activeDate, setActiveDate] = useState<string | null>(null);
 
@@ -69,17 +75,17 @@ export function MonthCalendar({
     <div className="calendar-card card">
       <div className="calendar-head">
         <div>
-          <span className="eyebrow"><CalendarDays size={13} /> Your schedule</span>
+          <span className="eyebrow"><CalendarDays size={13} /> {t("yourSchedule")}</span>
           <h2>{monthLabel}</h2>
         </div>
         <div className="calendar-nav">
-          <button className="icon-button" type="button" onClick={() => setMonthOffset((offset) => offset - 1)} aria-label="Previous month"><ChevronLeft size={16} /></button>
-          <button className="button secondary small" type="button" onClick={() => setMonthOffset(0)}>Today</button>
-          <button className="icon-button" type="button" onClick={() => setMonthOffset((offset) => offset + 1)} aria-label="Next month"><ChevronRight size={16} /></button>
+          <button className="icon-button" type="button" onClick={() => setMonthOffset((offset) => offset - 1)} aria-label={t("previousMonth")}><ChevronLeft size={16} /></button>
+          <button className="button secondary small" type="button" onClick={() => setMonthOffset(0)}>{t("todayButton")}</button>
+          <button className="icon-button" type="button" onClick={() => setMonthOffset((offset) => offset + 1)} aria-label={t("nextMonth")}><ChevronRight size={16} /></button>
         </div>
       </div>
       <div className="calendar-grid month">
-        {WEEKDAY_SHORT.map((weekday) => <span key={weekday} className="calendar-dow">{weekday}</span>)}
+        {daysShort.map((weekday, index) => <span key={`${weekday}-${index}`} className="calendar-dow">{weekday}</span>)}
         {cells.map((cell, index) => {
           if (!cell) return <span key={`blank-${index}`} className="calendar-cell is-blank" />;
           const schedule = byWeekday.get(cell.weekday);
@@ -91,69 +97,69 @@ export function MonthCalendar({
           if (isToday) classes.push("is-today");
           if (hasWorkout) classes.push("has-workout");
           return (
-            <button key={cell.iso} type="button" className={classes.join(" ")} onClick={() => setActiveDate(cell.iso)} aria-label={`Open ${cell.iso} plan`}>
+            <button key={cell.iso} type="button" className={classes.join(" ")} onClick={() => setActiveDate(cell.iso)} aria-label={t("openDayPlanAria", { date: cell.iso })}>
               <b>{cell.day}</b>
               <span className="calendar-pills">
-                {hasWorkout ? <em className="cal-pill workout">{schedule!.workout!.dayLabel || "Workout"}</em> : isRest ? <em className="cal-pill rest">Rest</em> : null}
-                {schedule && !schedule.isRest && schedule.diet ? <em className="cal-pill diet">Diet</em> : null}
-                {daySessions.length ? <em className="cal-pill session">{daySessions.length === 1 ? daySessions[0].time : `${daySessions.length} sessions`}</em> : null}
+                {hasWorkout ? <em className="cal-pill workout">{schedule!.workout!.dayLabel || ts("workout")}</em> : isRest ? <em className="cal-pill rest">{ts("rest")}</em> : null}
+                {schedule && !schedule.isRest && schedule.diet ? <em className="cal-pill diet">{ts("diet")}</em> : null}
+                {daySessions.length ? <em className="cal-pill session">{daySessions.length === 1 ? daySessions[0].time : t("sessionsCount", { count: daySessions.length })}</em> : null}
               </span>
             </button>
           );
         })}
       </div>
       <div className="calendar-legend">
-        <span><i className="cal-dot workout" /> Workout</span>
-        <span><i className="cal-dot diet" /> Diet</span>
-        <span><i className="cal-dot session" /> Session</span>
-        <span><i className="cal-dot rest" /> Rest</span>
+        <span><i className="cal-dot workout" /> {ts("workout")}</span>
+        <span><i className="cal-dot diet" /> {ts("diet")}</span>
+        <span><i className="cal-dot session" /> {t("session")}</span>
+        <span><i className="cal-dot rest" /> {ts("rest")}</span>
       </div>
 
       {activeDate ? (
         <ModalPortal>
           <div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setActiveDate(null)}>
             <div className="plan-modal day-modal" role="dialog" aria-modal="true" aria-label={activeDate} onMouseDown={(event) => event.stopPropagation()}>
-              <button className="modal-close icon-button" type="button" aria-label="Close" onClick={() => setActiveDate(null)}><X size={18} /></button>
+              <button className="modal-close icon-button" type="button" aria-label={tc("close")} onClick={() => setActiveDate(null)}><X size={18} /></button>
               <div className="day-panel">
                 <header className="day-panel-head">
-                  <span className="eyebrow">Scheduled for</span>
+                  <span className="eyebrow">{t("scheduledFor")}</span>
                   <h2>{new Date(`${activeDate}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</h2>
                 </header>
 
                 {activeSessions.length ? (
                   <section className="day-section">
-                    <h4><Clock size={13} /> Sessions</h4>
+                    <h4><Clock size={13} /> {t("sessionsHeading")}</h4>
                     <ul className="day-session-list">
                       {activeSessions.map((session, index) => (
-                        <li key={index}><span>{session.time}</span><strong>{session.title}</strong><span className={sessionBadgeClass(session.status)}>{session.status}</span></li>
+                        <li key={index}><span>{session.time}</span><strong>{session.title}</strong><span className={sessionBadgeClass(session.status)}>{statusLabel(tstatus, session.status)}</span></li>
                       ))}
                     </ul>
                   </section>
                 ) : null}
 
                 <section className="day-section">
-                  <h4><Dumbbell size={13} /> Workout</h4>
+                  <h4><Dumbbell size={13} /> {ts("workout")}</h4>
                   {activeSchedule?.isRest ? (
-                    <p className="day-rest">Rest &amp; recovery day.</p>
+                    <p className="day-rest">{ts("restNote")}</p>
                   ) : activeSchedule?.workout ? (
                     <>
                       <p className="day-plan-name">{activeSchedule.workout.title}{activeSchedule.workout.dayLabel ? ` · ${activeSchedule.workout.dayLabel}` : ""}</p>
                       <WorkoutExerciseList exercises={activeSchedule.workout.exercises} />
                     </>
                   ) : (
-                    <p className="day-empty">No workout scheduled for this day.</p>
+                    <p className="day-empty">{t("noWorkoutForDay")}</p>
                   )}
                 </section>
 
                 <section className="day-section">
-                  <h4><Utensils size={13} /> Diet</h4>
+                  <h4><Utensils size={13} /> {ts("diet")}</h4>
                   {activeSchedule?.diet ? (
                     <>
                       <p className="day-plan-name">{activeSchedule.diet.title}</p>
                       <MealTimeline meals={activeSchedule.diet.meals} />
                     </>
                   ) : (
-                    <p className="day-empty">No diet scheduled for this day.</p>
+                    <p className="day-empty">{t("noDietForDay")}</p>
                   )}
                 </section>
               </div>

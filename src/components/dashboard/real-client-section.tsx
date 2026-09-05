@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ClipboardList,
   Dumbbell,
-  Flame,
   Mail,
   Moon,
   Scale,
@@ -14,10 +13,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { submitClientCheckInAction } from "@/app/actions/client";
+import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth/session";
+import { currentWeekStart } from "@/lib/check-in-week";
 import { database } from "@/lib/db";
+import { hasAnyProgressPhoto, parseProgressPhotos } from "@/lib/progress-photos";
+import { statusLabel } from "@/lib/status-labels";
 import { HorizontalBars, TrendLineChart } from "./charts";
+import { CheckInForm } from "./check-in-form";
+import { ProgressPhotoTimeline } from "./progress-photos";
 import { Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
 import { WorkoutExerciseLogList, DietMealLogList, PlanCardShell } from "@/components/plans/client-plan-views";
 import { TodayWorkout } from "@/components/schedule/today-workout";
@@ -55,23 +59,25 @@ function tone(status: string): "success" | "warning" | "danger" | "neutral" | "b
   return "neutral";
 }
 
-function EmptyState({ text }: { text: string }) {
-  return <Card className="empty-state"><ClipboardList size={24} /><h3>Nothing here yet</h3><p>{text}</p></Card>;
+async function EmptyState({ text }: { text: string }) {
+  const t = await getTranslations("Common");
+  return <Card className="empty-state"><ClipboardList size={24} /><h3>{t("noRecordsYet")}</h3><p>{text}</p></Card>;
 }
 
-/** Bilingual "must complete" nudge shown until a client has a height and
- *  starting weight on file — their coach needs both to confirm the right
- *  package for them. */
-function ProfileCompletionNudge({ client }: { client: { height_cm: unknown; starting_weight_kg: unknown } }) {
+/** "Must complete" nudge shown until a client has a height and starting
+ *  weight on file — their coach needs both to confirm the right package
+ *  for them. */
+async function ProfileCompletionNudge({ client }: { client: { height_cm: unknown; starting_weight_kg: unknown } }) {
   if (client.height_cm != null && client.starting_weight_kg != null) return null;
+  const t = await getTranslations("Common.profileNudge");
   return (
     <Card className="profile-nudge-card">
       <span className="profile-nudge-icon"><UserRound size={20} /></span>
       <div>
-        <strong>Complete your profile · Dhammaystir profile-kaaga</strong>
-        <p>Add your height and weight so your coach can confirm the right package for you. · Geli dhererkaaga iyo miisaankaaga si coach-kaagu ugu ogaado package-ka kuu habboon.</p>
+        <strong>{t("title")}</strong>
+        <p>{t("body")}</p>
       </div>
-      <Link className="button primary" href="/client/profile#profile-information">Complete profile · Dhammaystir</Link>
+      <Link className="button primary" href="/client/profile#profile-information">{t("cta")}</Link>
     </Card>
   );
 }
@@ -88,7 +94,7 @@ function normalizeDate(value: unknown): string {
   return String(value).slice(0, 10);
 }
 
-type PlanCompletionRow = { item_key: string; scheduled_on: unknown; details: unknown };
+export type PlanCompletionRow = { item_key: string; scheduled_on: unknown; details: unknown };
 
 async function getClientContext() {
   const session = await requireRole("client");
@@ -123,6 +129,10 @@ async function getClientContext() {
 
 async function ClientHome() {
   const { client } = await getClientContext();
+  const t = await getTranslations("ClientHome");
+  const ta = await getTranslations("Account");
+  const tc = await getTranslations("Common");
+  const ts = await getTranslations("Common.status");
   const now = new Date();
   const [dietPlan, workoutPlan, nextSession, recentCheckIns, openInvoice, packageServices] = await Promise.all([
     database()("diet_plans").where({ client_id: client.id, status: "active" }).orderBy("updated_at", "desc").first(),
@@ -206,20 +216,27 @@ async function ClientHome() {
     scheduleReady = false;
   }
 
+  const dietVersionLine = dietPlan
+    ? (dietPlan.daily_calories
+        ? t("kcalVersionLine", { calories: dietPlan.daily_calories, version: dietPlan.version })
+        : t("dietPlanVersionLine", { version: dietPlan.version }))
+    : "";
+  const workoutVersionLine = workoutPlan ? t("weeksVersionLine", { weeks: workoutPlan.weeks, version: workoutPlan.version }) : "";
+
   return (
     <>
       <PageHeader
-        eyebrow={client.package_name || client.service_name || "SoFit client"}
-        title={`Welcome, ${client.name}.`}
-        description="Stay focused on today's plan, your next coaching touchpoint, and the progress you are building."
+        eyebrow={client.package_name || client.service_name || ta("sofitClient")}
+        title={t("welcomeTitle", { name: client.name })}
+        description={t("description")}
       />
       <ProfileCompletionNudge client={client} />
       {client.package_name ? (
         <Card className="client-package-summary">
           <div>
-            <span className="eyebrow">Your package</span>
+            <span className="eyebrow">{t("yourPackage")}</span>
             <h2>{client.package_name}</h2>
-            <p>{client.package_description || "Your coach has assigned this package to your account."}</p>
+            <p>{client.package_description || t("packageDescriptionFallback")}</p>
           </div>
           <div className="client-package-services">
             {packageServices.map((service) => <span key={service.name}>{service.quantity}x {service.name}</span>)}
@@ -234,49 +251,50 @@ async function ClientHome() {
       {!scheduleReady ? null : todayExercises.length > 0 ? (
         <TodayWorkout exercises={todayExercises} planTitle={todayPlanTitle} dayLabel={todayDayLabel} />
       ) : isRestToday ? (
-        <Card className="today-rest"><span className="today-rest-icon"><Moon size={20} /></span><div><strong>Rest day</strong><span>No workout scheduled today — focus on recovery, sleep, and good nutrition.</span></div></Card>
+        <Card className="today-rest"><span className="today-rest-icon"><Moon size={20} /></span><div><strong>{t("restDayTitle")}</strong><span>{t("restDayBody")}</span></div></Card>
       ) : (
-        <Card className="today-rest today-empty"><span className="today-rest-icon"><Dumbbell size={20} /></span><div><strong>No workout scheduled today</strong><span>Your coach hasn&rsquo;t set today&rsquo;s training yet — your assigned plans are on the Workout plan page.</span></div></Card>
+        <Card className="today-rest today-empty"><span className="today-rest-icon"><Dumbbell size={20} /></span><div><strong>{t("noWorkoutTitle")}</strong><span>{t("noWorkoutBody")}</span></div></Card>
       )}
       <div className="stats-grid">
-        <StatCard label="Account status" value={client.status} note={client.pipeline_stage} icon={<CheckCircle2 size={18} />} accent="green" />
-        <StatCard label="Latest weight" value={latestCheckIn?.weight_kg ? `${latestCheckIn.weight_kg} kg` : "-"} note={latestCheckIn ? dateOnly.format(new Date(latestCheckIn.week_of)) : "No check-in yet"} icon={<Scale size={18} />} points={progressTrend.map((point) => point.value)} />
-        <StatCard label="Diet adherence" value={latestCheckIn?.diet_adherence_pct != null ? `${latestCheckIn.diet_adherence_pct}%` : "-"} note="Latest submitted week" icon={<Utensils size={18} />} accent="green" />
-        <StatCard label="Workout completion" value={latestCheckIn?.workout_completion_pct != null ? `${latestCheckIn.workout_completion_pct}%` : "-"} note="Latest submitted week" icon={<Activity size={18} />} />
+        <StatCard label={t("statAccountStatus")} value={statusLabel(ts, client.status)} note={statusLabel(ts, client.pipeline_stage)} icon={<CheckCircle2 size={18} />} accent="green" />
+        <StatCard label={t("statLatestWeight")} value={latestCheckIn?.weight_kg ? `${latestCheckIn.weight_kg} kg` : "-"} note={latestCheckIn ? dateOnly.format(new Date(latestCheckIn.week_of)) : t("noCheckInYet")} icon={<Scale size={18} />} points={progressTrend.map((point) => point.value)} />
+        <StatCard label={t("dietAdherence")} value={latestCheckIn?.diet_adherence_pct != null ? `${latestCheckIn.diet_adherence_pct}%` : "-"} note={t("latestSubmittedWeek")} icon={<Utensils size={18} />} accent="green" />
+        <StatCard label={t("workoutCompletion")} value={latestCheckIn?.workout_completion_pct != null ? `${latestCheckIn.workout_completion_pct}%` : "-"} note={t("latestSubmittedWeek")} icon={<Activity size={18} />} />
       </div>
       <div className="dashboard-insight-grid client-dashboard-insights">
         <Card className="chart-card">
-          <CardHead title="Your momentum" meta="Weight trend from recent check-ins" />
-          <TrendLineChart data={progressTrend} valueLabel="Weight" formatValue={(value) => `${value} kg`} />
+          <CardHead title={t("yourMomentum")} meta={t("weightTrendMeta")} />
+          <TrendLineChart data={progressTrend} valueLabel={t("weightLabel")} formatValue={(value) => `${value} kg`} highestLabel={tc("chartHighest")} latestLabel={tc("chartLatest")} emptyLabel={tc("chartNoTrend")} />
         </Card>
         <Card className="chart-card">
-          <CardHead title="Weekly consistency" meta={latestCheckIn ? dateOnly.format(new Date(latestCheckIn.week_of)) : "Awaiting first check-in"} action={<BarChart3 size={18} />} />
+          <CardHead title={t("weeklyConsistency")} meta={latestCheckIn ? dateOnly.format(new Date(latestCheckIn.week_of)) : t("awaitingFirstCheckIn")} action={<BarChart3 size={18} />} />
           <HorizontalBars
             valueLabel="%"
+            emptyLabel={tc("chartNoCategory")}
             items={[
-              { label: "Diet adherence", value: numeric(latestCheckIn?.diet_adherence_pct), detail: `${numeric(latestCheckIn?.diet_adherence_pct)}%` },
-              { label: "Workout completion", value: numeric(latestCheckIn?.workout_completion_pct), detail: `${numeric(latestCheckIn?.workout_completion_pct)}%` },
-              { label: "Energy", value: numeric(latestCheckIn?.energy_score) * 10, detail: `${numeric(latestCheckIn?.energy_score)}/10` },
-              { label: "Sleep", value: numeric(latestCheckIn?.sleep_score) * 10, detail: `${numeric(latestCheckIn?.sleep_score)}/10` },
+              { label: t("dietAdherence"), value: numeric(latestCheckIn?.diet_adherence_pct), detail: `${numeric(latestCheckIn?.diet_adherence_pct)}%` },
+              { label: t("workoutCompletion"), value: numeric(latestCheckIn?.workout_completion_pct), detail: `${numeric(latestCheckIn?.workout_completion_pct)}%` },
+              { label: t("energy"), value: numeric(latestCheckIn?.energy_score) * 10, detail: `${numeric(latestCheckIn?.energy_score)}/10` },
+              { label: t("sleep"), value: numeric(latestCheckIn?.sleep_score) * 10, detail: `${numeric(latestCheckIn?.sleep_score)}/10` },
             ]}
           />
         </Card>
       </div>
       <div className="overview-grid">
         <Card>
-          <CardHead title="Current plans" meta="Assigned by your coach" />
+          <CardHead title={t("currentPlans")} meta={t("assignedByCoach")} />
           <div className="simple-rows">
-            {dietPlan ? <div><span className="task-icon mint"><Utensils size={16} /></span><div><strong>{dietPlan.title}</strong><span>{dietPlan.daily_calories ? `${dietPlan.daily_calories} kcal` : "Diet plan"} - version {dietPlan.version}</span></div><Badge tone="success">{dietPlan.status}</Badge></div> : null}
-            {workoutPlan ? <div><span className="task-icon mint"><Dumbbell size={16} /></span><div><strong>{workoutPlan.title}</strong><span>{workoutPlan.weeks} weeks - version {workoutPlan.version}</span></div><Badge tone="success">{workoutPlan.status}</Badge></div> : null}
-            {!dietPlan && !workoutPlan ? <div><span>Your coach has not assigned a plan yet.</span></div> : null}
+            {dietPlan ? <div><span className="task-icon mint"><Utensils size={16} /></span><div><strong>{dietPlan.title}</strong><span>{dietVersionLine}</span></div><Badge tone="success">{statusLabel(ts, dietPlan.status)}</Badge></div> : null}
+            {workoutPlan ? <div><span className="task-icon mint"><Dumbbell size={16} /></span><div><strong>{workoutPlan.title}</strong><span>{workoutVersionLine}</span></div><Badge tone="success">{statusLabel(ts, workoutPlan.status)}</Badge></div> : null}
+            {!dietPlan && !workoutPlan ? <div><span>{t("noPlanAssignedYet")}</span></div> : null}
           </div>
         </Card>
         <Card>
-          <CardHead title="Next actions" meta="Live account records" />
+          <CardHead title={t("nextActions")} meta={t("liveAccountRecords")} />
           <div className="simple-rows">
-            <div><span className="task-icon mint"><CalendarDays size={16} /></span><div><strong>Next session</strong><span>{nextSession ? dateTime.format(new Date(nextSession.starts_at)) : "No session booked"}</span></div></div>
-            <div><span className="task-icon sand"><CheckCircle2 size={16} /></span><div><strong>Weekly check-in</strong><span>{latestCheckIn ? `Last submitted ${dateOnly.format(new Date(latestCheckIn.week_of))}` : "Not submitted yet"}</span></div></div>
-            <div><span className="task-icon rose"><Mail size={16} /></span><div><strong>Payment</strong><span>{openInvoice ? `${openInvoice.number} - ${money.format(numeric(openInvoice.amount))}` : "No unpaid invoice"}</span></div></div>
+            <div><span className="task-icon mint"><CalendarDays size={16} /></span><div><strong>{t("nextSession")}</strong><span>{nextSession ? dateTime.format(new Date(nextSession.starts_at)) : t("noSessionBooked")}</span></div></div>
+            <div><span className="task-icon sand"><CheckCircle2 size={16} /></span><div><strong>{t("weeklyCheckIn")}</strong><span>{latestCheckIn ? t("lastSubmitted", { date: dateOnly.format(new Date(latestCheckIn.week_of)) }) : t("notSubmittedYet")}</span></div></div>
+            <div><span className="task-icon rose"><Mail size={16} /></span><div><strong>{t("payment")}</strong><span>{openInvoice ? `${openInvoice.number} - ${money.format(numeric(openInvoice.amount))}` : t("noUnpaidInvoice")}</span></div></div>
           </div>
         </Card>
       </div>
@@ -284,26 +302,30 @@ async function ClientHome() {
   );
 }
 
-function DietPlanCard({ plan, today, completions }: { plan: Record<string, unknown>; today: string; completions: PlanCompletionRow[] }) {
+export async function DietPlanCard({ plan, today, completions, readOnly = false }: { plan: Record<string, unknown>; today: string; completions: PlanCompletionRow[]; readOnly?: boolean }) {
+  const t = await getTranslations("ClientDietPlan");
+  const ts = await getTranslations("Common.status");
   const days = jsonArray(plan.days);
   const meals: Array<Record<string, unknown>> = days.length
     ? days.flatMap((day) => jsonArray(day.meals).map((meal) => ({ ...meal, day: day.dayLabel } as Record<string, unknown>)))
     : jsonArray(plan.meals);
   const assignedOn = plan.starts_on || plan.created_at;
+  const versionLine = t("versionLine", { version: String(plan.version) }) + (assignedOn ? t("assignedOnSuffix", { date: dateOnly.format(new Date(String(assignedOn))) }) : "");
   return (
     <Card className="client-detailed-plan">
       <PlanCardShell
-        title={<div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Diet plan - version {String(plan.version)}{assignedOn ? ` · Assigned ${dateOnly.format(new Date(String(assignedOn)))}` : ""}</span><h2>{String(plan.title)}</h2></div>}
-        metrics={<div className="plan-metrics"><div><strong>{String(plan.daily_calories || "-")}</strong><span>kcal</span></div><div><strong>{String(plan.protein_g || "-")}</strong><span>protein g</span></div><div><strong>{String(plan.carbs_g || "-")}</strong><span>carbs g</span></div></div>}
+        title={<div><Badge tone={tone(String(plan.status))}>{statusLabel(ts, String(plan.status))}</Badge><span>{versionLine}</span><h2>{String(plan.title)}</h2></div>}
+        metrics={<div className="plan-metrics"><div><strong>{String(plan.daily_calories || "-")}</strong><span>{t("kcal")}</span></div><div><strong>{String(plan.protein_g || "-")}</strong><span>{t("proteinG")}</span></div><div><strong>{String(plan.carbs_g || "-")}</strong><span>{t("carbsG")}</span></div></div>}
       >
         <DietMealLogList
           today={today}
+          readOnly={readOnly}
           meals={meals.map((meal, index) => {
             const key = String(meal.meal_id ?? index);
             const rows = completions.filter((row) => row.item_key === key);
             const history = rows.map((row) => normalizeDate(row.scheduled_on));
             return {
-              name: String(meal.name || "Meal"),
+              name: String(meal.name || t("mealFallback")),
               type: String(meal.type || "meal"),
               time: String(meal.time || ""),
               calories: meal.calories ? String(meal.calories) : "",
@@ -326,17 +348,20 @@ function DietPlanCard({ plan, today, completions }: { plan: Record<string, unkno
   );
 }
 
-function WorkoutPlanCard({ plan, today, completions }: { plan: Record<string, unknown>; today: string; completions: PlanCompletionRow[] }) {
+export async function WorkoutPlanCard({ plan, today, completions, readOnly = false }: { plan: Record<string, unknown>; today: string; completions: PlanCompletionRow[]; readOnly?: boolean }) {
+  const t = await getTranslations("ClientWorkoutPlan");
+  const ts = await getTranslations("Common.status");
   const exercises = jsonArray(plan.exercises);
   const days = jsonArray(plan.weekly_split);
   const assignedOn = plan.starts_on || plan.created_at;
+  const versionLine = t("versionLine", { version: String(plan.version) }) + (assignedOn ? t("assignedOnSuffix", { date: dateOnly.format(new Date(String(assignedOn))) }) : "");
   return (
     <Card className="client-detailed-plan training">
       <PlanCardShell
-        title={<div><Badge tone={tone(String(plan.status))}>{String(plan.status)}</Badge><span>Workout program - version {String(plan.version)}{assignedOn ? ` · Assigned ${dateOnly.format(new Date(String(assignedOn)))}` : ""}</span><h2>{String(plan.title)}</h2></div>}
-        metrics={<div className="plan-metrics"><div><strong>{String(plan.weeks || "-")}</strong><span>weeks</span></div><div><strong>{days.length || new Set(exercises.map((item) => String(item.day))).size}</strong><span>days</span></div><div><strong>{exercises.length}</strong><span>exercises</span></div></div>}
+        title={<div><Badge tone={tone(String(plan.status))}>{statusLabel(ts, String(plan.status))}</Badge><span>{versionLine}</span><h2>{String(plan.title)}</h2></div>}
+        metrics={<div className="plan-metrics"><div><strong>{String(plan.weeks || "-")}</strong><span>{t("weeks")}</span></div><div><strong>{days.length || new Set(exercises.map((item) => String(item.day))).size}</strong><span>{t("days")}</span></div><div><strong>{exercises.length}</strong><span>{t("exercises")}</span></div></div>}
       >
-        <WorkoutExerciseLogList exercises={exercises.map((exercise, index) => {
+        <WorkoutExerciseLogList readOnly={readOnly} exercises={exercises.map((exercise, index) => {
           const key = String(exercise.exercise_id ?? index);
           const rows = completions
             .filter((row) => row.item_key === key)
@@ -353,12 +378,12 @@ function WorkoutPlanCard({ plan, today, completions }: { plan: Record<string, un
             .sort((a, b) => (a.date < b.date ? 1 : -1));
           const todayEntry = rows.find((row) => row.date === today) || null;
           return {
-            name: String(exercise.exercise || "Exercise"),
+            name: String(exercise.exercise || t("exerciseFallback")),
             muscleGroup: String(exercise.muscle_group || ""),
             equipment: String(exercise.equipment || "Bodyweight"),
             difficulty: String(exercise.difficulty || "beginner"),
             mediaUrl: exercise.media_url ? String(exercise.media_url) : null,
-            day: String(exercise.day || "Training day"),
+            day: String(exercise.day || t("trainingDayFallback")),
             sets: String(exercise.sets ?? "-"),
             reps: String(exercise.reps ?? "-"),
             rpe: String(exercise.rpe ?? "-"),
@@ -382,6 +407,7 @@ function safeParseJson(value: string): unknown {
 
 async function ClientDietPlans() {
   const { client } = await getClientContext();
+  const t = await getTranslations("ClientDietPlan");
   const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
   const today = todayISO(String(settingsRow?.timezone || "Africa/Nairobi"));
   const dietPlans = await database()("diet_plans").where({ client_id: client.id }).orderBy("updated_at", "desc");
@@ -395,11 +421,12 @@ async function ClientDietPlans() {
     list.push(row);
     byPlan.set(Number(row.plan_id), list);
   }
-  return <><PageHeader eyebrow="Nutrition" title="My diet plan" description="Meals, calories, and macro targets assigned by your coach." />{dietPlans.length ? <div className="client-plan-stack">{dietPlans.map((plan) => <DietPlanCard key={plan.id} plan={plan} today={today} completions={byPlan.get(Number(plan.id)) || []} />)}</div> : <EmptyState text="Your coach has not assigned a diet plan yet." />}</>;
+  return <><PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />{dietPlans.length ? <div className="client-plan-stack">{dietPlans.map((plan) => <DietPlanCard key={plan.id} plan={plan} today={today} completions={byPlan.get(Number(plan.id)) || []} />)}</div> : <EmptyState text={t("emptyHint")} />}</>;
 }
 
 async function ClientWorkoutPlans() {
   const { client } = await getClientContext();
+  const t = await getTranslations("ClientWorkoutPlan");
   const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
   const today = todayISO(String(settingsRow?.timezone || "Africa/Nairobi"));
   const workoutPlans = await database()("workout_plans").where({ client_id: client.id }).orderBy("updated_at", "desc");
@@ -413,12 +440,12 @@ async function ClientWorkoutPlans() {
     list.push(row);
     byPlan.set(Number(row.plan_id), list);
   }
-  return <><PageHeader eyebrow="Training" title="My workout plan" description="Your weekly split, exercises, sets, reps, RPE, and rest guidance." />{workoutPlans.length ? <div className="client-plan-stack">{workoutPlans.map((plan) => <WorkoutPlanCard key={plan.id} plan={plan} today={today} completions={byPlan.get(Number(plan.id)) || []} />)}</div> : <EmptyState text="Your coach has not assigned a workout plan yet." />}</>;
+  return <><PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />{workoutPlans.length ? <div className="client-plan-stack">{workoutPlans.map((plan) => <WorkoutPlanCard key={plan.id} plan={plan} today={today} completions={byPlan.get(Number(plan.id)) || []} />)}</div> : <EmptyState text={t("emptyHint")} />}</>;
 }
 
-function toMealDetail(meal: Record<string, unknown>) {
+function toMealDetail(meal: Record<string, unknown>, mealFallback = "Meal") {
   return {
-    name: String(meal.name || "Meal"),
+    name: String(meal.name || mealFallback),
     type: String(meal.type || "meal"),
     time: String(meal.time || ""),
     calories: meal.calories ? String(meal.calories) : "",
@@ -446,6 +473,10 @@ function mealsForWeekday(plan: { days?: unknown; meals?: unknown } | undefined, 
 
 async function ClientSessions() {
   const { client } = await getClientContext();
+  const t = await getTranslations("ClientSessions");
+  const tm = await getTranslations("ClientDietPlan");
+  const ts = await getTranslations("Common.status");
+  const mealFallback = tm("mealFallback");
   const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
   const clientTz = String(settingsRow?.timezone || "Africa/Nairobi");
   const sessions = await database()("sessions")
@@ -499,7 +530,7 @@ async function ClientSessions() {
       if (!isRest && slot.diet_plan_id) {
         const plan = dietById.get(Number(slot.diet_plan_id));
         if (plan) {
-          diet = { title: String(plan.title), meals: mealsForWeekday(plan, weekday, false).map(toMealDetail) };
+          diet = { title: String(plan.title), meals: mealsForWeekday(plan, weekday, false).map((meal) => toMealDetail(meal, mealFallback)) };
         }
       }
       weekDays[weekday] = { weekday, isRest, workout, diet };
@@ -544,7 +575,7 @@ async function ClientSessions() {
               })),
             }
           : null,
-        diet: dayMeals.length ? { title: String(activeDiet!.title), meals: dayMeals.map(toMealDetail) } : null,
+        diet: dayMeals.length ? { title: String(activeDiet!.title), meals: dayMeals.map((meal) => toMealDetail(meal, mealFallback)) } : null,
       };
     }
   }
@@ -553,68 +584,39 @@ async function ClientSessions() {
   const timeFmt = new Intl.DateTimeFormat("en-US", { timeZone: clientTz, hour: "numeric", minute: "2-digit" });
   const calendarSessions = sessions.map((item) => ({
     date: dayFmt.format(new Date(item.starts_at)),
-    title: item.service || "Personal training",
+    title: item.service || t("personalTrainingFallback"),
     time: timeFmt.format(new Date(item.starts_at)),
     status: String(item.attendance),
   }));
 
   return (
     <>
-      <PageHeader title="My sessions" description="Your training calendar, bookings, and attendance history." />
+      <PageHeader title={t("title")} description={t("description")} />
       <MonthCalendar sessions={calendarSessions} weekDays={weekDays} today={todayISO(clientTz)} />
-      {sessions.length === 0 ? <EmptyState text="No personal training sessions are booked yet." /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Session</th><th>Date</th><th>Duration</th><th>Attendance</th><th>Notes</th></tr></thead><tbody>{sessions.map((item) => <tr key={item.id}><td>{item.service || "Personal training"}</td><td>{dateTime.format(new Date(item.starts_at))}</td><td>{item.duration_minutes} min</td><td><Badge tone={tone(item.attendance)}>{item.attendance}</Badge></td><td>{item.notes || "-"}</td></tr>)}</tbody></table></div></Card>}
+      {sessions.length === 0 ? <EmptyState text={t("noSessionsBooked")} /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>{t("colSession")}</th><th>{t("colDate")}</th><th>{t("colDuration")}</th><th>{t("colAttendance")}</th><th>{t("colNotes")}</th></tr></thead><tbody>{sessions.map((item) => <tr key={item.id}><td>{item.service || t("personalTrainingFallback")}</td><td>{dateTime.format(new Date(item.starts_at))}</td><td>{t("durationSuffix", { minutes: item.duration_minutes })}</td><td><Badge tone={tone(item.attendance)}>{statusLabel(ts, item.attendance)}</Badge></td><td>{item.notes || "-"}</td></tr>)}</tbody></table></div></Card>}
     </>
   );
 }
 
 async function ClientCheckIn() {
   const { client } = await getClientContext();
+  const t = await getTranslations("ClientCheckIn");
+  const ts = await getTranslations("Common.status");
   const latest = await database()("check_ins").where({ client_id: client.id }).orderBy("week_of", "desc").first();
+  // If the client already has a submission open for the current week (e.g. they're
+  // editing their numbers again), prefill the uploader with whatever photos they
+  // already attached rather than making them re-upload.
+  const thisWeek = latest && normalizeDate(latest.week_of) === currentWeekStart() ? latest : null;
+  const initialPhotos = thisWeek ? parseProgressPhotos(thisWeek.progress_photos) : null;
   return (
     <>
-      <PageHeader title="Weekly check-in" description="Share this week's progress, adherence, and notes with your coach." />
+      <PageHeader title={t("title")} description={t("description")} />
       <ProfileCompletionNudge client={client} />
       <div className="checkin-form-layout">
         <Card className="checkin-form">
-          <form action={submitClientCheckInAction} className="checkin-form-grid">
-            <div className="checkin-section">
-              <span className="checkin-section-label">This week&rsquo;s numbers</span>
-              <div className="checkin-field-grid">
-                <label className="checkin-field">
-                  <span className="checkin-field-copy"><i className="task-icon sky"><Scale size={16} /></i>Current weight (kg)</span>
-                  <input name="weight_kg" type="number" min="1" max="500" step="0.1" required />
-                </label>
-                <label className="checkin-field">
-                  <span className="checkin-field-copy"><i className="task-icon mint"><Utensils size={16} /></i>Diet adherence (%)</span>
-                  <input name="diet_adherence_pct" type="number" min="0" max="100" required />
-                </label>
-                <label className="checkin-field">
-                  <span className="checkin-field-copy"><i className="task-icon sand"><Activity size={16} /></i>Workout completion (%)</span>
-                  <input name="workout_completion_pct" type="number" min="0" max="100" required />
-                </label>
-              </div>
-            </div>
-            <div className="checkin-section">
-              <span className="checkin-section-label">How you&rsquo;re feeling</span>
-              <div className="checkin-field-grid">
-                <label className="checkin-field">
-                  <span className="checkin-field-copy"><i className="task-icon rose"><Flame size={16} /></i>Energy (1-10)</span>
-                  <input name="energy_score" type="number" min="1" max="10" required />
-                </label>
-                <label className="checkin-field">
-                  <span className="checkin-field-copy"><i className="task-icon violet"><Moon size={16} /></i>Sleep quality (1-10)</span>
-                  <input name="sleep_score" type="number" min="1" max="10" required />
-                </label>
-              </div>
-            </div>
-            <label className="checkin-notes">
-              <span>Wins, challenges, and coach notes</span>
-              <textarea name="client_notes" rows={5} required placeholder="What went well this week? What was hard? Anything your coach should know?" />
-            </label>
-            <div className="form-submit"><span>Your coach can review this after submission.</span><button className="button primary" type="submit">Submit check-in</button></div>
-          </form>
+          <CheckInForm initialPhotos={initialPhotos} />
         </Card>
-        <Card><CardHead title="Latest check-in" meta={latest ? dateOnly.format(new Date(latest.week_of)) : "No submission"} />{latest ? <div className="simple-rows"><div><strong>Weight</strong><Badge>{latest.weight_kg} kg</Badge></div><div><strong>Diet adherence</strong><Badge tone="success">{latest.diet_adherence_pct}%</Badge></div><div><strong>Workout completion</strong><Badge tone="blue">{latest.workout_completion_pct}%</Badge></div><div><strong>Status</strong><Badge tone={tone(latest.status)}>{latest.status}</Badge></div></div> : <p>No check-in has been stored yet.</p>}</Card>
+        <Card><CardHead title={t("latestCheckIn")} meta={latest ? dateOnly.format(new Date(latest.week_of)) : t("noSubmission")} />{latest ? <div className="simple-rows"><div><strong>{t("weight")}</strong><Badge>{latest.weight_kg} kg</Badge></div><div><strong>{t("dietAdherence")}</strong><Badge tone="success">{latest.diet_adherence_pct}%</Badge></div><div><strong>{t("workoutCompletion")}</strong><Badge tone="blue">{latest.workout_completion_pct}%</Badge></div><div><strong>{t("status")}</strong><Badge tone={tone(latest.status)}>{statusLabel(ts, latest.status)}</Badge></div></div> : <p>{t("noCheckInStored")}</p>}</Card>
       </div>
     </>
   );
@@ -622,6 +624,9 @@ async function ClientCheckIn() {
 
 async function ClientProgress() {
   const { client } = await getClientContext();
+  const t = await getTranslations("ClientProgress");
+  const tc = await getTranslations("Common");
+  const ts = await getTranslations("Common.status");
   const checkIns = await database()("check_ins").where({ client_id: client.id }).orderBy("week_of", "desc");
   const latest = checkIns[0];
   const chronological = [...checkIns].reverse();
@@ -632,26 +637,37 @@ async function ClientProgress() {
     label: new Date(item.week_of).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     value: Math.round((numeric(item.diet_adherence_pct) + numeric(item.workout_completion_pct)) / 2),
   }));
+  const photoWeeks = checkIns
+    .map((item) => ({ key: String(item.id), weekLabel: dateOnly.format(new Date(item.week_of)), photos: parseProgressPhotos(item.progress_photos) }))
+    .filter((entry) => hasAnyProgressPhoto(entry.photos));
   return (
     <>
-      <PageHeader eyebrow="Your journey" title="Progress" description="See the habits behind your results, calculated only from submitted weekly check-ins." />
+      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
       <div className="stats-grid compact">
-        <StatCard label="Current weight" value={latest?.weight_kg ? `${latest.weight_kg} kg` : "-"} icon={<Scale size={18} />} points={weightTrend.map((point) => point.value)} />
-        <StatCard label="Diet adherence" value={latest?.diet_adherence_pct != null ? `${latest.diet_adherence_pct}%` : "-"} icon={<Utensils size={18} />} accent="green" />
-        <StatCard label="Workout completion" value={latest?.workout_completion_pct != null ? `${latest.workout_completion_pct}%` : "-"} icon={<Activity size={18} />} />
-        <StatCard label="Check-ins" value={String(checkIns.length)} icon={<CheckCircle2 size={18} />} accent="green" />
+        <StatCard label={t("currentWeight")} value={latest?.weight_kg ? `${latest.weight_kg} kg` : "-"} icon={<Scale size={18} />} points={weightTrend.map((point) => point.value)} />
+        <StatCard label={t("dietAdherence")} value={latest?.diet_adherence_pct != null ? `${latest.diet_adherence_pct}%` : "-"} icon={<Utensils size={18} />} accent="green" />
+        <StatCard label={t("workoutCompletion")} value={latest?.workout_completion_pct != null ? `${latest.workout_completion_pct}%` : "-"} icon={<Activity size={18} />} />
+        <StatCard label={t("checkIns")} value={String(checkIns.length)} icon={<CheckCircle2 size={18} />} accent="green" />
       </div>
       {checkIns.length === 0 ? (
-        <EmptyState text="Submit your first weekly check-in to begin tracking progress." />
+        <EmptyState text={t("emptyHint")} />
       ) : (
         <>
           <div className="progress-chart-grid">
-            <Card className="chart-card"><CardHead title="Weight trend" meta="Change across submitted check-ins" /><TrendLineChart data={weightTrend} valueLabel="Weight" formatValue={(value) => `${value} kg`} /></Card>
-            <Card className="chart-card"><CardHead title="Adherence trend" meta="Average of nutrition and training" /><TrendLineChart data={adherenceTrend} valueLabel="Adherence" formatValue={(value) => `${value}%`} /></Card>
+            <Card className="chart-card"><CardHead title={t("weightTrend")} meta={t("weightTrendMeta")} /><TrendLineChart data={weightTrend} valueLabel={t("weightLabel")} formatValue={(value) => `${value} kg`} highestLabel={tc("chartHighest")} latestLabel={tc("chartLatest")} emptyLabel={tc("chartNoTrend")} /></Card>
+            <Card className="chart-card"><CardHead title={t("adherenceTrend")} meta={t("adherenceTrendMeta")} /><TrendLineChart data={adherenceTrend} valueLabel={t("adherenceLabel")} formatValue={(value) => `${value}%`} highestLabel={tc("chartHighest")} latestLabel={tc("chartLatest")} emptyLabel={tc("chartNoTrend")} /></Card>
           </div>
+          {photoWeeks.length > 0 ? (
+            <Card className="chart-card">
+              <CardHead title={t("photoTimelineTitle")} meta={t("photoTimelineMeta", { count: photoWeeks.length })} />
+              <ProgressPhotoTimeline entries={photoWeeks} altPrefix={t("photoTimelineAltPrefix")} />
+            </Card>
+          ) : (
+            <EmptyState text={t("photoTimelineEmptyHint")} />
+          )}
           <Card>
-            <CardHead title="Check-in history" meta={`${checkIns.length} submitted records`} />
-            <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Week</th><th>Weight</th><th>Diet</th><th>Workout</th><th>Energy</th><th>Sleep</th><th>Status</th></tr></thead><tbody>{checkIns.map((item) => <tr key={item.id}><td>{dateOnly.format(new Date(item.week_of))}</td><td>{item.weight_kg || "-"} kg</td><td>{item.diet_adherence_pct ?? "-"}%</td><td>{item.workout_completion_pct ?? "-"}%</td><td>{item.energy_score ?? "-"}/10</td><td>{item.sleep_score ?? "-"}/10</td><td><Badge tone={tone(item.status)}>{item.status}</Badge></td></tr>)}</tbody></table></div>
+            <CardHead title={t("checkInHistory")} meta={t("recordsCount", { count: checkIns.length })} />
+            <div className="data-table-wrap"><table className="data-table"><thead><tr><th>{t("colWeek")}</th><th>{t("colWeight")}</th><th>{t("colDiet")}</th><th>{t("colWorkout")}</th><th>{t("colEnergy")}</th><th>{t("colSleep")}</th><th>{t("colStatus")}</th></tr></thead><tbody>{checkIns.map((item) => <tr key={item.id}><td>{dateOnly.format(new Date(item.week_of))}</td><td>{item.weight_kg || "-"} kg</td><td>{item.diet_adherence_pct ?? "-"}%</td><td>{item.workout_completion_pct ?? "-"}%</td><td>{item.energy_score ?? "-"}/10</td><td>{item.sleep_score ?? "-"}/10</td><td><Badge tone={tone(item.status)}>{statusLabel(ts, item.status)}</Badge></td></tr>)}</tbody></table></div>
           </Card>
         </>
       )}
@@ -661,15 +677,16 @@ async function ClientProgress() {
 
 async function ClientMessages() {
   const { session } = await getClientContext();
+  const t = await getTranslations("MessagesPanel");
   const threads = await loadClientMessageThreads(session.id);
   const unread = threads.reduce((total, thread) => total + thread.unreadCount, 0);
   return (
     <>
       <PageHeader
-        eyebrow="Coach support"
-        title="Messages"
-        description="Ask questions, share updates, and stay connected with your SoFit coach in one private conversation."
-        actions={<Badge tone={unread ? "blue" : "success"}>{unread ? `${unread} unread` : "Up to date"}</Badge>}
+        eyebrow={t("clientEyebrow")}
+        title={t("title")}
+        description={t("clientDescription")}
+        actions={<Badge tone={unread ? "blue" : "success"}>{unread ? t("unreadCount", { count: unread }) : t("upToDate")}</Badge>}
       />
       <MessagingWorkspace role="client" currentUserId={session.id} threads={threads} initialParticipantId={threads[0]?.participantId} />
     </>
@@ -678,8 +695,10 @@ async function ClientMessages() {
 
 async function ClientPayments() {
   const { client } = await getClientContext();
+  const t = await getTranslations("ClientPayments");
+  const ts = await getTranslations("Common.status");
   const invoices = await database()("invoices").select("invoices.*", "services.name as service").leftJoin("services", "services.id", "invoices.service_id").where("invoices.client_id", client.id).orderBy("due_on", "desc");
-  return <><PageHeader title="Payments" description="Review your invoices, due dates, and payment status." />{invoices.length === 0 ? <EmptyState text="No invoices have been created for your account." /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Invoice</th><th>Service</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td>{invoice.number}</td><td>{invoice.service || "-"}</td><td>{money.format(numeric(invoice.amount))}</td><td>{dateOnly.format(new Date(invoice.due_on))}</td><td><Badge tone={tone(invoice.status)}>{invoice.status}</Badge></td></tr>)}</tbody></table></div></Card>}</>;
+  return <><PageHeader title={t("title")} description={t("description")} />{invoices.length === 0 ? <EmptyState text={t("emptyHint")} /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>{t("colInvoice")}</th><th>{t("colService")}</th><th>{t("colAmount")}</th><th>{t("colDue")}</th><th>{t("colStatus")}</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td>{invoice.number}</td><td>{invoice.service || "-"}</td><td>{money.format(numeric(invoice.amount))}</td><td>{dateOnly.format(new Date(invoice.due_on))}</td><td><Badge tone={tone(invoice.status)}>{statusLabel(ts, invoice.status)}</Badge></td></tr>)}</tbody></table></div></Card>}</>;
 }
 
 async function ClientProfile() {

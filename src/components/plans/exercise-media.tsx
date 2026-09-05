@@ -75,6 +75,7 @@ export function ExerciseMedia({
   className?: string;
   context?: "exercise" | "meal";
 }) {
+  const tc = useTranslations("Common");
   const [failed, setFailed] = useState(false);
   // Reset the failure flag when the media source changes (React's "adjust state
   // during render" pattern — cheaper and safer than a setState-in-effect).
@@ -114,7 +115,7 @@ export function ExerciseMedia({
   return (
     <div className={`${root} is-empty`} role="img" aria-label={`${name} — no media yet`}>
       <span className="media-empty-icon">{context === "meal" ? <Utensils size={variant === "thumb" ? 16 : 22} /> : <Dumbbell size={variant === "thumb" ? 16 : 22} />}</span>
-      {variant !== "thumb" ? <span className="media-empty-label">{muscleGroup || (context === "meal" ? "Add a photo" : "Add a demo")}</span> : null}
+      {variant !== "thumb" ? <span className="media-empty-label">{muscleGroup || (context === "meal" ? tc("media.addPhoto") : tc("media.addDemo"))}</span> : null}
     </div>
   );
 }

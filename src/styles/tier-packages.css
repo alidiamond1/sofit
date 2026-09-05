@@ -15,8 +15,11 @@
 .tier-package-stats>div{text-align:center}
 .tier-package-stats strong{display:block;font-size:15px}
 .tier-package-stats span{color:var(--muted);font-size:8px}
-.tier-package-actions{display:flex;gap:8px;margin-top:auto}
-.tier-package-actions .button{flex:1;justify-content:center}
+.tier-package-actions{display:flex;gap:6px;margin-top:auto}
+.tier-package-actions .button{flex:1;justify-content:center;min-width:0;gap:5px;padding:8px 7px;font-size:10.5px;overflow:hidden;text-overflow:ellipsis}
+.tier-package-actions .button.danger-action{flex:0 0 auto;padding-inline:10px}
+.tier-package-actions form{flex:1;min-width:0;display:flex}
+.tier-package-actions form .button{width:100%}
 
 .day-tab-row{display:flex;gap:6px;margin:18px 0 14px;overflow-x:auto}
 .day-tab{display:flex;align-items:center;gap:4px;flex:0 0 auto;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:10px;font-weight:650;cursor:pointer;transition:border-color .15s ease,background .15s ease}

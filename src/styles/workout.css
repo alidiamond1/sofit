@@ -126,15 +126,20 @@
 .exercise-tag.diff-intermediate{color:#f0c674;border-color:rgba(224,168,58,.3);background:var(--amber-soft)}
 .exercise-tag.diff-advanced{color:#f2a1a1;border-color:rgba(226,88,93,.3);background:var(--red-soft)}
 
-/* 3b ── Coach: grouped/collapsible muscle-group sections (the "All" view) ── */
-.exercise-group{grid-column:1/-1}
+/* 3b ── Coach: grouped/collapsible muscle-group sections (the "All" view).
+   Collapsed groups sit as compact cards in the same grid as everything
+   else — a full-width row per group was the "too long, too much scroll"
+   complaint. Only the opened group spans the full row, to make room for
+   its exercise grid underneath. */
+.exercise-group{border-radius:18px}
+.exercise-group.is-open{grid-column:1/-1}
 .exercise-group-head{
-  display:flex;align-items:center;gap:10px;width:100%;
-  padding:13px 16px;border:1px solid var(--line);border-radius:14px;
+  display:flex;align-items:center;gap:10px;width:100%;min-height:68px;
+  padding:16px 18px;border:1px solid var(--line);border-radius:18px;
   background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;
-  font:inherit;transition:border-color .15s ease;
+  font:inherit;transition:transform .18s ease,border-color .15s ease,box-shadow .18s ease;
 }
-.exercise-group-head:hover{border-color:var(--line-strong)}
+.exercise-group-head:hover{border-color:var(--ring);transform:translateY(-2px);box-shadow:var(--shadow-float)}
 .exercise-group-name{font-size:13px;font-weight:700;letter-spacing:-.01em}
 .exercise-group-count{
   margin-left:auto;padding:2px 9px;border-radius:999px;
@@ -142,10 +147,10 @@
 }
 .exercise-group-chevron{color:var(--faint);flex:0 0 auto;transition:transform .18s ease}
 .exercise-group.is-open .exercise-group-chevron{transform:rotate(180deg)}
-.exercise-group.is-open .exercise-group-head{border-radius:14px 14px 0 0;border-bottom-color:transparent}
+.exercise-group.is-open .exercise-group-head{border-radius:18px 18px 0 0;border-bottom-color:transparent;transform:none}
 .exercise-group-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:16px;
-  padding:16px;border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;
+  padding:16px;border:1px solid var(--line);border-top:0;border-radius:0 0 18px 18px;
   background:var(--surface-soft);
 }
 

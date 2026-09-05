@@ -20,6 +20,7 @@ import {
   Moon,
   Package as PackageIcon,
   PanelLeftClose,
+  PanelLeftOpen,
   Search,
   Settings,
   Sparkles,
@@ -179,6 +180,7 @@ export function AppShell({
   notifications,
   unreadCount,
   unreadMessageCount,
+  activeClients,
   children,
 }: {
   role: "coach" | "client";
@@ -187,6 +189,7 @@ export function AppShell({
   notifications: ShellNotification[];
   unreadCount: number;
   unreadMessageCount: number;
+  activeClients?: { clients: { id: number; name: string; avatarPath: string | null }[]; total: number };
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -247,18 +250,32 @@ export function AppShell({
   return (
     <div className={collapsed ? "portal-shell is-collapsed" : "portal-shell"}>
       <ThemeSync preference={themePreference} />
-      <aside className="desktop-sidebar">
+      <aside className={role === "coach" ? "desktop-sidebar sidebar-coach" : "desktop-sidebar"}>
         <div className="sidebar-brand-row">
           <SoFitMark compact={collapsed} />
           <button
             className="icon-button sidebar-collapse"
             onClick={() => setCollapsed((value) => !value)}
-            aria-label={tTop("toggleSidebar")}
+            aria-label={collapsed ? tTop("expandSidebar") : tTop("collapseSidebar")}
+            title={collapsed ? tTop("expandSidebar") : tTop("collapseSidebar")}
           >
-            <PanelLeftClose size={17} />
+            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
           </button>
         </div>
         <NavLinks items={items} pathname={pathname} unreadMessageCount={unreadMessageCount} unreadCount={unreadCount} onOpenNotifications={() => setNotificationsOpen(true)} />
+        {role === "coach" && !collapsed && activeClients && activeClients.clients.length > 0 ? (
+          <div className="sidebar-active-clients">
+            <span className="sidebar-active-clients-label">{tTop("activeClients")}</span>
+            <div className="sidebar-active-clients-row">
+              <div className="sidebar-active-clients-stack">
+                {activeClients.clients.map((client) => (
+                  <Avatar key={client.id} name={client.name} src={client.avatarPath} className="tiny" />
+                ))}
+              </div>
+              <strong>{tTop("activeClientsCount", { count: activeClients.total })}</strong>
+            </div>
+          </div>
+        ) : null}
         <div className="sidebar-footer">
           <Link className="sidebar-user-link" href={profileHref} title={tTop("openProfile")}>
             <Avatar name={user.name} src={user.avatarPath} className="small" />

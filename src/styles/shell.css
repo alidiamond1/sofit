@@ -15,7 +15,24 @@
 .notification-button{position:relative}.notification-button>span{position:absolute;right:7px;top:7px;width:6px;height:6px;border:2px solid var(--surface);border-radius:50%;background:var(--green)}
 .profile-button{display:flex;align-items:center;gap:9px;padding:4px 6px 4px 4px;border:0;background:transparent;cursor:pointer;text-align:left}.profile-copy strong,.profile-copy small{display:block}.profile-copy strong{font-size:12px}.profile-copy small{color:var(--muted);font-size:9px}
 .portal-content{max-width:1540px;margin:0 auto;padding:36px clamp(20px,3.4vw,52px) 70px}.mobile-menu-button,.mobile-brand,.mobile-bottom-nav,.mobile-drawer-backdrop{display:none}
-.portal-shell.is-collapsed{grid-template-columns:82px minmax(0,1fr)}.is-collapsed .desktop-sidebar{padding-inline:13px}.is-collapsed .nav-link{justify-content:center;padding-inline:0}.is-collapsed .nav-link span,.is-collapsed .workspace-label,.is-collapsed .sidebar-collapse{display:none}.is-collapsed .sidebar-footer{justify-content:center;padding:8px 2px;flex-wrap:wrap}.is-collapsed .sidebar-brand-row{justify-content:center;padding:0}
+.portal-shell.is-collapsed{grid-template-columns:82px minmax(0,1fr)}.is-collapsed .desktop-sidebar{padding-inline:13px}.is-collapsed .nav-link{justify-content:center;padding-inline:0}.is-collapsed .nav-link span,.is-collapsed .workspace-label{display:none}.is-collapsed .sidebar-footer{justify-content:center;padding:8px 2px;flex-wrap:wrap}.is-collapsed .sidebar-brand-row{justify-content:center;padding:0}.is-collapsed .sidebar-brand-row .brand{display:none}
+
+/* Coach sidebar: solid pill for the active nav item (mirrors .button.primary's
+   color pairing so it stays on-brand instead of inventing a new accent). */
+.sidebar-coach .nav-link.active,html[data-theme="dark"] .sidebar-coach .nav-link.active{background:var(--primary);color:#04170a;font-weight:700;box-shadow:0 8px 18px rgba(58,211,102,.28)}
+.sidebar-coach .nav-link.active:before{display:none}
+.sidebar-coach .nav-link.active svg{color:#04170a}
+.sidebar-coach .nav-link.active .nav-unread-count{background:#04170a;color:var(--primary)}
+
+/* Coach sidebar: active-clients avatar stack, shown above the signed-in-user footer row. */
+.sidebar-active-clients{display:flex;flex-direction:column;gap:8px;padding:12px 12px 14px;margin-top:8px;border-top:1px solid var(--line)}
+.sidebar-active-clients-label{color:var(--faint);font-size:9px;font-weight:750;letter-spacing:.14em;text-transform:uppercase}
+.sidebar-active-clients-row{display:flex;align-items:center;gap:10px}
+.sidebar-active-clients-stack{display:flex}
+.sidebar-active-clients-stack .avatar{margin-left:-8px;border:2px solid var(--sidebar)}
+.sidebar-active-clients-stack .avatar:first-child{margin-left:0}
+.sidebar-active-clients-row>strong{color:var(--muted);font-size:10px;font-weight:650;white-space:nowrap}
+.avatar.tiny{width:26px;height:26px;border-radius:9px;font-size:9px}
 .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}.stat-card{min-height:136px;display:flex;flex-direction:column}.stat-card>span{color:var(--muted);font-size:11px;font-weight:570}.stat-card>strong{margin-top:13px;font-size:clamp(25px,2.5vw,34px);letter-spacing:-.045em;color:var(--ink)}.stat-foot{display:flex;align-items:center;gap:8px;margin-top:auto}.stat-foot small{color:var(--faint);font-size:9px}.trend{display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700}.trend.up{color:var(--green)}.trend.down{color:var(--red)}
 .overview-grid,.split-grid,.plan-grid,.client-summary-grid,.session-feature{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.75fr);gap:16px;margin-bottom:16px}.split-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.split-grid.wide-left{grid-template-columns:minmax(0,1.45fr) minmax(280px,.75fr)}
 .agenda-list,.momentum-list,.library-list,.booking-list,.simple-rows,.invoice-list,.week-schedule,.timeline-list{display:grid}.agenda-row{display:grid;grid-template-columns:46px 8px minmax(120px,1fr) auto 30px;align-items:center;gap:12px;min-height:59px;border-top:1px solid var(--line)}.agenda-row:first-child{border-top:0}.agenda-row time{color:var(--primary);font-size:11px;font-weight:700}.agenda-row>div strong,.agenda-row>div span{display:block}.agenda-row strong{font-size:12px}.agenda-row span,.agenda-row small{color:var(--muted);font-size:9px}.agenda-dot{width:7px;height:7px;border-radius:50%;background:var(--primary)}.agenda-dot.success{background:var(--green)}.agenda-dot.warning{background:var(--amber)}.agenda-dot.danger{background:var(--red)}

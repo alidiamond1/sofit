@@ -6,10 +6,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Generates the short-lived signature ImageKit requires for client-side uploads.
-// The private key never leaves the server.
+// The private key never leaves the server. Coaches use this for meal/exercise media;
+// clients use it for weekly progress photos — both still require a valid session.
 export async function GET() {
   const session = await readSession();
-  if (!session || session.role !== "coach") {
+  if (!session || !["coach", "client"].includes(session.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

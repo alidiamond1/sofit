@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useActionState, useDeferredValue, useMemo, useState } from "react";
 import { deleteClientAction, updateClientAction, type ClientActionState } from "@/app/actions/clients";
 import { statusLabel } from "@/lib/status-labels";
@@ -144,6 +145,7 @@ function ClientRecordActions({
 export function ClientDirectory({ clients, services, packages }: { clients: ClientDirectoryRow[]; services: ClientServiceOption[]; packages: ClientPackageOption[] }) {
   const t = useTranslations("Clients");
   const ts = useTranslations("Common.status");
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [stage, setStage] = useState("all");
   const [status, setStatus] = useState("all");
@@ -235,7 +237,20 @@ export function ClientDirectory({ clients, services, packages }: { clients: Clie
         </div>
         <div className="client-records">
           {filtered.map((client, index) => (
-            <article className="client-record" key={client.id}>
+            <article
+              className="client-record client-record-clickable"
+              key={client.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => router.push(`/coach/clients?client=${client.id}`)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  router.push(`/coach/clients?client=${client.id}`);
+                }
+              }}
+              aria-label={t("viewDetailAria", { name: client.name })}
+            >
               <div className="client-record-person">
                 <Avatar name={client.name} tone={index} src={client.avatarPath} />
                 <div><strong>{client.name}</strong><span>{client.email}</span></div>
@@ -252,7 +267,7 @@ export function ClientDirectory({ clients, services, packages }: { clients: Clie
                 <ProgressBar value={client.adherence} />
               </div>
               <div className="client-record-joined" data-label={t("colJoined")}><strong>{client.joined}</strong><span>{t("clientSince")}</span></div>
-              <div data-label={t("colActions")}><ClientRecordActions client={client} services={services} packages={packages} /></div>
+              <div data-label={t("colActions")} onClick={(event) => event.stopPropagation()}><ClientRecordActions client={client} services={services} packages={packages} /></div>
             </article>
           ))}
           {filtered.length === 0 ? (

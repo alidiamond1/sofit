@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Flame } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toggleExerciseDoneAction } from "@/app/actions/schedule";
 import { ExerciseMedia } from "@/components/plans/exercise-media";
@@ -31,6 +32,8 @@ export function TodayWorkout({
   planTitle: string;
   dayLabel: string | null;
 }) {
+  const t = useTranslations("ClientHome.todayWorkout");
+  const tp = useTranslations("ClientPlan");
   const [done, setDone] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(exercises.map((exercise) => [exercise.key, exercise.done])),
   );
@@ -60,7 +63,7 @@ export function TodayWorkout({
   return (
     <div className="today-workout card">
       <div className="today-workout-head">
-        <div className="today-ring" role="img" aria-label={`${completed} of ${total} exercises complete`}>
+        <div className="today-ring" role="img" aria-label={t("exercisesCompleteAria", { completed, total })}>
           <svg viewBox="0 0 80 80">
             <circle className="today-ring-track" cx="40" cy="40" r={radius} />
             <circle className="today-ring-value" cx="40" cy="40" r={radius} style={{ strokeDasharray: circumference, strokeDashoffset: dashOffset }} />
@@ -68,9 +71,9 @@ export function TodayWorkout({
           <div className="today-ring-center"><strong>{pct}%</strong><span>{completed}/{total}</span></div>
         </div>
         <div className="today-workout-copy">
-          <span className="eyebrow">Today&rsquo;s workout</span>
+          <span className="eyebrow">{t("eyebrow")}</span>
           <h2>{planTitle}</h2>
-          <p>{dayLabel ? `${dayLabel} · ` : ""}{total} exercise{total === 1 ? "" : "s"}{completed === total && total > 0 ? " · complete 🎉" : ""}</p>
+          <p>{dayLabel ? `${dayLabel} · ` : ""}{t("exerciseCount", { count: total })}{completed === total && total > 0 ? ` · ${t("complete")}` : ""}</p>
         </div>
         <span className={`today-streak${completed === total && total > 0 ? " is-complete" : ""}`} role="status" aria-live="polite"><Flame size={15} /> {completed}/{total}</span>
       </div>
@@ -79,19 +82,19 @@ export function TodayWorkout({
           const isDone = done[exercise.key];
           return (
             <li key={exercise.key} className={isDone ? "is-done" : ""}>
-              <button type="button" className="today-open" onClick={() => setDetail(exercise)} aria-label={`View ${exercise.name} details`}>
+              <button type="button" className="today-open" onClick={() => setDetail(exercise)} aria-label={tp("viewDetailsAria", { name: exercise.name })}>
                 <ExerciseMedia variant="thumb" className="today-thumb" url={exercise.mediaUrl} name={exercise.name} muscleGroup={exercise.muscleGroup} />
                 <div className="today-exercise-copy">
                   <span>{exercise.muscleGroup}</span>
                   <h3>{exercise.name}</h3>
-                  <small>{exercise.sets} × {exercise.reps} · RPE {exercise.rpe} · {exercise.restSeconds}s rest</small>
+                  <small>{exercise.sets} × {exercise.reps} · {tp("rpeRestLine", { rpe: exercise.rpe, rest: exercise.restSeconds })}</small>
                 </div>
               </button>
               <button
                 type="button"
                 className={`today-check${isDone ? " is-done" : ""}`}
                 aria-pressed={isDone}
-                aria-label={isDone ? `Mark ${exercise.name} not done` : `Mark ${exercise.name} done`}
+                aria-label={isDone ? t("markNotDoneAria", { name: exercise.name }) : t("markDoneAria", { name: exercise.name })}
                 onClick={() => toggle(exercise.key)}
               >
                 <Check size={16} />

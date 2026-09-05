@@ -9,6 +9,28 @@ function notificationLabel(value: unknown) {
   return Number.isNaN(date.getTime()) ? "Recently" : new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
 }
 
+export type ActiveClient = { id: number; name: string; avatarPath: string | null };
+
+/** Sidebar "active clients" widget data — this is a solo-coach business (one
+ *  shared client roster, no per-coach ownership column), so "active" just
+ *  means `clients.status = 'active'`, the same real pipeline status shown
+ *  everywhere else in the dashboard. Not a live online/presence signal. */
+export async function loadActiveClients(limit = 5): Promise<{ clients: ActiveClient[]; total: number }> {
+  const [rows, totalRow] = await Promise.all([
+    database()("clients")
+      .select("clients.id", "users.name", "users.avatar_path")
+      .join("users", "users.id", "clients.user_id")
+      .where("clients.status", "active")
+      .orderBy("clients.updated_at", "desc")
+      .limit(limit),
+    database()("clients").where("status", "active").count({ total: "*" }).first(),
+  ]);
+  return {
+    clients: rows.map((row) => ({ id: Number(row.id), name: String(row.name), avatarPath: row.avatar_path ? String(row.avatar_path) : null })),
+    total: Number(totalRow?.total || 0),
+  };
+}
+
 export async function loadDashboardShell(userId: number) {
   const [user, saved, notificationRows, unreadNotificationRow, messageRows, unreadMessageRow] = await Promise.all([
     database()("users").select("name", "email", "avatar_path", "role").where({ id: userId }).first(),

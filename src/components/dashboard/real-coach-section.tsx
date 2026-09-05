@@ -14,6 +14,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
+import { parseProgressPhotos } from "@/lib/progress-photos";
 import { statusLabel } from "@/lib/status-labels";
 import { BookConsultationButton, CoachConsultationsWorkspace, type ConsultationRow, type ConsultationClientOption } from "@/components/dashboard/coach-consultations";
 import { BookSessionButton, CoachPersonalTrainingWorkspace, type SessionRow, type SessionClientOption, type SessionServiceOption } from "@/components/dashboard/coach-personal-training";
@@ -22,6 +23,7 @@ import { CoachDietPlansPage, CoachWorkoutPlansPage } from "@/components/plans/co
 import { CoachPackagesPage } from "@/components/packages/coach-packages";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
 import { CoachServicesWorkspace, type EditableService } from "@/components/services/coach-services";
+import { ClientDetailView } from "./client-detail";
 import { ClientDirectory, type ClientDirectoryRow } from "./client-directory";
 import { CoachAnalyticsDashboard, type CoachAnalyticsData } from "./coach-analytics-dashboard";
 import { RingChart, TrendLineChart } from "./charts";
@@ -231,7 +233,8 @@ async function CoachOverview() {
   );
 }
 
-async function CoachClients() {
+async function CoachClients({ selectedClientId }: { selectedClientId?: number | null }) {
+  if (selectedClientId) return <ClientDetailView clientId={selectedClientId} />;
   const t = await getTranslations("Clients");
   const tc = await getTranslations("Common");
   const db = database();
@@ -439,6 +442,7 @@ async function CoachCheckIns() {
     clientNotes: String(row.client_notes || ""),
     coachFeedback: String(row.coach_feedback || ""),
     status: row.status as CheckInRow["status"],
+    progressPhotos: parseProgressPhotos(row.progress_photos),
   }));
 
   return (
@@ -656,7 +660,7 @@ async function CoachSchedule({ selectedClientId }: { selectedClientId?: number |
 export async function RealCoachSection({ section = "home", selectedClientId }: { section?: string; selectedClientId?: number | null }) {
   const session = await requireRole("coach");
   if (section === "home") return <CoachOverview />;
-  if (section === "clients") return <CoachClients />;
+  if (section === "clients") return <CoachClients selectedClientId={selectedClientId} />;
   if (section === "services") return <CoachServices />;
   if (section === "consultations") return <CoachConsultations />;
   if (section === "packages") return <CoachPackagesPage />;

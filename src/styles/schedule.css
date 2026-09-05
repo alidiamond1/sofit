@@ -190,6 +190,10 @@ button.nav-link{width:100%;-webkit-appearance:none;appearance:none;border:0;back
 .checkin-group{padding:22px}
 .checkin-group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:16px}
 .checkin-group-head h2{margin:6px 0 0;font-size:19px}
+.checkin-group-client-link{display:inline-flex;align-items:center;gap:7px;color:var(--ink);transition:color .15s ease}
+.checkin-group-client-link:hover{color:var(--primary)}
+.checkin-group-client-link svg{color:var(--faint);transition:color .15s ease}
+.checkin-group-client-link:hover svg{color:var(--primary)}
 .checkin-period-rows{display:grid;gap:6px;margin-bottom:16px}
 .checkin-period-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr;gap:10px;padding:9px 12px;border-radius:10px;background:var(--surface-soft);font-size:11px;font-weight:600}
 .checkin-period-row .muted{color:var(--muted);font-weight:500}
@@ -211,6 +215,71 @@ button.nav-link{width:100%;-webkit-appearance:none;appearance:none;border:0;back
 .checkin-notes>span{font-size:12px;font-weight:650;color:var(--ink)}
 .checkin-notes textarea{padding:12px 14px;border:1px solid var(--line-strong);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;resize:vertical;outline:none;transition:.15s}
 .checkin-notes textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(58,211,102,.14)}
+
+/* ── Client: weekly check-in — progress photos (the point of this feature,
+   so it gets a slightly heavier visual treatment than a plain section) ── */
+.checkin-photos-section{padding:16px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,var(--primary-soft),transparent 70%)}
+.checkin-section-heading{display:grid;gap:4px;margin-bottom:14px}
+.checkin-section-lede{margin:0;color:var(--muted);font-size:11px;line-height:1.6;max-width:520px}
+.checkin-skip-photos{justify-self:start;margin-top:-12px;padding:2px;border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.checkin-skip-photos:hover{color:var(--ink)}
+.checkin-row-photo-flag{margin-left:6px;color:var(--primary);vertical-align:-1px}
+
+/* Progress-photo uploader: three tap-to-add slots (front / side / back) */
+.progress-photo-uploader{display:grid;gap:14px}
+.progress-photo-count{display:flex}
+.progress-photo-count>span{padding:4px 11px;border-radius:999px;background:var(--surface);color:var(--muted);font-size:10px;font-weight:700;box-shadow:inset 0 0 0 1px var(--line)}
+.progress-photo-count>span.complete{background:var(--green-soft);color:var(--green);box-shadow:none}
+.progress-photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.progress-photo-slot{display:grid;gap:7px}
+.progress-photo-tile{position:relative;overflow:hidden;display:grid;place-items:center;width:100%;aspect-ratio:3/4;padding:0;border:1.5px dashed var(--line-strong);border-radius:14px;background:var(--surface-soft);cursor:pointer;transition:border-color .15s ease}
+.progress-photo-tile:hover{border-color:var(--primary)}
+.progress-photo-tile:disabled{cursor:default}
+.progress-photo-tile.has-photo{border-style:solid;border-color:var(--line);padding:0}
+.progress-photo-tile.has-error{border-color:var(--red)}
+.progress-photo-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.progress-photo-tile-empty{display:grid;justify-items:center;gap:5px;padding:10px 6px;text-align:center;color:var(--muted)}
+.progress-photo-tile-empty strong{font-size:10px;color:var(--ink)}
+.progress-photo-tile-empty em{font-style:normal;font-size:8px;line-height:1.35;color:var(--muted)}
+.progress-photo-zoom-badge{position:absolute;right:6px;bottom:6px;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:rgba(8,13,20,.55);color:#fff;backdrop-filter:blur(6px)}
+.progress-photo-uploading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(8,13,20,.55);color:#fff;font-size:8px;font-weight:650;text-align:center;padding:6px}
+.progress-photo-slot-foot{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.progress-photo-slot-label{font-size:9px;font-weight:650;color:var(--ink)}
+.progress-photo-slot-actions{display:flex;gap:4px}
+.progress-photo-slot-actions .icon-button{width:24px;height:24px;border-radius:7px}
+.progress-photo-error{margin:0;color:var(--red);font-size:8px;line-height:1.4}
+
+/* Read-only display: one week's trio, a then/now compare, and a timeline strip */
+.progress-photo-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.progress-photo-trio.as-sm{max-width:280px}
+.progress-photo-thumb{padding:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;aspect-ratio:3/4;position:relative;background:var(--surface-soft);cursor:pointer}
+.progress-photo-thumb:disabled{cursor:default}
+.progress-photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.progress-photo-thumb.is-empty{display:grid;place-items:center;color:var(--faint);font-size:8px;text-align:center;padding:4px}
+.progress-photo-thumb-label{position:absolute;left:5px;bottom:5px;padding:2px 6px;border-radius:6px;background:rgba(8,13,20,.55);color:#fff;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.progress-photo-thumb.is-empty .progress-photo-thumb-label{position:static;background:transparent;color:var(--faint);padding:0}
+
+.progress-photo-compare{display:grid;grid-template-columns:1fr;gap:16px}
+.progress-photo-compare.has-previous{grid-template-columns:1fr 1fr}
+.progress-photo-compare-col{display:grid;gap:8px;align-content:start}
+.progress-photo-compare-label{font-size:9px;font-weight:750;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.progress-photo-compare-col.is-placeholder{opacity:.7}
+
+.progress-photo-timeline{display:flex;gap:14px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x proximity}
+.progress-photo-timeline-week{flex:0 0 auto;display:grid;gap:6px;scroll-snap-align:start;width:140px}
+.progress-photo-timeline-date{font-size:9px;font-weight:700;color:var(--muted)}
+.progress-photo-empty-hint{margin:0;color:var(--muted);font-size:10px}
+.progress-photo-subhead{margin:18px 0 8px;font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+
+.detail-photos{display:grid;gap:10px}
+.detail-photos h4{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+
+/* Full-screen tap-to-close photo preview, shared by every read-only surface */
+.photo-lightbox{position:fixed;inset:0;z-index:1300;display:grid;place-items:center;padding:24px;background:rgba(6,10,16,.86);backdrop-filter:blur(4px)}
+.photo-lightbox img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.photo-lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.12);color:#fff;border-color:transparent}
+.photo-lightbox-close:hover{background:rgba(255,255,255,.22);color:#fff}
+@media(max-width:640px){.progress-photo-compare.has-previous{grid-template-columns:1fr}}
 
 /* ── Client: collapsible plan card (tap title to show/hide the list) ─ */
 .client-plan-title.is-clickable{cursor:pointer}

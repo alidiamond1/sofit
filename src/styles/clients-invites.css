@@ -41,6 +41,24 @@
 .managed-service-card{min-height:320px;overflow:visible}.service-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:22px}.service-card-head .service-icon{margin:0}.service-card-head>div{display:flex;align-items:center;gap:9px}.service-card-head .management-action-cluster{padding:3px;border:1px solid var(--line)}
 .service-type-label{display:block;margin-bottom:8px;color:var(--primary);font-size:8px;font-weight:750;letter-spacing:.11em;text-transform:uppercase}.managed-service-card>p{min-height:54px}.managed-service-card .service-price strong{letter-spacing:-.04em}
 .client-directory-empty{display:grid;place-items:center;padding:52px 24px;text-align:center;color:var(--muted)}.client-directory-empty svg{color:var(--primary)}.client-directory-empty h3{margin:12px 0 5px;color:var(--ink);font-size:15px}.client-directory-empty p{margin:0 0 16px;font-size:10px}
+.client-record-clickable{cursor:pointer}
+
+/* Client detail (coach view of one client) */
+.client-detail-header{display:flex;align-items:flex-start;gap:22px;flex-wrap:wrap}
+.client-detail-header .avatar{margin-top:2px}
+.client-detail-identity{flex:1;min-width:220px}
+.client-detail-badges{display:flex;gap:7px;margin-bottom:11px}
+.client-detail-identity h1{margin:0;font-size:26px;letter-spacing:-.04em}
+.client-detail-contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:11px;color:var(--muted);font-size:11px}
+.client-detail-program{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:190px;padding:16px 18px;border-radius:16px;background:var(--surface-soft);text-align:right}
+.client-detail-program strong{font-size:14px}
+.client-detail-program span{color:var(--muted);font-size:10px}
+.client-detail-program .client-detail-since{margin-top:4px}
+.empty-state .button{margin-top:6px}
+@media(max-width:700px){
+  .client-detail-header{flex-direction:column}
+  .client-detail-program{align-items:flex-start;width:100%;text-align:left}
+}
 
 /* Coach invites */
 .invite-process{padding:25px;margin-bottom:20px;overflow:visible}
