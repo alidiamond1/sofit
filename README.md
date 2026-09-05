@@ -12,10 +12,6 @@ Requirements:
 Copy `.env.example` to `.env`, fill in the database details, and then run:
 
 
-
-
-
-
 ```bash
 npm install
 npm run db:migrate
