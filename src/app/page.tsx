@@ -10,14 +10,14 @@ import styles from "./home.module.css";
 
 export const metadata: Metadata = {
   title: "Online Fitness & Nutrition Coaching",
-  description: "Coach-led diet plans, workout programming, consultations, and personal training built around your real routine.",
+  description: "Coach-led meal plans, workout programming, consultations, and personal training built around your real routine.",
 };
 
 const programIcons = [ClipboardCheck, Utensils, Dumbbell, MessageCircle];
 const faqs = [
   { question: "Do I need gym experience before I start?", answer: "No. Your consultation establishes your starting point, available equipment, and confidence level so the plan meets you where you are." },
   { question: "Is SoFit only for weight loss?", answer: "No. SoFit supports fat loss, muscle gain, improved fitness, and performance goals through different combinations of nutrition, programming, and coaching." },
-  { question: "Can I train remotely?", answer: "Yes. Diet and workout plans are delivered through your client dashboard, and the Business personal-training tier is designed for flexible or remote coaching." },
+  { question: "Can I train remotely?", answer: "Yes. Meal and workout plans are delivered through your client dashboard, and the Business personal-training tier is designed for flexible or remote coaching." },
   { question: "What happens after the consultation?", answer: "Coach Ali recommends the right path, then your plan is built, assigned, tracked, and adjusted through check-ins and direct feedback." },
 ];
 

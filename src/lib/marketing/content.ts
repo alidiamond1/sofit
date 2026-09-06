@@ -43,7 +43,7 @@ export const programs: MarketingProgram[] = [
     slug: "diet-plan",
     serviceType: "diet",
     number: "02",
-    name: "Diet plan",
+    name: "Meal plan",
     shortName: "Eat with structure",
     eyebrow: "Nutrition coaching",
     summary: "Custom calories, macros, meals, and swaps built around the way you actually live.",

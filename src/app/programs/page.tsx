@@ -16,7 +16,7 @@ import { database } from "@/lib/db";
 export const metadata: Metadata = {
   title: "Fitness coaching programs & pricing",
   description:
-    "Real SoFit pricing: consultation, diet plan, workout plan, and personal training tiers, plus bundled packages for a faster start.",
+    "Real SoFit pricing: consultation, meal plan, workout plan, and personal training tiers, plus bundled packages for a faster start.",
 };
 
 // ponytail: whole-dollar rounding — every seeded price is already a round dollar
@@ -74,6 +74,10 @@ async function activePackages(): Promise<PackageRow[]> {
 export default async function ProgramsPage() {
   const [services, packages] = await Promise.all([activeServices(), activePackages()]);
 
+  // Fetched for internal/future use — the core services and PT tier cards below are
+  // intentionally price-less by current design (only the Packages section, further
+  // down, displays a price). Kept so re-enabling a price display later is a render
+  // change only, not a re-plumbing of the data.
   const priceByType = new Map<string, ServiceRow>();
   const ptTiersByTier = new Map<string, ServiceRow>();
   for (const service of services) {
@@ -83,7 +87,6 @@ export default async function ProgramsPage() {
       priceByType.set(service.type, service);
     }
   }
-  const ptFromPrice = ptTiersByTier.size > 0 ? Math.min(...[...ptTiersByTier.values()].map((s) => s.price)) : null;
 
   return (
     <MarketingPageShell>
@@ -105,8 +108,7 @@ export default async function ProgramsPage() {
           <strong>Not every client needs the same level of support.</strong>
           <p>
             A useful program solves the problem in front of you. Start with direction, add a focused nutrition or
-            workout plan, or choose personal training when direct feedback and accountability matter most. Every
-            service below is priced on its own — or bundled into a package.
+            workout plan, or choose personal training when direct feedback and accountability matter most.
           </p>
         </div>
       </section>
@@ -115,18 +117,12 @@ export default async function ProgramsPage() {
         <SectionHeading
           eyebrow="The SoFit programs"
           title={<>Built for real weeks, not perfect ones.</>}
-          description="Every path is personal, measurable, and connected to direct coach feedback. The difference is how much structure and support you need — and what it costs."
+          description="Every path is personal, measurable, and connected to direct coach feedback. The difference is how much structure and support you need."
         />
         <div className={styles.programList}>
-          {programs.map((program) => {
-            if (program.serviceType === "personal_training") {
-              const price = ptFromPrice != null ? { amount: `From ${money.format(ptFromPrice)}`, note: "per month · 3 tiers" } : null;
-              return <ProgramPanel key={program.slug} program={program} price={price} />;
-            }
-            const service = priceByType.get(program.serviceType);
-            const price = service ? { amount: money.format(service.price), note: billingNote(service.billingInterval) } : null;
-            return <ProgramPanel key={program.slug} program={program} price={price} />;
-          })}
+          {programs.map((program) => (
+            <ProgramPanel key={program.slug} program={program} />
+          ))}
         </div>
       </section>
 
@@ -134,25 +130,16 @@ export default async function ProgramsPage() {
         <SectionHeading
           eyebrow="Personal training tiers"
           title={<>One-to-one coaching, shaped around your life.</>}
-          description="The standard stays personal. The delivery, price, and level of support change to match your calendar, working style, or performance target."
+          description="The standard stays personal. The delivery and level of support change to match your calendar, working style, or performance target."
         />
         <div className={styles.tierGrid}>
-          {personalTrainingTiers.map((tier, index) => {
-            const service = ptTiersByTier.get(tier.tier);
-            return (
-              <article className={styles.tierCard} data-index={String(index + 1).padStart(2, "0")} key={tier.name}>
-                <span className={styles.tierMarker}>{tier.marker}</span>
-                <h3>{tier.name}</h3>
-                <p>{tier.description}</p>
-                {service ? (
-                  <div className={styles.tierPrice}>
-                    <strong>{money.format(service.price)}</strong>
-                    <span>{billingNote(service.billingInterval)}</span>
-                  </div>
-                ) : null}
-              </article>
-            );
-          })}
+          {personalTrainingTiers.map((tier, index) => (
+            <article className={styles.tierCard} data-index={String(index + 1).padStart(2, "0")} key={tier.name}>
+              <span className={styles.tierMarker}>{tier.marker}</span>
+              <h3>{tier.name}</h3>
+              <p>{tier.description}</p>
+            </article>
+          ))}
         </div>
       </section>
 

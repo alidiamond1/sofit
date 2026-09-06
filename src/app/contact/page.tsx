@@ -8,7 +8,7 @@ import { readSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Contact Coach Ali",
-  description: "Talk directly with SoFit about a consultation, fitness goal, diet plan, workout plan, or personal training.",
+  description: "Talk directly with SoFit about a consultation, fitness goal, meal plan, workout plan, or personal training.",
 };
 
 export default async function ContactPage() {

@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://sofit.so"),
   applicationName: "SoFit",
   title: { default: "SoFit — Fitness & Nutrition Coaching", template: "%s · SoFit" },
-  description: "Personal training, custom diet & workout plans, and daily accountability — all in one calm coaching app.",
+  description: "Personal training, custom meal & workout plans, and daily accountability — all in one calm coaching app.",
   appleWebApp: { capable: true, title: "SoFit", statusBarStyle: "default" },
   formatDetection: { telephone: false },
   alternates: { canonical: "/" },

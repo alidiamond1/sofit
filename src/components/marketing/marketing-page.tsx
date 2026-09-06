@@ -114,21 +114,20 @@ export function ProgramPanel({
 }) {
   return (
     <article className={styles.programPanel} id={program.slug}>
-      <div className={styles.programIndex} aria-hidden="true">
-        {program.number}
-      </div>
-      <div className={styles.programIntro}>
-        <span className={styles.eyebrow}>{program.eyebrow}</span>
+      <span className={styles.eyebrow}>
+        {program.number} — {program.eyebrow}
+      </span>
+      <div className={styles.programTitleRow}>
         <h3>{program.name}</h3>
-        <p>{program.summary}</p>
-      </div>
-      <div className={styles.programDetail}>
         {price ? (
           <div className={styles.programPrice}>
             <strong>{price.amount}</strong>
             {price.note ? <span>{price.note}</span> : null}
           </div>
         ) : null}
+      </div>
+      <p className={styles.programSummary}>{program.summary}</p>
+      <div className={styles.programBody}>
         <p>{program.description}</p>
         <ul>
           {program.outcomes.map((outcome) => (
