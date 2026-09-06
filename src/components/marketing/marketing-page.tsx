@@ -105,7 +105,13 @@ export function TextLink({ href, children }: { href: string; children: ReactNode
   );
 }
 
-export function ProgramPanel({ program }: { program: MarketingProgram }) {
+export function ProgramPanel({
+  program,
+  price,
+}: {
+  program: MarketingProgram;
+  price?: { amount: string; note?: string } | null;
+}) {
   return (
     <article className={styles.programPanel} id={program.slug}>
       <div className={styles.programIndex} aria-hidden="true">
@@ -117,6 +123,12 @@ export function ProgramPanel({ program }: { program: MarketingProgram }) {
         <p>{program.summary}</p>
       </div>
       <div className={styles.programDetail}>
+        {price ? (
+          <div className={styles.programPrice}>
+            <strong>{price.amount}</strong>
+            {price.note ? <span>{price.note}</span> : null}
+          </div>
+        ) : null}
         <p>{program.description}</p>
         <ul>
           {program.outcomes.map((outcome) => (

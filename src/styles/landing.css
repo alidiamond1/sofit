@@ -238,7 +238,7 @@
 
 /* Sub-page header (Diet Coach, Contact) ---------------------------------*/
 .lp-page-hero{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:120px 20px 40px;text-align:center}
-.lp-page-hero h1{margin:16px 0;font-size:clamp(32px,6vw,52px);line-height:1.05;letter-spacing:-.03em;color:var(--lp-ink)}
+.lp-page-hero h1{margin:16px 0;font-size:clamp(36px,7vw,68px);line-height:1.02;letter-spacing:-.035em;color:var(--lp-ink)}
 .lp-page-hero>p{margin:0 auto;max-width:520px;font-size:16px;line-height:1.7;color:var(--lp-muted)}
 .lp-page-hero-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 22px;margin-top:26px}
 .lp-page-hero-trust span{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:650;color:var(--lp-ink)}
@@ -289,8 +289,8 @@ a.lp-contact-info-row:hover strong{color:var(--lp-accent)}
 .lp-contact-form-message.is-error{background:rgba(226,88,93,.14);color:#e2585d}
 .lp-contact-form-message.is-success{background:rgba(58,211,102,.14);color:var(--lp-accent)}
 
-.lp-contact-cta{max-width:1040px;margin:0 auto 64px;padding:44px 32px;border-radius:24px;text-align:center;background:linear-gradient(150deg,rgba(58,211,102,.14),var(--lp-surface));border:1px solid var(--lp-line)}
-.lp-contact-cta h2{margin:0 0 8px;font-size:clamp(22px,3vw,28px);letter-spacing:-.02em;color:var(--lp-ink)}
+.lp-contact-cta{max-width:1180px;margin:0 auto 64px;padding:56px 32px;text-align:center;border-top:1px solid var(--lp-line);background:radial-gradient(circle at 50% 0%,rgba(58,211,102,.12),transparent 70%)}
+.lp-contact-cta h2{margin:0 0 8px;font-size:clamp(26px,3.6vw,38px);letter-spacing:-.03em;color:var(--lp-ink)}
 .lp-contact-cta p{margin:0 0 22px;color:var(--lp-muted);font-size:14px}
 .lp-contact-cta .lp-cta{display:inline-flex}
 

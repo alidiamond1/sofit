@@ -31,7 +31,7 @@ button.nav-link{width:100%;-webkit-appearance:none;appearance:none;border:0;back
    side — grid mode gives 7 equal columns, so anything from ~1360-1700px squeezes this
    row; .card sets overflow:hidden, so without wrap the Rest label was getting hard-cut
    (e.g. "Rest" → "Res") instead of dropping to its own line. */
-.scheduler-day-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px}
+.scheduler-day-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px;min-height:42px}
 .scheduler-day-head strong{font-size:14px;letter-spacing:-.01em}
 .scheduler-rest{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:color .15s ease}
 .scheduler-rest:has(input:checked){color:var(--accent);font-weight:700}

@@ -1,7 +1,12 @@
 export type ProgramSlug = "consultation" | "diet-plan" | "workout-plan" | "personal-training";
 
+// Matches the `services.type` column, so a program's real price can be looked
+// up from the DB instead of hardcoded here.
+export type ServiceType = "consultation" | "diet" | "workout" | "personal_training";
+
 export type MarketingProgram = {
   slug: ProgramSlug;
+  serviceType: ServiceType;
   number: string;
   name: string;
   shortName: string;
@@ -23,6 +28,7 @@ export const marketingNav = [
 export const programs: MarketingProgram[] = [
   {
     slug: "consultation",
+    serviceType: "consultation",
     number: "01",
     name: "Consultation",
     shortName: "Start with clarity",
@@ -35,6 +41,7 @@ export const programs: MarketingProgram[] = [
   },
   {
     slug: "diet-plan",
+    serviceType: "diet",
     number: "02",
     name: "Diet plan",
     shortName: "Eat with structure",
@@ -47,6 +54,7 @@ export const programs: MarketingProgram[] = [
   },
   {
     slug: "workout-plan",
+    serviceType: "workout",
     number: "03",
     name: "Workout plan",
     shortName: "Train with purpose",
@@ -59,6 +67,7 @@ export const programs: MarketingProgram[] = [
   },
   {
     slug: "personal-training",
+    serviceType: "personal_training",
     number: "04",
     name: "Personal training",
     shortName: "Coaching, up close",
@@ -71,23 +80,37 @@ export const programs: MarketingProgram[] = [
   },
 ];
 
+// `tier` matches the `services.tier` column so each card can be paired with its real price.
 export const personalTrainingTiers = [
   {
     name: "Elite",
+    tier: "elite",
     marker: "Priority",
     description: "Priority scheduling and close accountability for clients who want their training protected on a busy calendar.",
   },
   {
     name: "Business",
+    tier: "business",
     marker: "Flexible",
     description: "Remote-friendly structure that adapts when travel, long days, and changing schedules are part of the week.",
   },
   {
     name: "Athlete",
+    tier: "athlete",
     marker: "Performance",
     description: "Testing, periodization, and performance review built around a specific sport or competitive target.",
   },
 ] as const;
+
+// Labels for the `packages.category` enum — kept in sync with PACKAGE_CATEGORIES
+// in src/lib/package-tiers.ts (the source of truth for valid values).
+export const packageCategoryLabels: Record<string, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  elite: "Elite",
+  business: "Business",
+  athlete: "Athlete",
+};
 
 export const coachingProcess = [
   {

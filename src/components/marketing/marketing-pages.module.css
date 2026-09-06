@@ -246,6 +246,28 @@
   gap: 1.5rem;
 }
 
+.programPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+
+.programPrice strong {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--mk-ink);
+}
+
+.programPrice span {
+  color: var(--mk-faint);
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
 .programDetail ul {
   display: grid;
   gap: 0.8rem;
