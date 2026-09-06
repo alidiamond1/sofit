@@ -7,7 +7,7 @@ export default async function CoachPage({
   searchParams,
 }: {
   params: Promise<{ section: string }>;
-  searchParams: Promise<{ client?: string | string[] }>;
+  searchParams: Promise<{ client?: string | string[]; transformation?: string | string[] }>;
 }) {
   const { section } = await params;
   const query = await searchParams;
@@ -15,5 +15,7 @@ export default async function CoachPage({
   if (section === "invites") return <CoachInvites />;
   const clientValue = Array.isArray(query.client) ? query.client[0] : query.client;
   const selectedClientId = clientValue && /^\d+$/.test(clientValue) ? Number(clientValue) : null;
-  return <RealCoachSection section={section} selectedClientId={selectedClientId} />;
+  const transformationValue = Array.isArray(query.transformation) ? query.transformation[0] : query.transformation;
+  const selectedTransformationId = transformationValue && /^\d+$/.test(transformationValue) ? Number(transformationValue) : null;
+  return <RealCoachSection section={section} selectedClientId={selectedClientId} selectedTransformationId={selectedTransformationId} />;
 }

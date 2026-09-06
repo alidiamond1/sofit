@@ -3,7 +3,14 @@
 .theme-fieldset{min-width:0;padding:0;border:0}.theme-fieldset legend{padding:0;color:var(--muted);font-size:10px;font-weight:750}.theme-fieldset>p{margin:5px 0 12px;color:var(--muted);font-size:9px}
 .theme-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .theme-choice{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr) 16px;align-items:center;gap:10px;min-height:74px;padding:12px;border:1px solid var(--line-strong);border-radius:13px;background:var(--surface-soft);cursor:pointer;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
-.theme-choice:hover{border-color:var(--line-strong);background:var(--surface)}.theme-choice input{position:absolute;opacity:0;pointer-events:none}.theme-choice-preview{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;background:var(--surface);color:var(--primary);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.theme-choice:hover{border-color:var(--primary);background:var(--surface)}.theme-choice input{position:absolute;opacity:0;pointer-events:none}
+/* Scoped as .theme-choice>.theme-choice-preview (not the bare class) so this
+   reliably outranks the generic ".account-form-grid label > span" rule below —
+   that rule was winning on specificity and silencing the intended accent
+   color (and even the display:grid centering), leaving every icon a flat
+   muted gray with no sense of which option is selected. */
+.theme-choice>.theme-choice-preview{width:38px;height:38px;margin:0;display:grid;place-items:center;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.theme-choice:has(input:checked)>.theme-choice-preview{border-color:transparent;color:var(--primary);box-shadow:0 3px 10px rgba(0,0,0,.08)}
 .theme-choice strong,.theme-choice small{display:block}.theme-choice strong{font-size:10px}.theme-choice small{margin-top:3px;color:var(--muted);font-size:8px}.theme-choice>i{width:15px;height:15px;border:1px solid var(--line-strong);border-radius:50%;background:var(--surface)}
 .theme-choice:has(input:checked){border-color:var(--primary);background:var(--primary-soft);box-shadow:0 0 0 3px rgba(58,211,102,.12)}.theme-choice:has(input:checked)>i{border:4px solid var(--primary);background:var(--surface)}.theme-choice:has(input:focus-visible){outline:3px solid rgba(58,211,102,.25);outline-offset:2px}
 

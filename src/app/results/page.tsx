@@ -9,7 +9,23 @@ import {
   TextLink,
   marketingStyles as styles,
 } from "@/components/marketing/marketing-page";
+import { TransformationsGallery, type GalleryTransformation } from "@/components/marketing/transformations-gallery";
 import { progressSignals } from "@/lib/marketing/content";
+import { database } from "@/lib/db";
+
+async function publishedTransformations(): Promise<GalleryTransformation[]> {
+  const rows = await database()("transformations")
+    .where({ is_published: true })
+    .orderBy("sort_order", "asc")
+    .orderBy("created_at", "desc");
+  return rows.map((row) => ({
+    id: Number(row.id),
+    displayName: String(row.display_name),
+    beforePhotoUrl: String(row.before_photo_url),
+    afterPhotoUrl: String(row.after_photo_url),
+    description: String(row.description || ""),
+  }));
+}
 
 export const metadata: Metadata = {
   title: "How progress is measured",
@@ -24,7 +40,9 @@ const reviewRhythm = [
   "Adjust the plan with context so progress continues without chasing noise from one difficult day or one strong session.",
 ];
 
-export default function ResultsPage() {
+export default async function ResultsPage() {
+  const transformations = await publishedTransformations();
+
   return (
     <MarketingPageShell>
       <EditorialHero
@@ -100,6 +118,17 @@ export default function ResultsPage() {
           </div>
         </div>
       </section>
+
+      {transformations.length > 0 ? (
+        <section id="transformations" className={styles.pageSection}>
+          <SectionHeading
+            eyebrow="Before and after"
+            title={<>Real clients. Real work.</>}
+            description="A running gallery of transformations built with clients over time, shared with their permission."
+          />
+          <TransformationsGallery items={transformations} />
+        </section>
+      ) : null}
 
       <ClosingCta
         eyebrow="Build your own baseline"

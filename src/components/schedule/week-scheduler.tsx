@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, Dumbbell, Moon, Save, Utensils } from "lucide-react";
+import { CalendarCheck, ChevronRight, Dumbbell, Moon, Save, Utensils } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useActionState, useState, type ReactNode } from "react";
@@ -136,6 +136,9 @@ export function WeekScheduler({
           );
         })}
       </div>
+      <p className="scheduler-scroll-hint" aria-hidden="true">
+        {t("scrollForMoreDays")} <ChevronRight size={13} />
+      </p>
     </>
   );
 }

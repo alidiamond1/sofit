@@ -133,6 +133,11 @@ export async function updatePreferencesAction(
     updated_at: new Date(),
   };
   await database()("user_settings").insert({ user_id: session.id, ...values }).onConflict("user_id").merge(values);
+  (await cookies()).set(LOCALE_COOKIE, parsed.data.language, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+  });
   refreshAccountPages(role);
   return { success: "Preferences saved." };
 }

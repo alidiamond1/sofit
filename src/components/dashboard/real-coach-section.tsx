@@ -21,8 +21,8 @@ import { BookSessionButton, CoachPersonalTrainingWorkspace, type SessionRow, typ
 import { CoachCheckInsWorkspace, type CheckInRow } from "@/components/dashboard/coach-check-ins";
 import { CoachDietPlansPage, CoachWorkoutPlansPage } from "@/components/plans/coach-plan-pages";
 import { CoachPackagesPage } from "@/components/packages/coach-packages";
+import { CoachTransformations } from "@/components/transformations/coach-transformations";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
-import { CoachServicesWorkspace, type EditableService } from "@/components/services/coach-services";
 import { ClientDetailView } from "./client-detail";
 import { ClientDirectory, type ClientDirectoryRow } from "./client-directory";
 import { CoachAnalyticsDashboard, type CoachAnalyticsData } from "./coach-analytics-dashboard";
@@ -36,9 +36,9 @@ import { planDays } from "@/lib/schedule";
 export const realCoachSections = [
   "clients",
   "invites",
-  "services",
   "consultations",
   "packages",
+  "transformations",
   "diet-plans",
   "workout-plans",
   "schedule",
@@ -304,30 +304,6 @@ async function CoachClients({ selectedClientId }: { selectedClientId?: number | 
       )}
     </>
   );
-}
-
-async function CoachServices() {
-  const t = await getTranslations("Services");
-  const db = database();
-  const services = await db("services")
-    .select("services.*")
-    .select(db.raw("(SELECT COUNT(*) FROM clients WHERE clients.service_id = services.id) as client_count"))
-    .select(db.raw("(SELECT COUNT(*) FROM package_services WHERE package_services.service_id = services.id) as package_count"))
-    .orderBy("type")
-    .orderBy("tier");
-  const rows: EditableService[] = services.map((service) => ({
-    id: numeric(service.id),
-    name: String(service.name),
-    type: String(service.type) as EditableService["type"],
-    tier: service.tier ? String(service.tier) as EditableService["tier"] : null,
-    price: numeric(service.price),
-    billingInterval: String(service.billing_interval) as EditableService["billingInterval"],
-    description: String(service.description || ""),
-    isActive: Boolean(service.is_active),
-    clientCount: numeric(service.client_count),
-    packageCount: numeric(service.package_count),
-  }));
-  return <><PageHeader eyebrow={t("pageEyebrow")} title={t("pageTitle")} description={t("pageDescription")} /><CoachServicesWorkspace services={rows} /></>;
 }
 
 async function CoachConsultations() {
@@ -657,13 +633,21 @@ async function CoachSchedule({ selectedClientId }: { selectedClientId?: number |
   );
 }
 
-export async function RealCoachSection({ section = "home", selectedClientId }: { section?: string; selectedClientId?: number | null }) {
+export async function RealCoachSection({
+  section = "home",
+  selectedClientId,
+  selectedTransformationId,
+}: {
+  section?: string;
+  selectedClientId?: number | null;
+  selectedTransformationId?: number | null;
+}) {
   const session = await requireRole("coach");
   if (section === "home") return <CoachOverview />;
   if (section === "clients") return <CoachClients selectedClientId={selectedClientId} />;
-  if (section === "services") return <CoachServices />;
   if (section === "consultations") return <CoachConsultations />;
   if (section === "packages") return <CoachPackagesPage />;
+  if (section === "transformations") return <CoachTransformations selectedTransformationId={selectedTransformationId} />;
   if (section === "personal-training") return <CoachPersonalTraining />;
   if (section === "check-ins") return <CoachCheckIns />;
   if (section === "diet-plans") return <CoachDietPlansPage />;

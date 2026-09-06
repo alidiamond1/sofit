@@ -23,12 +23,18 @@ button.nav-link{width:100%;-webkit-appearance:none;appearance:none;border:0;back
 .scheduler-empty .scheduler-client-picker{margin-top:8px;align-items:center}
 
 .scheduler-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;align-items:start}
-.scheduler-day{display:flex;flex-direction:column;gap:11px;min-height:200px;padding:15px}
+.scheduler-day{display:flex;flex-direction:column;gap:11px;min-height:200px;padding:15px;transition:border-color .15s ease,background .15s ease}
 .scheduler-day .scheduler-day-body{flex:1}
-.scheduler-day.is-rest{opacity:.9}
-.scheduler-day-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.scheduler-day.is-rest{border-style:dashed;border-color:var(--line-strong);background:var(--surface-soft);box-shadow:none}
+.scheduler-day.is-rest:before{display:none}
+/* wrap (not clip) when a narrow column can't fit the day name + Rest toggle side by
+   side — grid mode gives 7 equal columns, so anything from ~1360-1700px squeezes this
+   row; .card sets overflow:hidden, so without wrap the Rest label was getting hard-cut
+   (e.g. "Rest" → "Res") instead of dropping to its own line. */
+.scheduler-day-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px}
 .scheduler-day-head strong{font-size:14px;letter-spacing:-.01em}
-.scheduler-rest{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer}
+.scheduler-rest{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:color .15s ease}
+.scheduler-rest:has(input:checked){color:var(--accent);font-weight:700}
 .scheduler-rest input{accent-color:var(--accent)}
 .scheduler-day-body{display:grid;gap:10px}
 .scheduler-day-body label{display:grid;gap:5px}
@@ -172,10 +178,16 @@ button.nav-link{width:100%;-webkit-appearance:none;appearance:none;border:0;back
 }
 /* Below this, 7 even columns get too cramped to use — scroll the week
    horizontally instead of wrapping (an orphaned single card on its own row
-   looks broken, and column widths lose their alignment once forced to wrap). */
+   looks broken, and column widths lose their alignment once forced to wrap).
+   overflow-x:scroll (not auto) keeps the track always reserved/visible on
+   non-overlay scrollbars — the whole point is that Sunday must read as
+   "scroll to reach me", not "cut off with no way there". */
+.scheduler-scroll-hint{display:none}
 @media(max-width:1360px){
-  .scheduler-week{display:flex;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+  .scheduler-week{display:flex;overflow-x:scroll;padding-bottom:10px;scroll-snap-type:x proximity}
   .scheduler-day{flex:0 0 220px;scroll-snap-align:start}
+  .scheduler-scroll-hint{display:flex;align-items:center;justify-content:center;gap:4px;margin:10px 0 0;color:var(--muted);font-size:10px;font-weight:650}
+  .scheduler-scroll-hint svg{color:var(--accent)}
 }
 
 

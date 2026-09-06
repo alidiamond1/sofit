@@ -28,7 +28,6 @@ const clientSchema = z.object({
 function refreshClientViews() {
   revalidatePath("/coach");
   revalidatePath("/coach/clients");
-  revalidatePath("/coach/services");
   revalidatePath("/coach/packages");
   revalidatePath("/client");
   revalidatePath("/client/profile");
