@@ -1,5 +1,9 @@
 # SoFit campaign assets
 
+- `login-male-training.png`: Built-in OpenAI image generator, current Login portrait. Prompt: Photorealistic-natural 2:3 fitness editorial of one adult Black East African man with a natural athletic physique, short hair, fitted charcoal T-shirt and dark training trousers, performing standing battle ropes. Full body in the upper two-thirds, correct anatomy and grips, focused expression, premium industrial gym, soft window sidelight, muted green and charcoal equipment. Dark lower floor for webpage text overlay. No other people, writing, logos, or watermark.
+
+- `login-battle-ropes.png`: Built-in OpenAI image generator, exclusive portrait for Login. Prompt: Photorealistic 2:3 fitness editorial of an adult Black East African woman in a modest forest-green long-sleeve top and dark training trousers doing standing battle ropes in a spacious industrial gym. Full body, correct anatomy and rope grips, focused expression, natural window sidelight, charcoal equipment, dark lower floor for text overlay. No text, logos, or watermark.
+
 Generated with the built-in OpenAI image generator on 2026-09-09. These are illustrative campaign images, not client transformation records. Original generated PNGs are preserved here; Next.js serves responsive optimized versions.
 
 - `nutrition.png`: Photorealistic editorial food photography, 3:2. Healthy meal prep on a charcoal worktop: chicken, roasted vegetables, rice, leafy greens, avocado and lemon. Natural daylight, realistic texture, restrained green palette, dark lower area for overlay. No text, logos or watermarks.

@@ -1,35 +1,37 @@
-import { Activity, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
+import { MarketingThemeToggle } from "@/components/marketing/site-navbar";
 import { readSession } from "@/lib/auth/session";
 import logo from "@/assets/sofit-logo.png";
+import styles from "./login.module.css";
 
 export default async function LoginPage() {
   const session = await readSession();
   if (session) redirect(session.role === "coach" ? "/coach" : "/client");
 
   return (
-    <main className="login-page">
-      <section className="login-story">
-        <div className="login-brand"><Image src={logo} alt="SoFit" priority /></div>
-        <div className="story-copy">
-          <span className="story-kicker"><Sparkles size={14} /> Personal coaching, beautifully organized</span>
-          <h2>Build strength.<br />Keep life in balance.</h2>
-          <p>Plans, progress, and the conversations that keep every next step clear.</p>
-          <div className="story-points">
-            <span><CheckCircle2 size={17} /> Clear weekly direction</span>
-            <span><CheckCircle2 size={17} /> Progress you can see</span>
-            <span><CheckCircle2 size={17} /> Your coach, close by</span>
-          </div>
-        </div>
-        <div className="story-quote"><Activity size={20} /><blockquote>Consistency gets easier when every next step feels clear.</blockquote><span>THE SOFIT METHOD</span></div>
-      </section>
-      <section className="login-panel">
-        <div className="mobile-login-brand"><Image src={logo} alt="SoFit" priority /></div>
-        <LoginForm />
-        <p className="login-footer">? 2026 SoFit Coaching</p>
-      </section>
+    <main className={`lp ${styles.page}`}>
+      <header className={styles.header}>
+        <Link href="/" className={styles.brand} aria-label="SoFit home"><Image src={logo} alt="SoFit" priority /></Link>
+        <div className={styles.headerActions}><Link href="/" className={styles.backLink} aria-label="Back to website"><ArrowLeft size={16} aria-hidden="true" /><span>Back to website</span></Link><MarketingThemeToggle /></div>
+      </header>
+      <div className={styles.layout}>
+        <section className={styles.visual} aria-labelledby="login-story-title">
+          <Image src="/brand/fitness/login-male-training.png" alt="A man performing a battle-rope workout in a gym." fill priority sizes="(max-width: 899px) 100vw, 55vw" className={styles.visualImage} />
+          <div className={styles.visualShade} aria-hidden="true" />
+          <span className={styles.photoLabel}>SHOW UP FOR YOURSELF.</span>
+          <div className={styles.visualCopy}><span>ONE PLAN. EVERYDAY PROGRESS.</span><h2 id="login-story-title">Your next chapter<br />starts with <em>you.</em></h2><p>Training, nutrition, and a coach in your corner.<br />Keep building on the work you have started.</p><div className={styles.visualPoints}><span><Check size={16} aria-hidden="true" /> Your plan</span><span><Check size={16} aria-hidden="true" /> Your progress</span><span><Check size={16} aria-hidden="true" /> Your coach</span></div></div>
+          <div className={styles.visualMark} aria-hidden="true"><ArrowUpRight size={42} /></div>
+        </section>
+        <section className={styles.panel} aria-label="Sign in to SoFit">
+          <LoginForm />
+          <div className={styles.help}><span>New to SoFit?</span><Link href="/contact?subject=consultation#contact-form">Meet your coach <ArrowUpRight size={15} aria-hidden="true" /></Link></div>
+          <footer className={styles.footer}><span>&copy; {new Date().getFullYear()} SoFit Coaching</span><Link href="/contact">Need help signing in?</Link></footer>
+        </section>
+      </div>
     </main>
   );
 }

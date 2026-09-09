@@ -14,15 +14,24 @@ function isActivePath(pathname: string, href: string) {
   return href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SiteNavbar() {
+export function MarketingThemeToggle() {
   const t = useTranslations("Topbar");
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
   function toggleTheme() {
     const theme = document.documentElement.dataset.marketingTheme === "light" ? "dark" : "light";
     document.documentElement.dataset.marketingTheme = theme;
     document.cookie = `sofit-marketing-theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
   }
+  return <button type="button" className={styles.themeToggle} onClick={toggleTheme}>
+    <Sun size={18} className={styles.lightIcon} aria-hidden="true" />
+    <Moon size={18} className={styles.darkIcon} aria-hidden="true" />
+    <span className={`${styles.themeLabel} ${styles.lightIcon}`}>{t("switchToLightMode")}</span>
+    <span className={`${styles.themeLabel} ${styles.darkIcon}`}>{t("switchToDarkMode")}</span>
+  </button>;
+}
+
+export function SiteNavbar() {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -47,12 +56,7 @@ export function SiteNavbar() {
             <Image src={logo} alt="SoFit" priority />
           </Link>
 
-          <button type="button" className={styles.themeToggle} onClick={toggleTheme}>
-            <Sun size={18} className={styles.lightIcon} aria-hidden="true" />
-            <Moon size={18} className={styles.darkIcon} aria-hidden="true" />
-            <span className={`${styles.themeLabel} ${styles.lightIcon}`}>{t("switchToLightMode")}</span>
-            <span className={`${styles.themeLabel} ${styles.darkIcon}`}>{t("switchToDarkMode")}</span>
-          </button>
+          <MarketingThemeToggle />
           <button
             type="button"
             className={styles.menuButton}
