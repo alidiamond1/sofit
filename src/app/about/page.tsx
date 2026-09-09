@@ -1,116 +1,51 @@
 import type { Metadata } from "next";
-import {
-  ClosingCta,
-  EditorialHero,
-  ImageFrame,
-  MarketingPageShell,
-  PrimaryLink,
-  SectionHeading,
-  TextLink,
-  marketingStyles as styles,
-} from "@/components/marketing/marketing-page";
+import Image from "next/image";
+import { ArrowUpRight, ChartNoAxesCombined, HeartHandshake, Target } from "lucide-react";
+import { MarketingPageShell, PrimaryLink, SectionHeading, TextLink, marketingStyles as styles } from "@/components/marketing/marketing-page";
 import { coachingPrinciples, coachingProcess } from "@/lib/marketing/content";
 
 export const metadata: Metadata = {
   title: "About Coach Ali",
-  description:
-    "Meet Coach Ali and learn how SoFit turns personal goals, honest feedback, and measured progress into sustainable fitness coaching.",
+  description: "Meet Coach Ali and discover the personal approach to training, nutrition, and consistent progress behind SoFit.",
 };
+
+const principleIcons = [Target, ChartNoAxesCombined, HeartHandshake];
 
 export default function AboutPage() {
   return (
     <MarketingPageShell>
-      <EditorialHero
-        eyebrow="About Coach Ali"
-        title={<>Coaching with <em>context.</em></>}
-        description="SoFit is personal coaching built around the whole person: your goal, your routine, your starting point, and the life your plan has to work inside."
-        imageSrc="/brand/hero.jpg"
-        imageAlt="Coach Ali training in a gym."
-        imagePosition="center 22%"
-        aside={<><span>Coach-led</span><span>Personal by design</span></>}
-      >
-        <PrimaryLink href="/contact?subject=consultation">Work with Coach Ali</PrimaryLink>
-        <TextLink href="/programs">Explore programs</TextLink>
-      </EditorialHero>
-
-      <section className={`${styles.pageSection} ${styles.splitSection}`}>
-        <div className={styles.splitCopy}>
-          <SectionHeading eyebrow="The idea behind SoFit" title={<>Clear direction changes how consistency feels.</>} compact />
-          <p>
-            Fitness advice is easy to find. Knowing which advice belongs in your week is harder. SoFit was built to close that gap
-            with a real intake, a focused plan, and feedback from the same coach who understands why the plan was made.
-          </p>
-          <p>
-            That creates a calmer kind of accountability: you know what matters today, your coach can see what happened,
-            and the next adjustment comes from evidence rather than pressure.
-          </p>
-          <ul className={styles.factList}>
-            <li><span>Focus</span><strong>Strength, nutrition, body composition, and performance</strong></li>
-            <li><span>Delivery</span><strong>Online planning, direct messaging, check-ins, and coached sessions</strong></li>
-            <li><span>Standard</span><strong>Personal decisions, explained clearly and reviewed consistently</strong></li>
-          </ul>
+      <section className={styles.aboutHero} aria-labelledby="about-title">
+        <div className={styles.aboutHeroTop}><span className={styles.eyebrow}>The person behind the plan</span><span className={styles.aboutEdition}>COACH ALI / SOFIT</span></div>
+        <div className={styles.aboutHeadline}>
+          <h1 id="about-title" className={styles.aboutTitle}>Real coaching.<br /><em>For your real life.</em></h1>
+          <div><p>Your goals deserve more than a template. Meet the coach bringing training, nutrition, and personal support into one clear plan.</p><TextLink href="#meet-coach">Get to know Coach Ali</TextLink></div>
         </div>
-        <ImageFrame
-          src="/brand/training-detail.png"
-          alt="Close-up of an athlete training with intention in the gym."
-          caption="The work is personal. The standard is consistent."
-          position="center 30%"
-        />
-      </section>
-
-      <section className={styles.pageSection}>
-        <SectionHeading
-          eyebrow="Coaching principles"
-          title={<>Less noise. Better decisions.</>}
-          description="SoFit keeps the system focused on what helps you act, learn, and move forward."
-        />
-        <div className={styles.principlesGrid}>
-          {coachingPrinciples.map((principle) => (
-            <article className={styles.principleItem} key={principle.number}>
-              <span>{principle.number}</span>
-              <h3>{principle.title}</h3>
-              <p>{principle.text}</p>
-            </article>
-          ))}
+        <div className={styles.aboutMosaic}>
+          <div className={styles.aboutMainPhoto}><Image src="/brand/coach-training-03.jpg" alt="Coach Ali seated in the gym between training sessions." fill priority sizes="(max-width: 767px) 100vw, 62vw" /><span>THE COACH. THE WORK. THE EVERYDAY.</span></div>
+          <div className={styles.aboutSidePhoto}><Image src="/brand/coach-training-02.jpg" alt="Coach Ali performing a cable exercise." fill sizes="(max-width: 767px) 50vw, 30vw" /></div>
+          <div className={styles.aboutMosaicNote}><span>01 coach.<br />One connected plan.</span><ArrowUpRight size={32} aria-hidden="true" /><p>Training. Nutrition.<br />Accountability.</p></div>
         </div>
       </section>
 
-      <section className={`${styles.pageSection} ${styles.splitSection} ${styles.splitSectionReverse}`}>
-        <div className={styles.splitCopy}>
-          <SectionHeading eyebrow="The working relationship" title={<>A coach who sees the signal and hears the person.</>} compact />
-          <p>
-            Tracking helps, but numbers never speak without context. Weekly check-ins create space to explain what felt
-            strong, what got in the way, and what the program should ask from you next.
-          </p>
-          <p>
-            You get clear expectations, direct answers, and adjustments that protect the larger goal without pretending
-            every week will look the same.
-          </p>
-          <TextLink href="/results">See how progress is measured</TextLink>
-        </div>
-        <aside className={styles.coachNote}>
-          <p>The goal is not a perfect week. It is a system you can return to and keep building.</p>
-          <footer>A SoFit coaching principle</footer>
-        </aside>
+      <section id="meet-coach" className={styles.aboutStory} aria-labelledby="meet-title">
+        <div><span className={styles.eyebrow}>Meet Coach Ali</span><h2 id="meet-title">A person first.<br />A program second.</h2><div className={styles.aboutByline}><span>ALI</span><div><strong>Coach Ali</strong><small>Fitness &amp; nutrition coach</small></div></div></div>
+        <div className={styles.aboutStoryCopy}><p>Fitness advice is everywhere. Finding a way to make it work in your own life is the harder part. That is where SoFit begins.</p><p>Coach Ali brings your training, nutrition, and progress into the same conversation. Your schedule, experience, food preferences, and goals shape the plan from the start.</p><p>The relationship continues after the plan is delivered. Check-ins, direct messages, and regular review help turn what you learn each week into a practical next step.</p><PrimaryLink href="/contact?subject=consultation#contact-form">Work with Coach Ali</PrimaryLink></div>
       </section>
 
-      <section className={styles.pageSection}>
-        <SectionHeading eyebrow="What to expect" title={<>A simple rhythm, repeated well.</>} compact />
-        <div className={styles.processGrid}>
-          {coachingProcess.map((step) => (
-            <article className={styles.processItem} key={step.number}>
-              <span>{step.number}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
-            </article>
-          ))}
-        </div>
+      <section className={styles.aboutValues}>
+        <SectionHeading eyebrow="What guides the work" title={<>A clear plan. A human approach.</>} description="Three principles behind the way SoFit coaches, reviews progress, and helps you keep going." />
+        <div className={styles.aboutValueGrid}>{coachingPrinciples.map((principle, index) => { const Icon = principleIcons[index]; return <article key={principle.number}><div><span className={styles.aboutValueIcon}><Icon size={24} aria-hidden="true" /></span><span>{principle.number}</span></div><h3>{principle.title}</h3><p>{principle.text}</p></article>; })}</div>
       </section>
 
-      <ClosingCta
-        title={<>Your starting point is enough.</>}
-        text="Bring the goal, the questions, and the reality of your schedule. Coach Ali will help you turn them into a plan."
-      />
+      <section className={styles.aboutBelief} aria-labelledby="belief-title">
+        <div className={styles.aboutBeliefPhoto}><Image src="/brand/coach-training-01.jpg" alt="Coach Ali at a strength training machine in the gym." fill sizes="(max-width: 767px) 100vw, 50vw" /></div>
+        <div className={styles.aboutBeliefCopy}><span className={styles.eyebrow}>Progress, with perspective</span><h2 id="belief-title">You do not need<br />a perfect week.<br /><em>You need a way forward.</em></h2><p>Strength, energy, consistency, and confidence all have a place in the picture. Your feedback helps the coach understand what the numbers cannot explain on their own.</p><TextLink href="/results">Explore client transformations</TextLink></div>
+      </section>
+
+      <section className={styles.aboutProcess}>
+        <div><SectionHeading eyebrow="What working together looks like" title={<>Know your next step.</>} description="A clear rhythm from the first conversation to the next adjustment." compact /><TextLink href="/programs">Find the support that fits</TextLink></div>
+        <ol className={styles.aboutTimeline}>{coachingProcess.map((step) => <li key={step.number}><span>{step.number}</span><div><h3>{step.title}</h3><p>{step.text}</p></div></li>)}</ol>
+      </section>
     </MarketingPageShell>
   );
 }

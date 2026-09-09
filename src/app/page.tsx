@@ -62,7 +62,7 @@ export default async function Home() {
             const Icon = programIcons[index];
             return (
               <Link href={`/programs#${program.slug}`} key={program.slug} className={`${styles.programCard} ${styles[`programCard${index + 1}`]}`}>
-                {index === 0 ? <Image src="/brand/coach-training-01.jpg" alt="Coach Ali in his training environment." fill sizes="(max-width: 760px) 100vw, 50vw" className={styles.programCardImage} /> : null}
+                <Image src={program.imageSrc} alt={program.imageAlt} fill sizes="(max-width: 767px) 100vw, (max-width: 1151px) 50vw, 60vw" className={styles.programCardImage} />
                 <div className={styles.programShade} aria-hidden="true" />
                 <div className={styles.programCardTop}><span>{program.number}</span><Icon size={19} aria-hidden="true" /></div>
                 <div className={styles.programCardBody}><p>{program.eyebrow}</p><h3>{program.name}</h3><span>{program.summary}</span></div>
@@ -71,6 +71,23 @@ export default async function Home() {
             );
           })}
         </div>
+      </section>
+
+      <section className={styles.trainingSection} aria-labelledby="training-title">
+        <div className={styles.trainingHeader}>
+          <div><span className={styles.eyebrow}>Built for your starting point</span><h2 id="training-title">Stronger looks different<br />on <em>everyone.</em></h2></div>
+          <p>Your first session or your next personal best. Coaching for men and women, with a plan shaped around your experience, schedule, and goals.</p>
+        </div>
+        <div className={styles.trainingPhoto}>
+          <Image src="/brand/fitness/training.png" alt="A man and woman performing dumbbell exercises side by side in a bright gym." fill sizes="(max-width: 1440px) 100vw, 1408px" />
+          <span>YOUR START. YOUR STRENGTH.</span>
+        </div>
+        <div className={styles.trainingGoals}>
+          <article><span>01 / BUILD CONFIDENCE</span><h3>Start with the basics.</h3><p>Learn the movements, find your rhythm, and build a routine you can return to.</p></article>
+          <article><span>02 / BUILD STRENGTH</span><h3>Give every rep a purpose.</h3><p>Follow structured sessions with clear sets, reps, and a progression that fits your level.</p></article>
+          <article><span>03 / STAY CONSISTENT</span><h3>Make room for real life.</h3><p>Keep training connected to your nutrition, recovery, and weekly coach feedback.</p></article>
+        </div>
+        <TextLink href="/contact?subject=consultation">Find your starting point</TextLink>
       </section>
 
       <section className={styles.methodSection}>
@@ -121,6 +138,17 @@ export default async function Home() {
             <div className={styles.phoneGrid}><div><span>Nutrition</span><strong>82%</strong><small>On target</small></div><div><span>Check-in</span><strong>Fri</strong><small>2 days</small></div></div>
             <div className={styles.messageCard}><span>Coach Ali</span><p>Good work this week. I have adjusted the next session.</p></div>
           </div>
+        </div>
+      </section>
+
+      <section className={styles.nutritionSection} aria-labelledby="nutrition-title">
+        <div className={styles.nutritionPhoto}><Image src="/brand/fitness/nutrition.png" alt="Fresh vegetables, grilled chicken, and rice in a balanced meal." fill sizes="(max-width: 767px) 100vw, 50vw" /></div>
+        <div className={styles.nutritionCopy}>
+          <span className={styles.eyebrow}>Fuel the work</span>
+          <h2 id="nutrition-title">Train with purpose.<br /><em>Eat with confidence.</em></h2>
+          <p>Good nutrition should fit your kitchen and your calendar. Build a repeatable routine with meals you enjoy, practical swaps, and targets that support your training.</p>
+          <ul><li><Check size={18} aria-hidden="true" /> Personal calorie and macro targets</li><li><Check size={18} aria-hidden="true" /> Meal options built around your preferences</li><li><Check size={18} aria-hidden="true" /> Adjustments guided by your weekly check-ins</li></ul>
+          <PrimaryLink href="/programs#diet-plan">Explore nutrition coaching</PrimaryLink>
         </div>
       </section>
 

@@ -1,201 +1,138 @@
-"use client";
+﻿"use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { AlertTriangle, ArrowLeft, Eye, EyeOff, ImagePlus, Loader2, Sparkles, Trash2, X } from "lucide-react";
-import Link from "next/link";
+import { ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useActionState, useRef, useState, type ChangeEvent } from "react";
-import {
-  deleteTransformationAction,
-  togglePublishTransformationAction,
-  updateTransformationAction,
-  type TransformationActionState,
-} from "@/app/actions/transformations";
-import { ModalPortal } from "@/components/dashboard/modal-portal";
-import { Badge, Card } from "@/components/dashboard/primitives";
-
-export type TransformationRow = {
-  id: number;
-  displayName: string;
-  beforePhotoUrl: string | null;
-  afterPhotoUrl: string | null;
-  description: string;
-  isPublished: boolean;
-};
+import { useActionState, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { deleteTransformationAction, saveTransformationAction, type TransformationActionState } from "@/app/actions/transformations";
+import { parseTransformationStory, type TransformationRow } from "@/lib/transformation";
+export type { TransformationRow } from "@/lib/transformation";
 
 const initialState: TransformationActionState = {};
-
-/* ------------------------------------------------------------------
-   Single-photo uploader — same signed ImageKit flow as MediaUploader /
-   ProgressPhotoUploader (GET /api/imagekit-auth, then a direct POST to
-   ImageKit), scoped to a single "before" or "after" photo slot.
------------------------------------------------------------------- */
-
 const IMAGEKIT_PUBLIC_KEY = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY;
-const IMAGEKIT_READY = Boolean(IMAGEKIT_PUBLIC_KEY);
-const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+const MAX_BYTES = 20 * 1024 * 1024;
 
-function TransformationPhotoUploader({
-  inputName,
-  label,
-  defaultUrl = "",
-}: {
-  inputName: string;
-  label: string;
-  defaultUrl?: string;
+function TransformationPhotoUploader({ inputName, label, defaultUrl = "", onBusy, onChanged }: {
+  inputName: string; label: string; defaultUrl?: string; onBusy: (busy: boolean) => void; onChanged: () => void;
 }) {
   const t = useTranslations("Transformations.detail");
   const [url, setUrl] = useState(defaultUrl);
   const [status, setStatus] = useState<"idle" | "uploading" | "error">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
-
   async function upload(file: File) {
-    if (file.size > MAX_BYTES) {
-      setStatus("error");
-      return;
-    }
-    setStatus("uploading");
+    if (file.size === 0 || file.size > MAX_BYTES || !["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type)) { setStatus("error"); return; }
+    setStatus("uploading"); onBusy(true);
     try {
       const authResponse = await fetch("/api/imagekit-auth");
-      if (!authResponse.ok) throw new Error(`Auth ${authResponse.status}`);
-      const auth = (await authResponse.json()) as { token: string; expire: string; signature: string };
-
+      if (!authResponse.ok) throw new Error("Photo authorization failed");
+      const auth = await authResponse.json();
       const body = new FormData();
-      body.append("file", file);
-      body.append("fileName", file.name || `transformation-${auth.token}`);
-      body.append("publicKey", IMAGEKIT_PUBLIC_KEY as string);
-      body.append("signature", auth.signature);
-      body.append("expire", auth.expire);
-      body.append("token", auth.token);
+      body.append("file", file); body.append("fileName", file.name);
+      body.append("publicKey", IMAGEKIT_PUBLIC_KEY || "");
+      body.append("signature", auth.signature); body.append("expire", auth.expire); body.append("token", auth.token);
       body.append("folder", "/sofit/transformations");
-
       const response = await fetch("https://upload.imagekit.io/api/v1/files/upload", { method: "POST", body });
-      if (!response.ok) throw new Error(`ImageKit responded ${response.status}`);
-      const data = (await response.json()) as { url?: string };
-      if (!data.url) throw new Error("No URL returned from ImageKit.");
-      setUrl(data.url);
-      setStatus("idle");
-    } catch {
-      setStatus("error");
-    }
+      if (!response.ok) throw new Error("Photo upload failed");
+      const data = await response.json();
+      if (typeof data.url !== "string" || !data.url.startsWith("https://") || data.url.length > 500) throw new Error("Invalid photo URL");
+      setUrl(data.url); onChanged(); setStatus("idle");
+    } catch { setStatus("error"); } finally { onBusy(false); }
   }
-
   function onPick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (file) void upload(file);
     event.target.value = "";
   }
-
   return (
-    <div className="media-uploader">
-      <input type="hidden" name={inputName} value={url} />
-      <div className={`media-dropzone${url ? " has-preview" : ""}`}>
-        {url ? (
-          <img src={url} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <div className="media-dropzone-empty">
-            <span className="media-empty-icon"><ImagePlus size={22} /></span>
-            <strong>{label}</strong>
-          </div>
-        )}
-        {status === "uploading" ? (
-          <div className="media-uploading" role="status"><Loader2 size={18} className="spin" /> {t("uploading")}</div>
-        ) : null}
+    <div className="transformation-upload">
+      <span className="transformation-field-label">{label}</span>
+      <div className="transformation-upload-preview">
+        {url ? <img src={url} alt={label} /> : <ImagePlus size={30} aria-hidden="true" />}
+        {status === "uploading" ? <span className="media-uploading" role="status"><Loader2 size={18} className="spin" />{t("uploading")}</span> : null}
       </div>
-      <div className="media-uploader-actions">
-        {IMAGEKIT_READY ? (
-          <button type="button" className="button secondary small" onClick={() => fileRef.current?.click()} disabled={status === "uploading"}>
-            <ImagePlus size={14} /> {url ? t("replacePhoto") : t("uploadPhoto")}
-          </button>
-        ) : null}
+      <div className="transformation-upload-actions">
+        {IMAGEKIT_PUBLIC_KEY ? <button type="button" className="button secondary small" onClick={() => fileRef.current?.click()} disabled={status === "uploading"}><ImagePlus size={14} />{url ? t("replacePhoto") : t("uploadPhoto")}</button> : null}
+        {url ? <button type="button" className="text-button" disabled={status === "uploading"} onClick={() => { setUrl(""); onChanged(); }}>{t("removePhoto")}</button> : null}
       </div>
-      <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPick} />
-      {!IMAGEKIT_READY ? <p className="media-hint">{t("imageKitNotConfigured")}</p> : null}
-      {status === "error" ? <p className="media-hint error">{t("uploadFailed")}</p> : null}
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden onChange={onPick} />
+      <details className="transformation-photo-url"><summary>{t("usePhotoUrl")}</summary><label><span>{label} URL</span><input type="url" name={inputName} value={url} onChange={(event) => { setUrl(event.target.value); onChanged(); }} placeholder="https://" maxLength={500} disabled={status === "uploading"} /></label></details>
+      <small>{t("photoHint")}</small>
+      {status === "error" ? <p className="form-message error" role="alert">{t("photoError")}</p> : null}
     </div>
   );
 }
 
-export function TransformationDetail({ item }: { item: TransformationRow }) {
+export function TransformationEditor({ item, onClose, onSaved }: { item: TransformationRow | null; onClose: () => void; onSaved: () => void }) {
   const t = useTranslations("Transformations.detail");
   const tc = useTranslations("Common");
-  const [deleting, setDeleting] = useState(false);
-
-  const [saveState, saveAction, savePending] = useActionState(async (previous: TransformationActionState, formData: FormData) => updateTransformationAction(previous, formData), initialState);
-  const [toggleState, toggleAction, togglePending] = useActionState(async (previous: TransformationActionState, formData: FormData) => togglePublishTransformationAction(previous, formData), initialState);
-  const [deleteState, deleteAction, deletePending] = useActionState(async (previous: TransformationActionState, formData: FormData) => deleteTransformationAction(previous, formData), initialState);
-
-  const hasBothPhotos = Boolean(item.beforePhotoUrl && item.afterPhotoUrl);
-
+  const story = item?.story || parseTransformationStory(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const dirty = useRef(false);
+  const [uploads, setUploads] = useState({ before: false, after: false });
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [state, saveAction, saving] = useActionState(async (previous: TransformationActionState, data: FormData) => {
+    const result = await saveTransformationAction(previous, data);
+    if (result.success) { dirty.current = false; onSaved(); }
+    return result;
+  }, initialState);
+  const [deleteState, deleteAction, deleting] = useActionState(async (previous: TransformationActionState, data: FormData) => {
+    const result = await deleteTransformationAction(previous, data);
+    if (result.success) { dirty.current = false; onSaved(); }
+    return result;
+  }, initialState);
+  const busy = saving || deleting || uploads.before || uploads.after;
+  useEffect(() => {
+    dialog.current?.showModal();
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = overflow; };
+  }, []);
+  function close() {
+    if (busy) return;
+    if (dirty.current && !window.confirm(t("discardChanges"))) return;
+    onClose();
+  }
   return (
-    <>
-      <Link href="/coach/transformations" className="button secondary review-back"><ArrowLeft size={15} /> {t("backToList")}</Link>
-
-      <Card className="transformation-detail-card">
-        <div className="transformation-detail-head">
-          <span className="service-icon"><Sparkles size={18} /></span>
-          <div className="transformation-detail-heading">
-            <Badge tone={item.isPublished ? "success" : "neutral"}>{item.isPublished ? t("published") : t("hidden")}</Badge>
-            <h1>{item.displayName}</h1>
-          </div>
-          <form action={toggleAction}>
-            <input type="hidden" name="id" value={item.id} />
-            <button className="button secondary" type="submit" disabled={togglePending}>
-              {item.isPublished ? <><EyeOff size={14} /> {t("hideCta")}</> : <><Eye size={14} /> {t("publishCta")}</>}
-            </button>
-          </form>
-        </div>
-
-        {toggleState.error ? <p className="form-message error" role="alert">{toggleState.error}</p> : null}
-        {toggleState.success ? <p className="form-message success" role="status">{toggleState.success}</p> : null}
-        {!hasBothPhotos ? <p className="form-message warning">{t("draftHint")}</p> : null}
-
-        <form action={saveAction} className="service-editor-form">
-          <input type="hidden" name="id" value={item.id} />
-          <input type="hidden" name="is_published" value={item.isPublished ? "true" : "false"} />
-          <div className="form-grid">
-            <label className="full"><span>{t("displayName")}</span><input name="display_name" defaultValue={item.displayName} placeholder={t("displayNamePlaceholder")} required minLength={2} maxLength={120} /></label>
-            <label><span>{t("beforePhoto")}</span><TransformationPhotoUploader inputName="before_photo_url" label={t("beforePhoto")} defaultUrl={item.beforePhotoUrl || ""} /></label>
-            <label><span>{t("afterPhoto")}</span><TransformationPhotoUploader inputName="after_photo_url" label={t("afterPhoto")} defaultUrl={item.afterPhotoUrl || ""} /></label>
-            <label className="full"><span>{t("description")}</span><textarea name="description" rows={4} maxLength={2000} defaultValue={item.description} placeholder={t("descriptionPlaceholder")} /></label>
-          </div>
-          {saveState.error ? <p className="form-message error" role="alert">{saveState.error}</p> : null}
-          {saveState.success ? <p className="form-message success" role="status">{saveState.success}</p> : null}
-          <div className="form-submit">
-            <span>{t("saveHint")}</span>
-            <button className="button primary" type="submit" disabled={savePending}>{savePending ? tc("saving") : t("saveChanges")}</button>
-          </div>
-        </form>
-
-        <div className="transformation-detail-danger">
-          <div><strong>{t("deleteTitle")}</strong><span>{t("deleteHint")}</span></div>
-          <button className="button danger small" type="button" onClick={() => setDeleting(true)}><Trash2 size={14} /> {tc("delete")}</button>
-        </div>
-      </Card>
-
-      {deleting ? (
-        <ModalPortal>
-          <div className="plan-modal-backdrop" role="presentation" onMouseDown={() => setDeleting(false)}>
-            <div className="plan-modal confirm-modal" role="alertdialog" aria-modal="true" aria-label={`${tc("delete")} ${item.displayName}`} onMouseDown={(event) => event.stopPropagation()}>
-              <button className="modal-close icon-button" type="button" aria-label={tc("close")} onClick={() => setDeleting(false)}><X size={18} /></button>
-              <section className="builder-panel destructive-panel">
-                <span className="destructive-icon"><AlertTriangle size={22} /></span>
-                <span className="eyebrow">{t("areYouSure")}</span>
-                <h2>{t("deleteConfirmTitle", { name: item.displayName })}</h2>
-                <p>{t("deleteConfirmBody")}</p>
-                <form action={deleteAction}>
-                  <input type="hidden" name="id" value={item.id} />
-                  {deleteState.error ? <p className="form-message error" role="alert">{deleteState.error}</p> : null}
-                  <div className="confirm-actions">
-                    <button className="button secondary" type="button" onClick={() => setDeleting(false)}>{tc("cancel")}</button>
-                    <button className="button danger" type="submit" disabled={deletePending}>{deletePending ? tc("deleting") : t("yesDelete")}</button>
-                  </div>
-                </form>
-              </section>
+    <dialog ref={dialog} className="plan-modal transformation-editor" aria-labelledby="transformation-editor-title" onCancel={(event) => { event.preventDefault(); close(); }} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
+      <div className="transformation-editor-content">
+        <header className="transformation-editor-heading"><div><span className="eyebrow">{t("editorEyebrow")}</span><h2 id="transformation-editor-title">{t(item ? "editTitle" : "createTitle")}</h2><p>{t("editorHint")}</p></div><button type="button" className="icon-button" aria-label={tc("close")} disabled={busy} onClick={close}><X size={18} /></button></header>
+        <form action={saveAction} onChange={() => { dirty.current = true; }}>
+          <input type="hidden" name="id" value={item?.id || ""} />
+          <fieldset disabled={saving || deleting} className="transformation-editor-fields">
+            <div className="form-grid">
+              <label><span>{t("displayName")}</span><input name="display_name" defaultValue={item?.displayName || ""} required minLength={2} maxLength={120} autoFocus /></label>
+              <label><span>{t("program")}</span><input name="program" defaultValue={story.program} maxLength={120} /></label>
+              <label className="full"><span>{t("headline")}</span><input name="headline" defaultValue={story.headline} maxLength={160} placeholder={t("headlinePlaceholder")} /></label>
             </div>
-          </div>
-        </ModalPortal>
-      ) : null}
-    </>
+            <h3>{t("photosTitle")}</h3>
+            <div className="transformation-editor-photos">
+              <TransformationPhotoUploader inputName="before_photo_url" label={t("beforePhoto")} defaultUrl={item?.beforePhotoUrl || ""} onBusy={(value) => setUploads((current) => ({ ...current, before: value }))} onChanged={() => { dirty.current = true; }} />
+              <TransformationPhotoUploader inputName="after_photo_url" label={t("afterPhoto")} defaultUrl={item?.afterPhotoUrl || ""} onBusy={(value) => setUploads((current) => ({ ...current, after: value }))} onChanged={() => { dirty.current = true; }} />
+            </div>
+            <h3>{t("storyTitle")}</h3>
+            <div className="form-grid">
+              <label className="full"><span>{t("description")}</span><textarea name="description" rows={4} maxLength={2000} defaultValue={item?.description || ""} placeholder={t("descriptionPlaceholder")} /></label>
+              <label><span>{t("durationWeeks")}</span><input type="number" name="durationWeeks" min="1" max="520" step="1" defaultValue={story.durationWeeks ?? ""} /></label>
+            </div>
+            <details className="transformation-optional-metrics" open={story.weightBefore != null || story.bodyFatBefore != null}><summary>{t("metricsTitle")}</summary><div className="form-grid">
+              {(["weightBefore", "weightAfter", "bodyFatBefore", "bodyFatAfter"] as const).map((field) => <label key={field}><span>{t(field)}</span><input name={field} type="number" min="0" max={field.startsWith("weight") ? 500 : 100} step="0.1" defaultValue={story[field] ?? ""} /></label>)}
+            </div></details>
+            <label className="transformation-consent"><input type="checkbox" name="consent" defaultChecked={story.consent} /><span>{t("consent")}</span></label>
+          </fieldset>
+          {state.error ? <p className="form-message error" role="alert">{state.error}</p> : null}
+          <footer className="transformation-editor-footer"><span>{t("draftSaveHint")}</span><div><button className="button secondary" type="button" disabled={busy} onClick={close}>{tc("cancel")}</button><button className="button secondary" type="submit" name="is_published" value="false" disabled={busy}>{t("saveDraft")}</button><button className="button primary" type="submit" name="is_published" value="true" disabled={busy}>{saving ? tc("saving") : t(item?.isPublished ? "savePublished" : "publishCta")}</button></div></footer>
+        </form>
+        {item ? <div className="transformation-editor-delete">
+          {confirmDelete ? <form action={deleteAction}><input type="hidden" name="id" value={item.id} /><p>{t("deleteConfirmBody")}</p>{deleteState.error ? <p className="form-message error" role="alert">{deleteState.error}</p> : null}<div className="confirm-actions"><button type="button" className="button secondary small" disabled={busy} onClick={() => setConfirmDelete(false)}>{tc("cancel")}</button><button type="submit" className="button danger small" disabled={busy}>{t("yesDelete")}</button></div></form> : <button type="button" className="text-button" disabled={busy} onClick={() => setConfirmDelete(true)}><Trash2 size={14} />{t("deleteTitle")}</button>}
+        </div> : null}
+      </div>
+    </dialog>
   );
+}
+
+export function TransformationDetail({ item }: { item: TransformationRow }) {
+  const router = useRouter();
+  const back = () => { router.push("/coach/transformations"); router.refresh(); };
+  return <TransformationEditor item={item} onClose={back} onSaved={back} />;
 }

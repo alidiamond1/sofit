@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, Moon, Sun, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import logo from "@/assets/sofit-logo.png";
@@ -14,8 +15,14 @@ function isActivePath(pathname: string, href: string) {
 }
 
 export function SiteNavbar() {
+  const t = useTranslations("Topbar");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  function toggleTheme() {
+    const theme = document.documentElement.dataset.marketingTheme === "light" ? "dark" : "light";
+    document.documentElement.dataset.marketingTheme = theme;
+    document.cookie = `sofit-marketing-theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -40,6 +47,12 @@ export function SiteNavbar() {
             <Image src={logo} alt="SoFit" priority />
           </Link>
 
+          <button type="button" className={styles.themeToggle} onClick={toggleTheme}>
+            <Sun size={18} className={styles.lightIcon} aria-hidden="true" />
+            <Moon size={18} className={styles.darkIcon} aria-hidden="true" />
+            <span className={`${styles.themeLabel} ${styles.lightIcon}`}>{t("switchToLightMode")}</span>
+            <span className={`${styles.themeLabel} ${styles.darkIcon}`}>{t("switchToDarkMode")}</span>
+          </button>
           <button
             type="button"
             className={styles.menuButton}

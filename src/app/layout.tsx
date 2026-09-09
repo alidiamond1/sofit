@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Anton } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 
@@ -56,8 +57,9 @@ export const maxDuration = 20;
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale();
+  const marketingTheme = (await cookies()).get("sofit-marketing-theme")?.value === "light" ? "light" : "dark";
   return (
-    <html lang={locale} className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable}`}>
+    <html lang={locale} data-marketing-theme={marketingTheme} className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable}`}>
       <body suppressHydrationWarning>
         <NextIntlClientProvider>
           {children}

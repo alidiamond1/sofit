@@ -10,6 +10,9 @@
 ------------------------------------------------------------------- */
 
 .lp {
+  --mk-bg:#050605; --mk-surface:#101310; --mk-surface-strong:#171b18;
+  --mk-ink:#f2f5f0; --mk-muted:#a7afa7; --mk-faint:#737b74; --mk-line:rgba(255,255,255,.11);
+  --mk-green:#3ad366; --mk-green-deep:#23ad4c; --mk-button:#3ad366; --mk-header:rgba(5,6,5,.82);
   --lp-bg: #000000;
   --lp-surface: #121412;
   --lp-surface-raised: #191c1a;
@@ -26,6 +29,17 @@
   overflow: hidden;
   background: var(--lp-bg);
   color: var(--lp-ink);
+}
+
+html[data-marketing-theme="light"] .lp {
+  color-scheme:light;
+  --mk-bg:#fbfcfa; --mk-surface:#fff; --mk-surface-strong:#f0f4ef;
+  --mk-ink:#152119; --mk-muted:#566159; --mk-faint:#68746b; --mk-line:#dfe6df;
+  --mk-green:#16813b; --mk-green-deep:#116b30; --mk-header:rgba(251,252,250,.92);
+  --lp-bg:#fbfcfa; --lp-surface:#fff; --lp-surface-raised:#f0f4ef;
+  --lp-ink:#152119; --lp-muted:#566159; --lp-faint:#68746b; --lp-line:#dfe6df;
+  --lp-accent:#16813b; --lp-accent-ink:#fff; --lp-accent-deep:#116b30;
+  --lp-shadow:0 10px 30px rgba(20,45,25,.06); --lp-shadow-lg:0 24px 70px rgba(20,45,25,.12);
 }
 
 /* Navbar --------------------------------------------------------- */

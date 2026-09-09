@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowUpRight, Check, Dumbbell } from "lucide-react";
 import {
   ClosingCta,
-  EditorialHero,
   ImageFrame,
   MarketingPageShell,
   PrimaryLink,
@@ -30,7 +32,6 @@ function billingNote(interval: string) {
   return "per month";
 }
 
-type ServiceRow = { type: string; tier: string | null; price: number; billingInterval: string };
 type PackageRow = {
   id: number;
   name: string;
@@ -41,16 +42,6 @@ type PackageRow = {
   dietGroupName: string | null;
   workoutGroupName: string | null;
 };
-
-async function activeServices(): Promise<ServiceRow[]> {
-  const rows = await database()("services").where({ is_active: true }).select("type", "tier", "price", "billing_interval");
-  return rows.map((row) => ({
-    type: String(row.type),
-    tier: row.tier ? String(row.tier) : null,
-    price: Number(row.price),
-    billingInterval: String(row.billing_interval),
-  }));
-}
 
 async function activePackages(): Promise<PackageRow[]> {
   const rows = await database()("packages")
@@ -72,46 +63,30 @@ async function activePackages(): Promise<PackageRow[]> {
 }
 
 export default async function ProgramsPage() {
-  const [services, packages] = await Promise.all([activeServices(), activePackages()]);
-
-  // Fetched for internal/future use — the core services and PT tier cards below are
-  // intentionally price-less by current design (only the Packages section, further
-  // down, displays a price). Kept so re-enabling a price display later is a render
-  // change only, not a re-plumbing of the data.
-  const priceByType = new Map<string, ServiceRow>();
-  const ptTiersByTier = new Map<string, ServiceRow>();
-  for (const service of services) {
-    if (service.type === "personal_training" && service.tier) {
-      ptTiersByTier.set(service.tier, service);
-    } else if (!priceByType.has(service.type)) {
-      priceByType.set(service.type, service);
-    }
-  }
+  const packages = await activePackages();
 
   return (
     <MarketingPageShell>
-      <EditorialHero
-        eyebrow="Choose your coaching path"
-        title={<>One goal. The <em>right</em> way in.</>}
-        description="Whether you need a clear first decision or close one-to-one coaching, SoFit starts with the service that matches your current reality."
-        imageSrc="/brand/training-detail.png"
-        imageAlt="A focused strength training session with close coaching guidance."
-        imagePosition="center 28%"
-        aside={<><span>Four ways to begin</span><span>One coach</span></>}
-      >
-        <PrimaryLink href="/contact?subject=consultation">Book a consultation</PrimaryLink>
-        <TextLink href="#program-list">Compare the programs</TextLink>
-      </EditorialHero>
-
-      <section className={`${styles.pageSection} ${styles.pageSectionWide}`}>
-        <div className={styles.introBand}>
-          <strong>Not every client needs the same level of support.</strong>
-          <p>
-            A useful program solves the problem in front of you. Start with direction, add a focused nutrition or
-            workout plan, or choose personal training when direct feedback and accountability matter most.
-          </p>
+      <section className={styles.programHero} aria-labelledby="programs-title">
+        <div className={styles.programHeroCopy}>
+          <span className={styles.eyebrow}>Your ambition. A plan to match.</span>
+          <h1 id="programs-title">Find your rhythm.<br /><em>Build your strength.</em></h1>
+          <p>Training, nutrition, and a coach who knows your name. Choose the support that turns your goals into a routine you can keep.</p>
+          <div className={styles.heroActions}><PrimaryLink href="#program-list">Find your program</PrimaryLink><TextLink href="/contact?subject=consultation#contact-form">Talk to Coach Ali</TextLink></div>
+          <ul className={styles.programHeroBenefits}><li><Check size={16} /> All experience levels</li><li><Check size={16} /> Online coaching</li><li><Check size={16} /> Personal feedback</li></ul>
+        </div>
+        <div className={styles.programHeroCollage}>
+          <div className={styles.programHeroOrbit} aria-hidden="true" />
+          <div className={styles.programHeroPhoto}><Image src="/brand/fitness/strength.png" alt="A woman building strength with a kettlebell squat." fill priority sizes="(max-width: 767px) 90vw, 42vw" /></div>
+          <div className={styles.programHeroInset}><Image src="/brand/fitness/nutrition.png" alt="A fresh, balanced meal to support training." fill sizes="(max-width: 767px) 38vw, 18vw" /></div>
+          <div className={styles.programHeroTag}><Dumbbell size={24} aria-hidden="true" /><div><strong>Made for your life.</strong><span>Training + nutrition + support</span></div></div>
+          <span className={styles.programHeroSpark} aria-hidden="true" />
         </div>
       </section>
+
+      <nav className={styles.programJumpLinks} aria-label="Explore coaching services">
+        {programs.map((program) => <Link key={program.slug} href={`#${program.slug}`}><span>{program.number}</span><strong>{program.name}</strong><ArrowUpRight size={18} aria-hidden="true" /></Link>)}
+      </nav>
 
       <section id="program-list" className={styles.pageSection}>
         <SectionHeading
@@ -138,6 +113,7 @@ export default async function ProgramsPage() {
               <span className={styles.tierMarker}>{tier.marker}</span>
               <h3>{tier.name}</h3>
               <p>{tier.description}</p>
+              <TextLink href={`/contact?subject=${encodeURIComponent(tier.name + " personal training")}#contact-form`}>Explore {tier.name}</TextLink>
             </article>
           ))}
         </div>
@@ -175,6 +151,7 @@ export default async function ProgramsPage() {
                       <span>{billingNote(pkg.billingInterval)}</span>
                     </div>
                   </div>
+                  <TextLink href={`/contact?subject=${encodeURIComponent(pkg.name)}#contact-form`}>Ask about this package</TextLink>
                   {pkg.description ? <p>{pkg.description}</p> : null}
                   {pkg.dietGroupName || pkg.workoutGroupName ? (
                     <div className={styles.packageIncludes}>

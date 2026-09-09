@@ -12,6 +12,8 @@ export type MarketingProgram = {
   shortName: string;
   eyebrow: string;
   summary: string;
+  imageSrc: string;
+  imageAlt: string;
   description: string;
   outcomes: string[];
   bestFor: string;
@@ -28,6 +30,8 @@ export const marketingNav = [
 export const programs: MarketingProgram[] = [
   {
     slug: "consultation",
+    imageSrc: "/brand/coach-training-01.jpg",
+    imageAlt: "Coach Ali in his training environment.",
     serviceType: "consultation",
     number: "01",
     name: "Consultation",
@@ -41,6 +45,8 @@ export const programs: MarketingProgram[] = [
   },
   {
     slug: "diet-plan",
+    imageSrc: "/brand/fitness/nutrition.png",
+    imageAlt: "A balanced bowl of chicken, rice, avocado, and vegetables.",
     serviceType: "diet",
     number: "02",
     name: "Meal plan",
@@ -54,6 +60,8 @@ export const programs: MarketingProgram[] = [
   },
   {
     slug: "workout-plan",
+    imageSrc: "/brand/fitness/strength.png",
+    imageAlt: "A woman performing a kettlebell squat in the gym.",
     serviceType: "workout",
     number: "03",
     name: "Workout plan",
@@ -67,6 +75,8 @@ export const programs: MarketingProgram[] = [
   },
   {
     slug: "personal-training",
+    imageSrc: "/brand/fitness/training.png",
+    imageAlt: "A man and woman training with dumbbells.",
     serviceType: "personal_training",
     number: "04",
     name: "Personal training",

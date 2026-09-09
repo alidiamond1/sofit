@@ -5,6 +5,7 @@ import { database } from "@/lib/db";
 import { Card, PageHeader } from "@/components/dashboard/primitives";
 import { TransformationDetail, type TransformationRow } from "./transformation-detail";
 import { TransformationList, type TransformationListRow } from "./transformation-list";
+import { parseTransformationStory } from "@/lib/transformation";
 
 function mapRow(row: Record<string, unknown>): TransformationRow {
   return {
@@ -14,6 +15,7 @@ function mapRow(row: Record<string, unknown>): TransformationRow {
     afterPhotoUrl: row.after_photo_url ? String(row.after_photo_url) : null,
     description: String(row.description || ""),
     isPublished: Boolean(row.is_published),
+    story: parseTransformationStory(row.story_details),
   };
 }
 

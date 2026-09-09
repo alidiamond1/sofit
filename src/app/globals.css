@@ -18,6 +18,7 @@
 @import "../styles/workout.css";
 @import "../styles/schedule.css";
 @import "../styles/landing.css";
+@import "../styles/typography.css";
 
 /* Shared portal styles load in dependency order above. */
 /* premium.css elevates the whole UI to the glass/depth system; workout.css adds the training experience. */

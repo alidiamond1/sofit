@@ -1,11 +1,12 @@
 "use client";
 
-import { Camera, ClipboardCheck, ExternalLink, X } from "lucide-react";
+import { Camera, ChevronDown, ClipboardCheck, ExternalLink, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { reviewCheckInAction, type CheckInActionState } from "@/app/actions/check-ins";
 import { hasAnyProgressPhoto, type ProgressPhotos } from "@/lib/progress-photos";
+import { filterCheckIns } from "@/lib/check-in-filters";
 import { statusLabel } from "@/lib/status-labels";
 import { ModalPortal } from "./modal-portal";
 import { Badge, Card } from "./primitives";
@@ -132,27 +133,23 @@ function CheckInDetail({ row, previousRow, onClose }: { row: CheckInRow; previou
   );
 }
 
-function ClientCheckInGroup({ client, rows, period }: { client: string; rows: CheckInRow[]; period: Period }) {
+function ClientCheckInGroup({ client, rows, history, period }: { client: string; rows: CheckInRow[]; history: CheckInRow[]; period: Period }) {
   const t = useTranslations("CheckIns");
   const ts = useTranslations("Common.status");
   const [active, setActive] = useState<CheckInRow | null>(null);
   const periods = useMemo(() => aggregate(rows, period), [rows, period]);
   const latest = rows[0];
-  // `rows` is this client's full history, newest first — the nearest earlier
-  // submission that actually has a photo is the "previous week" comparison.
+  // Compare against the nearest earlier photo, including rows hidden by filters.
   const previousRow = active
-    ? rows.slice(rows.findIndex((row) => row.id === active.id) + 1).find((row) => hasAnyProgressPhoto(row.progressPhotos)) || null
+    ? history.slice(history.findIndex((row) => row.id === active.id) + 1).find((row) => hasAnyProgressPhoto(row.progressPhotos)) || null
     : null;
 
   return (
-    <Card className="checkin-group">
-      <div className="checkin-group-head">
+    <details className="card checkin-group">
+      <summary className="checkin-group-head">
         <div>
           <span className="eyebrow">{t("checkInsCount", { count: rows.length })}</span>
-          <Link href={`/coach/clients?client=${latest?.clientId ?? rows[0]?.clientId}`} className="checkin-group-client-link" title={t("viewFullProfile")}>
-            <h2>{client}</h2>
-            <ExternalLink size={14} />
-          </Link>
+          <h2>{client}</h2>
         </div>
         {latest ? (
           <div className="plan-metrics">
@@ -161,18 +158,23 @@ function ClientCheckInGroup({ client, rows, period }: { client: string; rows: Ch
             <div><strong>{latest.workoutPct}%</strong><span>{t("workout")}</span></div>
           </div>
         ) : null}
-      </div>
-      <div className="checkin-period-rows">
+        <ChevronDown size={20} className="checkin-group-chevron" aria-hidden="true" />
+      </summary>
+      <div className="checkin-group-body">
+        <Link href={`/coach/clients?client=${latest.clientId}`} className="checkin-group-client-link">
+          {t("viewFullProfile")} <ExternalLink size={14} aria-hidden="true" />
+        </Link>
+      {period !== "week" ? <div className="checkin-period-rows">
         {periods.map((entry) => (
           <div className="checkin-period-row" key={entry.key}>
             <span>{entry.label}</span>
             <span>{entry.avgDiet}% {t("diet")}</span>
             <span>{entry.avgWorkout}% {t("workout")}</span>
             <span>{entry.weight != null ? `${entry.weight} kg` : "—"}</span>
-            {period !== "week" ? <span className="muted">{t("submissionsCount", { count: entry.count })}</span> : null}
+            <span className="muted">{t("submissionsCount", { count: entry.count })}</span>
           </div>
         ))}
-      </div>
+      </div> : null}
       {period === "week" ? (
         <div className="data-table-wrap">
           <table className="data-table">
@@ -181,7 +183,9 @@ function ClientCheckInGroup({ client, rows, period }: { client: string; rows: Ch
               {rows.map((row) => (
                 <tr key={row.id} className="is-clickable" onClick={() => setActive(row)}>
                   <td>
-                    {weekLabel.format(new Date(`${row.weekOf}T00:00:00`))}
+                    <button type="button" className="text-button" onClick={(event) => { event.stopPropagation(); setActive(row); }}>
+                      {weekLabel.format(new Date(`${row.weekOf}T00:00:00`))}
+                    </button>
                     {hasAnyProgressPhoto(row.progressPhotos) ? <Camera size={12} className="checkin-row-photo-flag" aria-label={t("hasPhotosFlag")} /> : null}
                   </td>
                   <td>{row.weightKg != null ? `${row.weightKg} kg` : "-"}</td>
@@ -194,14 +198,19 @@ function ClientCheckInGroup({ client, rows, period }: { client: string; rows: Ch
           </table>
         </div>
       ) : null}
+      </div>
       {active ? <CheckInDetail row={active} previousRow={previousRow} onClose={() => setActive(null)} /> : null}
-    </Card>
+    </details>
   );
 }
 
 export function CoachCheckInsWorkspace({ checkIns }: { checkIns: CheckInRow[] }) {
   const t = useTranslations("CheckIns");
+  const ts = useTranslations("Common.status");
   const [period, setPeriod] = useState<Period>("week");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [month, setMonth] = useState("");
 
   const groups = useMemo(() => {
     const map = new Map<number, { client: string; rows: CheckInRow[] }>();
@@ -213,6 +222,9 @@ export function CoachCheckInsWorkspace({ checkIns }: { checkIns: CheckInRow[] })
     for (const entry of map.values()) entry.rows.sort((a, b) => (a.weekOf < b.weekOf ? 1 : -1));
     return Array.from(map.values()).sort((a, b) => (b.rows[0]?.weekOf || "").localeCompare(a.rows[0]?.weekOf || ""));
   }, [checkIns]);
+  const filteredGroups = groups.map((group) => ({ ...group, history: group.rows, rows: filterCheckIns(group.rows, { search, status, month }) })).filter((group) => group.rows.length > 0);
+  const months = Array.from(new Set(checkIns.map((row) => row.weekOf.slice(0, 7)))).sort().reverse();
+  const hasFilters = Boolean(search || status || month);
 
   if (checkIns.length === 0) {
     return (
@@ -226,15 +238,33 @@ export function CoachCheckInsWorkspace({ checkIns }: { checkIns: CheckInRow[] })
 
   return (
     <>
+      <div className="checkin-toolbar">
       <div className="status-toggle checkin-period-toggle" role="group" aria-label={t("aggregateByAria")}>
         {(["week", "month", "year"] as Period[]).map((option) => (
-          <button key={option} type="button" className={period === option ? "active" : ""} onClick={() => setPeriod(option)}>
+          <button key={option} type="button" aria-pressed={period === option} className={period === option ? "active" : ""} onClick={() => setPeriod(option)}>
             {option === "week" ? t("byWeek") : option === "month" ? t("byMonth") : t("byYear")}
           </button>
         ))}
       </div>
+      <div className="checkin-filters">
+        <label className="inline-search">
+          <Search size={16} aria-hidden="true" />
+          <input type="search" aria-label={t("searchClients")} placeholder={t("searchClients")} value={search} onChange={(event) => setSearch(event.target.value)} />
+        </label>
+        <select aria-label={t("filterStatus")} value={status} onChange={(event) => setStatus(event.target.value)}>
+          <option value="">{t("allStatuses")}</option>
+          {(["pending", "submitted", "reviewed"] as const).map((value) => <option key={value} value={value}>{statusLabel(ts, value)}</option>)}
+        </select>
+        <select aria-label={t("filterMonth")} value={month} onChange={(event) => setMonth(event.target.value)}>
+          <option value="">{t("allMonths")}</option>
+          {months.map((value) => <option key={value} value={value}>{periodLabel(value, "month")}</option>)}
+        </select>
+        {hasFilters ? <button type="button" className="text-button" onClick={() => { setSearch(""); setStatus(""); setMonth(""); }}>{t("clearFilters")}</button> : null}
+      </div>
+      </div>
       <div className="checkin-group-stack">
-        {groups.map((group) => <ClientCheckInGroup key={group.rows[0]?.clientId ?? group.client} client={group.client} rows={group.rows} period={period} />)}
+        {filteredGroups.map((group) => <ClientCheckInGroup key={group.rows[0].clientId} client={group.client} rows={group.rows} history={group.history} period={period} />)}
+        {filteredGroups.length === 0 ? <Card className="empty-state"><ClipboardCheck size={24} /><h3 role="status">{t("noMatchingCheckIns")}</h3><p>{t("adjustFilters")}</p></Card> : null}
       </div>
     </>
   );

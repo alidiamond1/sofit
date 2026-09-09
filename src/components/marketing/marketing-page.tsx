@@ -114,6 +114,11 @@ export function ProgramPanel({
 }) {
   return (
     <article className={styles.programPanel} id={program.slug}>
+      <div className={styles.programVisual}>
+        <Image src={program.imageSrc} alt={program.imageAlt} fill sizes="(max-width: 767px) 100vw, 45vw" />
+        <span className={styles.programNumber}>{program.number}</span>
+      </div>
+      <div className={styles.programContent}>
       <span className={styles.eyebrow}>
         {program.number} — {program.eyebrow}
       </span>
@@ -126,7 +131,6 @@ export function ProgramPanel({
           </div>
         ) : null}
       </div>
-      <p className={styles.programSummary}>{program.summary}</p>
       <div className={styles.programBody}>
         <p>{program.description}</p>
         <ul>
@@ -141,7 +145,8 @@ export function ProgramPanel({
           <span>Best for</span>
           <p>{program.bestFor}</p>
         </div>
-        <TextLink href="/contact">Talk to the coach</TextLink>
+        <PrimaryLink href={`/contact?subject=${program.slug}#contact-form`}>Discuss {program.name.toLowerCase()}</PrimaryLink>
+      </div>
       </div>
     </article>
   );

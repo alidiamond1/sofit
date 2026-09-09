@@ -197,10 +197,22 @@ button.nav-link{width:100%;-webkit-appearance:none;appearance:none;border:0;back
 .consultation-status-actions .form-message.error{width:100%;margin:0;font-size:10px}
 
 /* ── Coach: check-ins grouped by client, with week/month/year rollup ─ */
-.checkin-period-toggle{margin-bottom:16px}
+.checkin-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.checkin-period-toggle{flex-shrink:0}
+.checkin-filters{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-left:auto}
+.checkin-filters .inline-search{width:220px;min-height:42px}
+.checkin-filters select{min-height:42px;max-width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface-soft);color:var(--ink);font:inherit;font-size:12px}
+.checkin-filters .inline-search:focus-within,.checkin-filters select:focus-visible,.checkin-group-head:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 .checkin-group-stack{display:grid;gap:16px}
-.checkin-group{padding:22px}
-.checkin-group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:16px}
+.checkin-group{padding:0;min-width:0}
+.checkin-group-head{display:flex;align-items:center;gap:20px;padding:20px 22px;list-style:none;cursor:pointer;border-radius:inherit}
+.checkin-group-head::-webkit-details-marker{display:none}
+.checkin-group-head>div:first-child{flex:1;min-width:0}
+.checkin-group-head .plan-metrics{margin:0}
+.checkin-group-chevron{flex-shrink:0;color:var(--muted);transition:transform .15s ease}
+.checkin-group[open]>.checkin-group-head .checkin-group-chevron{transform:rotate(180deg)}
+.checkin-group-body{padding:0 22px 22px}
+.checkin-group-body>.checkin-group-client-link{margin-bottom:16px;font-size:12px}
 .checkin-group-head h2{margin:6px 0 0;font-size:19px}
 .checkin-group-client-link{display:inline-flex;align-items:center;gap:7px;color:var(--ink);transition:color .15s ease}
 .checkin-group-client-link:hover{color:var(--primary)}
@@ -210,9 +222,50 @@ button.nav-link{width:100%;-webkit-appearance:none;appearance:none;border:0;back
 .checkin-period-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr;gap:10px;padding:9px 12px;border-radius:10px;background:var(--surface-soft);font-size:11px;font-weight:600}
 .checkin-period-row .muted{color:var(--muted);font-weight:500}
 .data-table tr.is-clickable{cursor:pointer}
-@media(max-width:760px){.checkin-group-head{flex-direction:column}.checkin-period-row{grid-template-columns:1fr 1fr;row-gap:2px}}
+@media(max-width:760px){.checkin-filters{width:100%;justify-content:flex-start}.checkin-filters .inline-search{width:100%}.checkin-filters select{flex:1;min-width:0}.checkin-group-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:16px}.checkin-group-head .plan-metrics{grid-column:1/-1;grid-row:2}.checkin-group-chevron{grid-column:2;grid-row:1}.checkin-group-body{padding:0 16px 16px}.checkin-period-row{grid-template-columns:1fr 1fr;row-gap:2px}}
 
 /* ── Client: weekly check-in submission form ─────────────────── */
+.plan-history-toolbar{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.plan-history-toolbar>.inline-search{width:280px;min-height:42px}
+.plan-history-filters{display:flex;flex-wrap:wrap;gap:12px}
+.plan-history-filters label{display:grid;gap:6px;min-width:140px}
+.plan-history-filters label>span{font-size:10px;font-weight:650;color:var(--muted)}
+.plan-history-filters select,.plan-history-filters input{min-height:42px;width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft);color:var(--ink);font:inherit;font-size:12px}
+.plan-history-toolbar .inline-search:focus-within,.plan-history-filters select:focus-visible,.plan-history-filters input:focus-visible,.plan-history summary:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+.plan-history-caption{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
+.plan-history-caption p{margin:0;color:var(--ink);font-size:12px;font-weight:600}
+.plan-history-hint{margin:8px 0 16px;color:var(--muted);font-size:11px;line-height:1.6}
+.plan-history-stack{display:grid;gap:12px}
+.plan-history-client{padding:0;min-width:0}
+.plan-history summary{list-style:none;cursor:pointer;border-radius:inherit}
+.plan-history summary::-webkit-details-marker{display:none}
+.plan-history-client-head{display:flex;align-items:center;gap:14px;padding:20px 22px}
+.plan-history-avatar{display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;border:1px solid var(--line);border-radius:13px;background:var(--surface-soft);color:var(--primary);font-size:13px;font-weight:750}
+.plan-history-client-name,.plan-history-record-title,.plan-history-item-name{display:grid;gap:5px;flex:1;min-width:0}
+.plan-history-client-name>h3{margin:0;font-size:15px;overflow-wrap:anywhere}
+.plan-history-client-name>span,.plan-history-record-title>span,.plan-history-item-name>span{color:var(--muted);font-size:10px;line-height:1.5}
+.plan-history-client-count{font-size:11px;color:var(--muted)}
+.plan-history-chevron{flex-shrink:0;color:var(--muted);transition:transform .15s ease}
+.plan-history details[open]>summary>.plan-history-chevron{transform:rotate(180deg)}
+.plan-history-records{display:grid;gap:10px;padding:0 22px 22px}
+.plan-history-record{border:1px solid var(--line);border-radius:12px;min-width:0;background:var(--surface)}
+.plan-history-record-head{display:flex;align-items:center;gap:16px;padding:16px}
+.plan-history-record-title>h4{margin:0;font-size:13px;overflow-wrap:anywhere}
+.plan-history-progress{display:grid;gap:6px;min-width:130px;font-size:10px;color:var(--muted)}
+.plan-history-progress progress{display:block;width:130px;height:4px;border:0;border-radius:4px;overflow:hidden;appearance:none;background:var(--surface-soft);accent-color:var(--primary)}
+.plan-history-progress progress::-webkit-progress-bar{background:var(--surface-soft)}
+.plan-history-progress progress::-webkit-progress-value{background:var(--primary)}
+.plan-history-progress progress::-moz-progress-bar{background:var(--primary)}
+.plan-history-record-body{padding:0 16px 12px}
+.plan-history-record-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line);color:var(--muted);font-size:11px}
+.plan-history-items{list-style:none;margin:0;padding:0}
+.plan-history-items li{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--line);color:var(--muted)}
+.plan-history-items li>svg{flex-shrink:0}
+.plan-history-item-name>strong{font-size:12px;color:var(--ink);overflow-wrap:anywhere}
+.plan-history-done{color:var(--primary)}
+@media(max-width:760px){.plan-history-toolbar{padding:14px}.plan-history-toolbar>.inline-search,.plan-history-filters{width:100%}.plan-history-filters{display:grid;grid-template-columns:1fr 1fr}.plan-history-filters label{min-width:0}.plan-history-filters label:last-child{grid-column:1/-1}.plan-history-client-head{padding:16px;gap:10px}.plan-history-client-count{display:none}.plan-history-records{padding:0 12px 12px}.plan-history-record-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:14px}.plan-history-record-title{grid-column:1;grid-row:1}.plan-history-record-head>.plan-history-chevron{grid-column:2;grid-row:1}.plan-history-record-head>.badge{grid-column:2;grid-row:2}.plan-history-progress{grid-column:1;grid-row:2}.plan-history-items li{flex-wrap:wrap}.plan-history-items .badge{margin-left:auto}}
+@media(prefers-reduced-motion:reduce){.plan-history-chevron,.checkin-group-chevron{transition:none}}
+
 .checkin-form-grid{display:grid;gap:24px}
 .checkin-section{display:grid;gap:12px}
 .checkin-section-label{color:var(--muted);font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.08em}

@@ -4,44 +4,38 @@
 import { Eye, EyeOff, Plus, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
-  createDraftTransformationAction,
   togglePublishTransformationAction,
   type TransformationActionState,
 } from "@/app/actions/transformations";
 import { Badge, Card } from "@/components/dashboard/primitives";
+import { TransformationEditor } from "./transformation-detail";
+import type { TransformationRow as TransformationRecord } from "@/lib/transformation";
 
-export type TransformationListRow = {
-  id: number;
-  displayName: string;
-  beforePhotoUrl: string | null;
-  afterPhotoUrl: string | null;
-  description: string;
-  isPublished: boolean;
-};
+export type TransformationListRow = TransformationRecord;
 
 const initialState: TransformationActionState = {};
 
 function RowThumb({ item, label }: { item: TransformationListRow; label: string }) {
+  const t = useTranslations("Transformations.public");
   if (!item.beforePhotoUrl && !item.afterPhotoUrl) {
     return <span className="transformation-row-empty-thumb"><Sparkles size={16} /></span>;
   }
   return (
     <div className="transformation-photos transformation-row-thumb">
-      <div className="transformation-photo">{item.beforePhotoUrl ? <img src={item.beforePhotoUrl} alt={`${label} — before`} loading="lazy" /> : null}</div>
-      <div className="transformation-photo">{item.afterPhotoUrl ? <img src={item.afterPhotoUrl} alt={`${label} — after`} loading="lazy" /> : null}</div>
+      <div className="transformation-photo">{item.beforePhotoUrl ? <img src={item.beforePhotoUrl} alt={t("beforeAlt", { name: label })} loading="lazy" /> : null}</div>
+      <div className="transformation-photo">{item.afterPhotoUrl ? <img src={item.afterPhotoUrl} alt={t("afterAlt", { name: label })} loading="lazy" /> : null}</div>
     </div>
   );
 }
 
-function TransformationRow({ item }: { item: TransformationListRow }) {
+function TransformationRow({ item, onEdit }: { item: TransformationListRow; onEdit: () => void }) {
   const t = useTranslations("Transformations.list");
-  const router = useRouter();
   const [state, toggleAction, pending] = useActionState(async (previous: TransformationActionState, formData: FormData) => togglePublishTransformationAction(previous, formData), initialState);
 
   function open() {
-    router.push(`/coach/transformations?transformation=${item.id}`);
+    onEdit();
   }
 
   return (
@@ -50,7 +44,7 @@ function TransformationRow({ item }: { item: TransformationListRow }) {
       role="button"
       tabIndex={0}
       onClick={open}
-      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } }}
+      onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); open(); } }}
       aria-label={t("openAria", { name: item.displayName })}
     >
       <RowThumb item={item} label={item.displayName} />
@@ -74,23 +68,24 @@ function TransformationRow({ item }: { item: TransformationListRow }) {
 
 export function TransformationList({ transformations }: { transformations: TransformationListRow[] }) {
   const t = useTranslations("Transformations.list");
+  const router = useRouter();
+  const [editor, setEditor] = useState<{ item: TransformationListRow | null } | null>(null);
 
   return (
     <>
       <div className="service-library-toolbar">
         <div><span className="workspace-icon"><Sparkles size={19} /></span><div><strong>{t("toolbarTitle")}</strong><span>{t("toolbarSubtitle", { count: transformations.length })}</span></div></div>
-        <form action={createDraftTransformationAction}>
-          <button className="button primary" type="submit"><Plus size={16} /> {t("createTransformation")}</button>
-        </form>
+        <button className="button primary" type="button" onClick={() => setEditor({ item: null })}><Plus size={16} /> {t("createTransformation")}</button>
       </div>
 
       {transformations.length === 0 ? (
         <Card className="empty-state"><Sparkles size={24} /><h3>{t("noTransformationsTitle")}</h3><p>{t("noTransformationsHint")}</p></Card>
       ) : (
         <div className="transformation-list">
-          {transformations.map((item) => <TransformationRow key={item.id} item={item} />)}
+          {transformations.map((item) => <TransformationRow key={item.id} item={item} onEdit={() => setEditor({ item })} />)}
         </div>
       )}
+      {editor ? <TransformationEditor item={editor.item} onClose={() => setEditor(null)} onSaved={() => { setEditor(null); router.refresh(); }} /> : null}
     </>
   );
 }
