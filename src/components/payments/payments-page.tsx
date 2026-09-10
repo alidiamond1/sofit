@@ -25,7 +25,10 @@ export async function PaymentsPage({ orderId }: { orderId?: string }) {
   });
   const attempt = orderId && z.uuid().safeParse(orderId).success ? await database()("payment_attempts")
     .join("invoices", "invoices.id", "payment_attempts.invoice_id").select("payment_attempts.id", "payment_attempts.invoice_id")
-    .where({ "payment_attempts.id": orderId, "invoices.client_id": billing.client.id }).first() : null;
+    .where({ "payment_attempts.id": orderId, "invoices.client_id": billing.client.id }).first()
+    : billing.invoice ? await database()("payment_attempts").select("id", "invoice_id")
+      .where({ invoice_id: billing.invoice.id }).whereIn("status", ["ready", "unknown", "paid"])
+      .orderBy("created_at", "desc").first() : null;
   return <ClientPaymentsWorkspace invoices={invoices} currentId={billing.invoice ? Number(billing.invoice.id) : null}
     unlocked={billing.unlocked} active={billing.client.status === "active"} configured={sifaloConfigured()}
     returnedOrder={attempt ? { invoiceId: Number(attempt.invoice_id), orderId: String(attempt.id) } : null} />;

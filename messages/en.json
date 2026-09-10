@@ -1580,7 +1580,11 @@
       "replaced": "Replaced"
     },
     "openingCheckout": "Opening secure checkout?",
-    "connectionError": "Connection interrupted. Please check payment status before trying again."
+    "connectionError": "Connection interrupted. Please check payment status before trying again.",
+    "paymentConfirmed": "Payment confirmed",
+    "successTitle": "Your program is ready",
+    "successBody": "Your payment for {name} is confirmed. Your program and coaching tools are now unlocked.",
+    "goDashboard": "Go to my dashboard"
   },
   "CoachBilling": {
     "eyebrow": "BUSINESS / BILLING",

@@ -1580,7 +1580,11 @@
       "replaced": "La beddelay"
     },
     "openingCheckout": "Waxaa la furayaa checkout-ka?",
-    "connectionError": "Xiriirkii ayaa go?ay. Hubi xaaladda lacag-bixinta ka hor intaadan isku dayin mar kale."
+    "connectionError": "Xiriirkii ayaa go?ay. Hubi xaaladda lacag-bixinta ka hor intaadan isku dayin mar kale.",
+    "paymentConfirmed": "Lacag-bixinta waa la xaqiijiyey",
+    "successTitle": "Program-kaagu waa diyaar",
+    "successBody": "Lacag-bixinta {name} waa la xaqiijiyey. Program-kaaga iyo adeegyada tababarka hadda way kuu furan yihiin.",
+    "goDashboard": "Tag dashboard-kayga"
   },
   "CoachBilling": {
     "eyebrow": "GANACSIGA / LACAG-BIXINTA",

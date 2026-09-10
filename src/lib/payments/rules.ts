@@ -36,13 +36,19 @@ export function isOpenClientPath(path: string) {
 
 // Sifalo currently documents USD-only checkout. Verify by our stored order_id,
 // never a sid supplied by the browser: sid alone does not bind a payment to an order.
-export function verifiedTransaction(value: unknown, expectedAmount: unknown) {
+export function verifiedTransaction(value: unknown, expectedAmount: unknown, feeBasisPoints = 0) {
   if (!value || typeof value !== "object") throw new Error("Invalid payment response.");
   const row = value as Record<string, unknown>;
+  if (!Number.isInteger(feeBasisPoints) || feeBasisPoints < 0 || feeBasisPoints > 10_000) throw new Error("Invalid payment fee configuration.");
+  const gross = amountInCents(expectedAmount);
+  const received = amountInCents(row.amount);
+  // The merchant confirmed a 0.40% fee. Sifalo may report the net credit,
+  // truncated to USD cents (0.10 gross -> 0.09 net), rather than the charge.
+  const net = gross - Math.ceil(gross * feeBasisPoints / 10_000);
   if (row.status !== "success" || row.code !== 601 || typeof row.sid !== "string" ||
       !/^[\x21-\x7e]{1,190}$/.test(row.sid) ||
       (row.currency !== undefined && row.currency !== "USD") ||
-      amountInCents(row.amount) !== amountInCents(expectedAmount)) {
+      (received !== gross && received !== net)) {
     throw new Error("Payment could not be verified.");
   }
   return row.sid;

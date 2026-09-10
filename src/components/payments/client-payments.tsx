@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Check, CheckCircle2, CreditCard, LockKeyhole, Package, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Check, CheckCircle2, CreditCard, LockKeyhole, Package, RefreshCw, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -25,6 +25,8 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
   const [result, setResult] = useState<PaymentResult>({});
   const [openingCheckout, setOpeningCheckout] = useState(false);
   const checkedOrder = useRef<string | null>(null);
+  const verificationRequest = useRef<{ id: string; promise: Promise<PaymentResult> } | null>(null);
+  const confirmation = useRef<HTMLDialogElement>(null);
   const current = invoices.find((invoice) => invoice.id === currentId);
   const history = invoices.filter((invoice) => invoice.id !== currentId);
   const money = (invoice: BillingInvoice) => new Intl.NumberFormat(locale, { style: "currency", currency: invoice.currency }).format(Number(invoice.amount));
@@ -44,13 +46,37 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
   useEffect(() => {
     if (!returnId || !returnInvoiceId || checkedOrder.current === returnId) return;
     checkedOrder.current = returnId;
-    startTransition(async () => {
-      const response = await verifyPaymentAction(returnInvoiceId, returnId);
-      setResult(response);
-      router.replace("/client/payments", { scroll: false });
-      router.refresh();
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let retries = 0;
+    const verify = () => startTransition(async () => {
+      try {
+        if (verificationRequest.current?.id !== returnId) verificationRequest.current = { id: returnId, promise: verifyPaymentAction(returnInvoiceId, returnId) };
+        const response = await verificationRequest.current.promise;
+        if (cancelled) return;
+        setResult(response);
+        if (response.paid) {
+          // Refresh the server layout so the sidebar boundary and plan data
+          // receive verified access together. Browser query flags grant nothing.
+          router.refresh();
+        } else if (response.pending && retries++ < 3) timer = setTimeout(() => { verificationRequest.current = null; verify(); }, 16_000);
+      } catch {
+        if (!cancelled) setResult({ error: t("connectionError") });
+      }
     });
-  }, [returnId, returnInvoiceId, router]);
+    verify();
+    return () => { cancelled = true; clearTimeout(timer); checkedOrder.current = null; };
+  }, [returnId, returnInvoiceId, router, t]);
+
+  useEffect(() => {
+    if (!result.paid || !unlocked || !currentId) return;
+    const key = `sofit-payment-confirmed-${currentId}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch { /* Storage can be disabled; confirmation still works. */ }
+    confirmation.current?.showModal();
+  }, [result.paid, unlocked, currentId]);
 
   function checkPayment(id: number) {
     startTransition(async () => {
@@ -76,6 +102,14 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
   }
 
   return <div className="billing-workspace" aria-busy={pending}>
+    <dialog ref={confirmation} className="payment-lock-dialog payment-success-dialog" aria-labelledby="payment-success-title" aria-describedby="payment-success-description">
+      <button className="icon-button payment-dialog-close" aria-label={t("close")} onClick={() => confirmation.current?.close()}><X size={20} /></button>
+      <span className="billing-icon"><CheckCircle2 size={30} /></span>
+      <span className="eyebrow">{t("paymentConfirmed")}</span>
+      <h2 id="payment-success-title">{t("successTitle")}</h2>
+      <p id="payment-success-description">{t("successBody", { name: current?.name || "SOFIT" })}</p>
+      <Link className="button primary full" href="/client" onClick={() => confirmation.current?.close()}>{t("goDashboard")}<ArrowUpRight size={17} /></Link>
+    </dialog>
     <header className="billing-heading"><div><span className="eyebrow">{t("eyebrow")}</span><h1>{t("title")}</h1><p>{t("description")}</p></div><span className="billing-secure"><ShieldCheck size={17} />{t("hostedCheckout")}</span></header>
     {(result.error || result.message) && <p className={`billing-notice ${result.error ? "is-error" : "is-success"}`} role={result.error ? "alert" : "status"}>{result.error || result.message}</p>}
     {!active && <p className="billing-notice" role="status">{t("inactive")}</p>}

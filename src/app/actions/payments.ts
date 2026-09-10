@@ -7,9 +7,9 @@ import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { activateInvoice, BillingError, snapshotOf, syncUnpaidPackageInvoice } from "@/lib/payments/billing";
 import { accessEnd, retryablePaymentFailure, verifiedTransaction } from "@/lib/payments/rules";
-import { checkoutUrl, paymentReturnUrl, sifaloConfigured, sifaloRequest } from "@/lib/payments/sifalo";
+import { checkoutUrl, paymentReturnUrl, sifaloConfigured, sifaloFeeBasisPoints, sifaloRequest } from "@/lib/payments/sifalo";
 
-export type PaymentResult = { error?: string; message?: string; url?: string; paid?: boolean; retryable?: boolean; refresh?: boolean };
+export type PaymentResult = { error?: string; message?: string; url?: string; paid?: boolean; pending?: boolean; retryable?: boolean; refresh?: boolean };
 const invoiceIdSchema = z.number().int().positive();
 const orderIdSchema = z.uuid();
 function paymentError(error: unknown): PaymentResult {
@@ -122,12 +122,12 @@ async function verifyReservedPayment(userId: number, invoiceId: number, amount: 
     // Ignore the return URL's sid/status/amount. Query the provider using only
     // the unpredictable order_id we previously stored for this owned invoice.
     const verified = await sifaloRequest("verify.php", { order_id: String(attempt.id) });
-    if (verified.status === "pending") return { message: "Your payment is still pending. Check again shortly; do not pay twice." };
+    if (verified.status === "pending") return { pending: true, message: "Your payment is still pending. Check again shortly; do not pay twice." };
     if (retryablePaymentFailure(verified, attempt.status)) {
       await database()("payment_attempts").where({ id: attempt.id }).whereNot({ status: "paid" }).update({ status: "failed", checkout_url: null, updated_at: new Date() });
       return { message: "No completed payment was found. You can open a new secure checkout.", retryable: true };
     }
-    const sid = verifiedTransaction(verified, amount);
+    const sid = verifiedTransaction(verified, amount, sifaloFeeBasisPoints());
     await database().transaction(async (trx) => {
       const client = await trx("clients").where({ user_id: userId }).forUpdate().first();
       const invoice = await trx("invoices").where({ id: invoiceId, client_id: client.id }).forUpdate().first();

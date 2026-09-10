@@ -28,6 +28,11 @@ for (const path of ["/client", "/client/", "/client/payments", "/client/profile"
 for (const path of ["/client/diet-plan", "/client/workout-plan", "/client/sessions", "/client/messages", "/client/check-in", "/client/progress", "/client/settings/anything"]) assert.equal(isOpenClientPath(path), false);
 const success = { sid: "test-123", amount: "99.00", status: "success", code: 601 };
 assert.equal(verifiedTransaction(success, "99"), "test-123");
+assert.equal(verifiedTransaction({ ...success, amount: "0.09" }, "0.10", 40), "test-123", "Sifalo net settlement after the confirmed 0.40% fee must verify.");
+assert.equal(verifiedTransaction({ ...success, amount: "98.60" }, "99.00", 40), "test-123");
+assert.equal(verifiedTransaction({ ...success, amount: "99.00" }, "99.00", 40), "test-123", "Documented gross responses remain supported.");
+for (const amount of ["0.08", "0.11", "1.00"]) assert.throws(() => verifiedTransaction({ ...success, amount }, "0.10", 40));
+assert.throws(() => verifiedTransaction({ ...success, amount: "97.00" }, "99.00", 40));
 for (const change of [{ amount: "0.99" }, { amount: "100.00" }, { currency: "SOS" }, { status: "pending" }, { status: "failure" }, { code: 600 }, { code: "601" }, { sid: "" }, { sid: "a".repeat(191) }]) {
   assert.throws(() => verifiedTransaction({ ...success, ...change }, "99"));
 }

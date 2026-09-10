@@ -6,6 +6,13 @@ export function sifaloConfigured() {
   return Boolean(process.env.SIFALO_API_USERNAME && process.env.SIFALO_API_PASSWORD);
 }
 
+export function sifaloFeeBasisPoints() {
+  // Merchant-confirmed account rate; override only when the provider changes it.
+  const value = process.env.SIFALO_TRANSACTION_FEE_PERCENT || "0.40";
+  if (!/^\d{1,2}(\.\d{1,2})?$/.test(value)) throw new BillingError("Invalid Sifalo fee configuration.");
+  return Math.round(Number(value) * 100);
+}
+
 export async function sifaloRequest(path: "" | "verify.php", body: Record<string, string>): Promise<Record<string, unknown>> {
   if (!sifaloConfigured()) throw new BillingError("Online payment is being set up. Please try again later.");
   const auth = Buffer.from(`${process.env.SIFALO_API_USERNAME}:${process.env.SIFALO_API_PASSWORD}`).toString("base64");
