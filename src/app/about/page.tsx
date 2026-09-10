@@ -5,8 +5,8 @@ import { MarketingPageShell, PrimaryLink, SectionHeading, TextLink, marketingSty
 import { coachingPrinciples, coachingProcess } from "@/lib/marketing/content";
 
 export const metadata: Metadata = {
-  title: "About Coach Ali",
-  description: "Meet Coach Ali and discover the personal approach to training, nutrition, and consistent progress behind SoFit.",
+  title: "About the SOFIT Team",
+  description: "Meet Coach Ali Abdullahi, ISSA Certified Elite Trainer and SOFIT founder, and Shabazz Abdulkadir, international development and capacity building consultant.",
 };
 
 const principleIcons = [Target, ChartNoAxesCombined, HeartHandshake];
@@ -15,21 +15,59 @@ export default function AboutPage() {
   return (
     <MarketingPageShell>
       <section className={styles.aboutHero} aria-labelledby="about-title">
-        <div className={styles.aboutHeroTop}><span className={styles.eyebrow}>The person behind the plan</span><span className={styles.aboutEdition}>COACH ALI / SOFIT</span></div>
+        <div className={styles.aboutHeroTop}><span className={styles.eyebrow}>The people behind your progress</span><span className={styles.aboutEdition}>SOFIT NUTRITION &amp; FITNESS</span></div>
         <div className={styles.aboutHeadline}>
           <h1 id="about-title" className={styles.aboutTitle}>Real coaching.<br /><em>For your real life.</em></h1>
-          <div><p>Your goals deserve more than a template. Meet the coach bringing training, nutrition, and personal support into one clear plan.</p><TextLink href="#meet-coach">Get to know Coach Ali</TextLink></div>
+          <div><p>Your goals deserve more than a template. Meet the people behind SOFIT, with experience in fitness, nutrition, development, and capacity building.</p><TextLink href="#meet-coach">Meet the team</TextLink></div>
         </div>
         <div className={styles.aboutMosaic}>
           <div className={styles.aboutMainPhoto}><Image src="/brand/coach-training-03.jpg" alt="Coach Ali seated in the gym between training sessions." fill priority sizes="(max-width: 767px) 100vw, 62vw" /><span>THE COACH. THE WORK. THE EVERYDAY.</span></div>
           <div className={styles.aboutSidePhoto}><Image src="/brand/coach-training-02.jpg" alt="Coach Ali performing a cable exercise." fill sizes="(max-width: 767px) 50vw, 30vw" /></div>
-          <div className={styles.aboutMosaicNote}><span>01 coach.<br />One connected plan.</span><ArrowUpRight size={32} aria-hidden="true" /><p>Training. Nutrition.<br />Accountability.</p></div>
+          <div className={styles.aboutMosaicNote}><span>Personal support.<br />Lasting progress.</span><ArrowUpRight size={32} aria-hidden="true" /><p>Training. Nutrition.<br />Accountability.</p></div>
         </div>
       </section>
 
-      <section id="meet-coach" className={styles.aboutStory} aria-labelledby="meet-title">
-        <div><span className={styles.eyebrow}>Meet Coach Ali</span><h2 id="meet-title">A person first.<br />A program second.</h2><div className={styles.aboutByline}><span>ALI</span><div><strong>Coach Ali</strong><small>Fitness &amp; nutrition coach</small></div></div></div>
-        <div className={styles.aboutStoryCopy}><p>Fitness advice is everywhere. Finding a way to make it work in your own life is the harder part. That is where SoFit begins.</p><p>Coach Ali brings your training, nutrition, and progress into the same conversation. Your schedule, experience, food preferences, and goals shape the plan from the start.</p><p>The relationship continues after the plan is delivered. Check-ins, direct messages, and regular review help turn what you learn each week into a practical next step.</p><PrimaryLink href="/contact?subject=consultation#contact-form">Work with Coach Ali</PrimaryLink></div>
+      <section id="meet-coach" className={styles.aboutTeam} aria-labelledby="meet-title">
+        <header className={styles.teamHeading}>
+          <span className={styles.eyebrow}>Meet the team</span>
+          <h2 id="meet-title">Experience with purpose.<br /><em>People at the heart.</em></h2>
+          <p>Get to know the people, qualifications, and experience behind SOFIT.</p>
+        </header>
+
+        <article className={styles.teamProfile} aria-labelledby="ali-name">
+          <div className={styles.teamPortrait}>
+            <Image src="/brand/coach-ali-abdullahi.jpg" alt="Portrait of Coach Ali Abdullahi, founder of SOFIT Nutrition & Fitness." fill sizes="(max-width: 767px) calc(100vw - 32px), (max-width: 1200px) 38vw, 420px" />
+          </div>
+          <div className={styles.teamCopy}>
+            <span className={styles.eyebrow}>Founder &amp; fitness coach</span>
+            <h3 id="ali-name">Coach Ali Abdullahi</h3>
+            <p className={styles.teamRole}>SOFIT Nutrition &amp; Fitness</p>
+            <dl className={styles.teamCredentials}>
+              <div><dt>Coaching experience</dt><dd><strong>6+</strong> years</dd></div>
+              <div><dt>Professional certification</dt><dd>ISSA Certified Elite Trainer</dd></div>
+            </dl>
+            <p>Coach Ali Abdullahi is an ISSA Certified Elite Trainer, fitness and nutrition professional, and the founder of SOFIT Nutrition &amp; Fitness. He brings over six years of coaching experience, with professional qualifications in personal training, corrective exercise, strength and conditioning, and nutrition coaching.</p>
+            <p>His work focuses on body transformation, fat loss, strength development, and healthy lifestyle change, helping clients build habits that support sustainable results.</p>
+            <PrimaryLink href="/contact?subject=consultation#contact-form">Work with Coach Ali</PrimaryLink>
+          </div>
+        </article>
+
+        <article className={styles.teamProfile} aria-labelledby="shabazz-name">
+          <div className={styles.teamPortrait}>
+            <Image src="/brand/shabazz-abdulkadir.jpg" alt="Portrait of Shabazz Abdulkadir, international development and capacity building consultant." fill sizes="(max-width: 767px) calc(100vw - 32px), (max-width: 1200px) 38vw, 420px" />
+          </div>
+          <div className={styles.teamCopy}>
+            <span className={styles.eyebrow}>International consultant</span>
+            <h3 id="shabazz-name">Shabazz Abdulkadir</h3>
+            <p className={styles.teamRole}>Development &amp; capacity building</p>
+            <dl className={styles.teamCredentials}>
+              <div><dt>Industry experience</dt><dd><strong>10+</strong> years</dd></div>
+              <div><dt>Education</dt><dd>Master’s degree<span>University of Washington</span></dd></div>
+            </dl>
+            <p>Shabazz Abdulkadir is an international consultant specialising in development and capacity building. She holds a master’s degree from the University of Washington and brings over ten years of experience in the industry.</p>
+            <p>Her professional background combines advanced academic training with extensive experience in development and strengthening capacity.</p>
+          </div>
+        </article>
       </section>
 
       <section className={styles.aboutValues}>
