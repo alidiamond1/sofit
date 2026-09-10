@@ -53,6 +53,7 @@ const coachNavConfig: NavItemConfig[] = [
   { key: "clients", href: "/coach/clients", icon: Users, sectionKey: "workspace" },
   { key: "invites", href: "/coach/invites", icon: Mail, sectionKey: "workspace" },
   { key: "packages", href: "/coach/packages", icon: PackageIcon, sectionKey: "coaching" },
+  { key: "assignments", href: "/coach/assignments", icon: ClipboardCheck, sectionKey: "coaching" },
   { key: "consultations", href: "/coach/consultations", icon: CalendarDays, sectionKey: "coaching" },
   { key: "dietPlans", href: "/coach/diet-plans", icon: Apple, sectionKey: "coaching" },
   { key: "workoutPlans", href: "/coach/workout-plans", icon: Dumbbell, sectionKey: "coaching" },

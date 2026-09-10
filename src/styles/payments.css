@@ -133,3 +133,6 @@
   .coach-billing-table td,.coach-billing-table td:first-child,.coach-billing-table td:last-child{padding:0;border:0;display:block}.coach-billing-table td:first-child{grid-column:1/-1}.coach-billing-table td:nth-child(3),.coach-billing-table td:nth-child(5){text-align:right}.coach-billing-table td:last-child{grid-column:1/-1;border-top:1px solid var(--line);padding-top:5px}.coach-billing-table td:nth-child(5){font-size:11px}
   .coach-billing-table td:nth-child(2)>strong{max-width:none}.coach-billing-client small{max-width:none}.coach-billing-pagination{padding:16px 18px}.coach-billing-dialog{padding:24px}
 }
+.assignment-reference{max-width:160px;overflow-wrap:anywhere}
+.assignment-filters{grid-template-columns:minmax(180px,1.7fr) 1fr 1fr auto}
+@media(max-width:640px){.assignment-filters{grid-template-columns:1fr 1fr}.assignment-filters .button{grid-column:1/-1}.assignment-table td:nth-child(3){font-size:11px}.assignment-reference{max-width:140px}}

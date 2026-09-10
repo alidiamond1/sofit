@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { filterCoachInvoices, invoiceCsvCell, invoiceStatus } from "../src/lib/payments/coach-invoices.ts";
+import { assignmentState, filterCoachInvoices, invoiceCsvCell, invoiceStatus } from "../src/lib/payments/coach-invoices.ts";
 import { accessEnd, amountInCents, hasPaidAccess, isOpenClientPath, retryablePaymentFailure, verifiedTransaction } from "../src/lib/payments/rules.ts";
 
 assert.equal(amountInCents("99.01"), 9901);
@@ -38,6 +38,11 @@ const coachRows = [
   { id: 2, client: "Ali", email: "ali@example.com", number: "SOF-2", packageName: "Consultation", interval: "one_time", currency: "USD", status: "unpaid", created: "2026-09-09", due: "2026-09-10" },
   { id: 3, client: "Amina", email: "amina@example.com", number: "SOF-3", packageName: "Elite", interval: "quarterly", currency: "EUR", status: "unpaid", created: "2026-08-31", due: "2026-09-01" },
 ];
+assert.equal(assignmentState(true, false, false, true), "awaitingPayment");
+assert.equal(assignmentState(true, true, true, true), "active");
+assert.equal(assignmentState(false, true, true, true), "replaced");
+assert.equal(assignmentState(true, true, false, true), "expired");
+assert.equal(assignmentState(true, true, true, false), "paused");
 const filter = { search: "", status: "", interval: "", packageName: "", currency: "USD", from: "", to: "" };
 const match = (changes) => filterCoachInvoices(coachRows, { ...filter, ...changes }, "2026-09-10").map((row) => row.id);
 assert.deepEqual(match({}), [1, 2]);

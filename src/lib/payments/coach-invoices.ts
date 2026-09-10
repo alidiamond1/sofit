@@ -3,7 +3,15 @@ export type CoachInvoice = {
   packageName: string; interval: string; cents: number; currency: string; status: string;
   created: string; due: string; paidAt: string | null; accessUntil: string | null;
   providerReference: string | null;
+  assignment?: { current: boolean; state: string; viewedAt: string | null };
 };
+
+export function assignmentState(current: boolean, paid: boolean, access: boolean, active: boolean) {
+  if (!current) return "replaced";
+  if (!active) return "paused";
+  if (!paid) return "awaitingPayment";
+  return access ? "active" : "expired";
+}
 
 export function invoiceStatus(row: Pick<CoachInvoice, "status" | "due">, today: string) {
   return row.status === "unpaid" && row.due < today ? "overdue" : row.status;

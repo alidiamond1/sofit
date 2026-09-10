@@ -17,7 +17,8 @@
       "analytics": "Analytics",
       "notifications": "Notifications",
       "profile": "Profile",
-      "settings": "Settings"
+      "settings": "Settings",
+      "assignments": "Assignments"
     },
     "client": {
       "home": "Home",
@@ -1575,7 +1576,8 @@
       "unpaid": "Unpaid",
       "overdue": "Overdue",
       "draft": "Draft",
-      "void": "Cancelled"
+      "void": "Cancelled",
+      "replaced": "Replaced"
     },
     "openingCheckout": "Opening secure checkout?",
     "connectionError": "Connection interrupted. Please check payment status before trying again."
@@ -1637,6 +1639,34 @@
     "close": "Close invoice details",
     "invoice": "Invoice",
     "notRecorded": "Not recorded",
-    "viewClient": "View client profile"
+    "viewClient": "View client profile",
+    "replaced": "Replaced"
+  },
+  "Assignments": {
+    "eyebrow": "COACHING / DELIVERY",
+    "title": "Assignments",
+    "description": "Follow each package from assignment to payment and program access.",
+    "assignPackage": "Assign a package",
+    "current": "Current assignments",
+    "currentHint": "One current package per client",
+    "awaitingPayment": "Awaiting payment",
+    "pendingHint": "Current invoices still to be paid",
+    "active": "Program unlocked",
+    "activeHint": "Paid or free packages with active access",
+    "viewedHint": "Opened means the client viewed the package on their Payments page. Current totals include all clients.",
+    "tracker": "Package delivery tracker",
+    "trackerHint": "Assigned ? Opened ? Paid ? Program unlocked",
+    "show": "Show",
+    "allHistory": "All assignment history",
+    "assigned": "Assigned on",
+    "opened": "Opened",
+    "notOpened": "Not opened yet",
+    "paymentAccess": "Payment & access",
+    "paused": "Account paused",
+    "expired": "Access expired",
+    "replaced": "Replaced",
+    "empty": "No assignments found",
+    "emptyHint": "Assign a package or adjust the filters to see its progress here.",
+    "count": "{count} assignments"
   }
 }

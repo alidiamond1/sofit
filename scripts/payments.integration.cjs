@@ -30,7 +30,8 @@ Module._extensions[".ts"] = (module, filename) => {
 const { database } = require("../src/lib/db.ts");
 const auth = require("../src/lib/auth/session.ts");
 const { assignPricedPackage, loadBilling } = require("../src/lib/payments/billing.ts");
-const { startCheckoutAction, verifyPaymentAction } = require("../src/app/actions/payments.ts");
+const { startCheckoutAction, verifyPaymentAction, markInvoiceViewedAction } = require("../src/app/actions/payments.ts");
+const { updatePackageAction } = require("../src/app/actions/packages.ts");
 const db = database();
 const fixtureFile = path.join(require("node:os").tmpdir(), "sofit-payment-fixture.json");
 let fixture;
@@ -103,7 +104,6 @@ async function run() {
   const other = await db.transaction((trx) => assignPricedPackage(trx, Number(clients[1].id), fixture.packageIds[0]));
   assert.equal((await loadBilling(user.id)).unlocked, false);
   assert.equal((await db("diet_plans").where({ client_id: clients[0].id })).length, 0, "No plan content before payment.");
-  await db("packages").where({ id: fixture.packageIds[0] }).update({ price: "150.00" });
   let response = { sid: `sid-${suffix}`, amount: "99.00", status: "success", code: 601 };
   let calls = [];
   let gatewayTimeout = false;
@@ -180,6 +180,50 @@ async function run() {
   assert.equal((await verifyPaymentAction(invoiceId)).paid, true);
   assert.equal((await loadBilling(user.id)).unlocked, false, "Late success for an old package must not unlock its replacement.");
   assert.equal(Number((await loadBilling(user.id)).invoice.id), Number(replacement.id));
+  // A coach price edit updates unpaid clients, while any already-issued token
+  // retains its original amount and cannot unlock a replacement invoice.
+  async function editPrice(price) {
+    await db("users").where({ id: fixture.userIds[1] }).update({ role: "coach" });
+    await auth.createSession({ id: fixture.userIds[1], name: "Payment test coach", email: "fixture@example.invalid", role: "coach", approvalStatus: "approved" });
+    const form = new FormData();
+    for (const [key, value] of Object.entries({ id: fixture.packageIds[0], name: "Payment test Complete", category: "elite", price, billing_interval: "monthly", is_active: "true", diet_group_id: fixture.groupId })) form.set(key, String(value));
+    assert.ok((await updatePackageAction({}, form)).success);
+    await db("users").where({ id: fixture.userIds[1] }).update({ role: "client" });
+    await auth.createSession({ id: fixture.userIds[1], name: "Payment test 1", email: "fixture@example.invalid", role: "client", approvalStatus: "approved" });
+  }
+  await editPrice("0.10");
+  const repriced = await loadBilling(fixture.userIds[1]);
+  assert.equal(String(repriced.invoice.amount), "0.10", "Coach edit must automatically update the unpaid client.");
+  assert.equal(Number(repriced.invoice.id), Number(other.id), "No started checkout: update the existing invoice.");
+  const reassigned = await db.transaction((trx) => assignPricedPackage(trx, Number(clients[1].id), fixture.packageIds[0]));
+  assert.equal(Number(reassigned.id), Number(other.id), "Reassignment must not duplicate an unchanged invoice.");
+  await markInvoiceViewedAction(Number(repriced.invoice.id));
+  assert.ok((await db("invoices").where({ id: repriced.invoice.id }).first()).client_viewed_at);
+  await markInvoiceViewedAction(Number(replacement.id));
+  assert.equal((await db("invoices").where({ id: replacement.id }).first()).client_viewed_at, null, "A client cannot mark another client's invoice viewed.");
+  const paidHistory = await db("invoices").where({ id: assigned[0].id }).first();
+  assert.equal(String(paidHistory.amount), "99.00", "Never rewrite paid invoice amounts.");
+  let expectedPrice = "0.10";
+  global.fetch = async (url, options) => {
+    if (String(url).endsWith("verify.php")) return Response.json({ status: "success", code: 601, sid: `repriced-${expectedPrice}-${suffix}`, amount: expectedPrice });
+    assert.equal(JSON.parse(options.body).amount, expectedPrice, "Checkout must charge the new exact price.");
+    return Response.json({ key: "repriced", token: "fixture" });
+  };
+  assert.ok((await startCheckoutAction(Number(repriced.invoice.id))).url);
+  const oldPriceAttempt = await db("payment_attempts").where({ invoice_id: repriced.invoice.id }).first();
+  await editPrice("0.20");
+  const withNewToken = await loadBilling(fixture.userIds[1]);
+  assert.notEqual(Number(withNewToken.invoice.id), Number(repriced.invoice.id));
+  assert.equal(String(withNewToken.invoice.amount), "0.20");
+  assert.equal((await startCheckoutAction(Number(repriced.invoice.id))).refresh, true, "An old browser tab must refresh before paying the changed price.");
+  assert.equal(String((await db("invoices").where({ id: repriced.invoice.id }).first()).amount), "0.10");
+  assert.equal((await verifyPaymentAction(Number(repriced.invoice.id), oldPriceAttempt.id)).paid, true);
+  assert.equal((await loadBilling(fixture.userIds[1])).unlocked, false, "Payment of the old price cannot unlock the new invoice.");
+  expectedPrice = "0.20";
+  assert.ok((await startCheckoutAction(Number(withNewToken.invoice.id))).url);
+  assert.equal((await verifyPaymentAction(Number(withNewToken.invoice.id))).paid, true);
+  assert.equal((await loadBilling(fixture.userIds[1])).unlocked, true);
+  console.log("Price sync passed: coach edits, reassignment, exact small amounts, immutable old tokens/paid history, viewed ownership and verified program unlock.");
   console.log("Payment integration passed: fresh approval, concurrent assignment/checkout, IDOR, price tampering, underpayment, replay, single activation, expiry, renewal, timeout recovery and replacement isolation.");
   if (process.argv.includes("--keep-ui")) {
     fs.mkdirSync(path.dirname(fixtureFile), { recursive: true });

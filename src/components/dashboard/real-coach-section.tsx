@@ -39,6 +39,7 @@ export const realCoachSections = [
   "invites",
   "consultations",
   "packages",
+  "assignments",
   "transformations",
   "diet-plans",
   "workout-plans",
@@ -643,6 +644,7 @@ export async function RealCoachSection({
   if (section === "consultations") return <CoachConsultations />;
   if (section === "packages") return <CoachPackagesPage />;
   if (section === "payments") return <CoachPaymentsPage />;
+  if (section === "assignments") return <CoachPaymentsPage assignments />;
   if (section === "transformations") return <CoachTransformations selectedTransformationId={selectedTransformationId} />;
   if (section === "personal-training") return <CoachPersonalTraining />;
   if (section === "check-ins") return <CoachCheckIns />;

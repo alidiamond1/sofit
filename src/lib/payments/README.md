@@ -12,7 +12,7 @@ The return URL is `/client/payments?order_id=<our UUID>`. Sifalo appends `sid`; 
 
 Checkout creation is serialized per client. Returning to checkout verifies the previous order first, then requests a fresh key/token with a new unique order ID if the provider confirms failure or no submitted transaction. The live Verify API returns `status: failed`, numeric `code: 600`, `sid: null`, and `response: order_id not found` for an unsubmitted checkout; this permits retry only for a successfully created (`ready`) attempt. Pending payments, unknown responses, and creation timeouts remain blocked for reconciliation. Old order IDs are retained so late returns remain verifiable. Do not manually mark an invoice paid from a return URL or screenshot.
 
-Invoice settlement and plan creation share one transaction. Old package payments remain in history but cannot unlock a replacement package. Paid monthly/quarterly access lasts one/three calendar months from verification; the next invoice is created on the first client request after expiry at the agreed snapshot price. There is no automatic debit. One-time packages do not expire; server-priced zero-cost packages activate without checkout. Paused clients remain locked.
+Invoice settlement and plan creation share one transaction. Old package payments remain in history but cannot unlock a replacement package. Paid monthly/quarterly access lasts one/three calendar months from verification; the next invoice is created on the first client request after expiry at the current package price. There is no automatic debit. One-time packages do not expire; server-priced zero-cost packages activate without checkout. Paused clients remain locked.
 
 Existing package labels acquire unpaid invoices on first client access. Legacy service/demo invoices do not prove purchase of a specific package. Review existing customers before production rollout. Billed packages must be archived instead of deleted.
 
@@ -28,3 +28,7 @@ npm run lint
 ```
 
 The integration check creates and removes isolated fixture rows in the configured database. It covers stale approval, concurrent assignment/checkout, invoice ownership, immutable pricing, underpayment, duplicate callbacks, transaction replay, expiry/renewal, uncertain requests and replacement isolation. `--ui` retains isolated unpaid UI fixtures; `--cleanup` removes them. Neither command contacts Sifalo.
+
+Coach price or billing-interval edits synchronize current unpaid invoices. A checkout that has already been issued keeps its original invoice amount; a new current invoice is created for the new price. Old invoices remain verifiable and appear as Replaced, excluded from outstanding balances. Paid periods and payment history retain their original amounts. Client reads also reconcile stale prices, and a stale Pay request refreshes the displayed amount before continuing.
+
+The Assignments menu tracks package invoice history, current access, and the first time the client views the invoice on the Payments page. The viewed timestamp is recorded by an authenticated, ownership-checked action after the page is visible; it is not an email delivery/read receipt.

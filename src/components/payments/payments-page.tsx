@@ -18,7 +18,7 @@ export async function PaymentsPage({ orderId }: { orderId?: string }) {
     const snapshot = row.package_snapshot ? snapshotOf(row.package_snapshot) : null;
     return { id: Number(row.id), number: String(row.number), name: snapshot?.name || String(row.service_name || "Coaching"),
       description: snapshot?.description || "", category: snapshot?.category || "", interval: snapshot?.interval || "one_time",
-      amount: String(row.amount), currency: String(row.currency || "USD"), status: String(row.status),
+      amount: String(row.amount), currency: String(row.currency || "USD"), status: snapshot && Number(row.id) !== Number(billing.invoice?.id) && ["unpaid", "overdue"].includes(row.status) ? "replaced" : String(row.status),
       due: todayISO(undefined, new Date(row.due_on)), paidAt: row.paid_at ? new Date(row.paid_at).toISOString() : null,
       accessUntil: row.access_until ? new Date(row.access_until).toISOString() : null,
       diet: Boolean(snapshot?.dietDays.some((day) => day.meals?.length)), workout: Boolean(snapshot?.workoutDays.some((day) => day.exercises?.length)), packageInvoice: Boolean(snapshot) };

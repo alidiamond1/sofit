@@ -17,7 +17,8 @@
       "analytics": "Falanqaynta",
       "notifications": "Ogeysiisyada",
       "profile": "Profaylka",
-      "settings": "dejimaha"
+      "settings": "dejimaha",
+      "assignments": "Qoondeynta"
     },
     "client": {
       "home": "Guriga",
@@ -1575,7 +1576,8 @@
       "unpaid": "Lama bixin",
       "overdue": "Waqtigii dhaafay",
       "draft": "Qabyo",
-      "void": "La joojiyey"
+      "void": "La joojiyey",
+      "replaced": "La beddelay"
     },
     "openingCheckout": "Waxaa la furayaa checkout-ka?",
     "connectionError": "Xiriirkii ayaa go?ay. Hubi xaaladda lacag-bixinta ka hor intaadan isku dayin mar kale."
@@ -1637,6 +1639,34 @@
     "close": "Xir faahfaahinta invoice-ka",
     "invoice": "Invoice",
     "notRecorded": "Lama diiwaangelin",
-    "viewClient": "Eeg profile-ka client-ka"
+    "viewClient": "Eeg profile-ka client-ka",
+    "replaced": "La beddelay"
+  },
+  "Assignments": {
+    "eyebrow": "TABABARKA / QOONDEYNTA",
+    "title": "Qoondeynta packages-ka",
+    "description": "La soco package kasta laga bilaabo qoondeyntiisa ilaa lacag-bixinta iyo furitaanka program-ka.",
+    "assignPackage": "Qoondee package",
+    "current": "Qoondeynta hadda",
+    "currentHint": "Client kasta package-kiisa hadda",
+    "awaitingPayment": "Lacag-bixin sugaya",
+    "pendingHint": "Invoices-ka hadda ee aan la bixin",
+    "active": "Program-ka waa furan yahay",
+    "activeHint": "Packages la bixiyay ama bilaash ah oo furan",
+    "viewedHint": "La furay waxay ka dhigan tahay in client-ku package-ka ka arkay Payments. Wadartu waxay koobaysaa dhammaan clients-ka.",
+    "tracker": "La socodka packages-ka",
+    "trackerHint": "La qoondeeyay ? La furay ? La bixiyay ? Program-ka oo furmay",
+    "show": "Muuji",
+    "allHistory": "Dhammaan taariikhda qoondeynta",
+    "assigned": "La qoondeeyay",
+    "opened": "La furay",
+    "notOpened": "Weli lama furin",
+    "paymentAccess": "Lacag-bixinta iyo gelitaanka",
+    "paused": "Account-ka waa la hakiyay",
+    "expired": "Gelitaankii wuu dhacay",
+    "replaced": "La beddelay",
+    "empty": "Qoondeyn lama helin",
+    "emptyHint": "Client u qoondee package ama beddel filters-ka.",
+    "count": "{count} qoondeyn"
   }
 }

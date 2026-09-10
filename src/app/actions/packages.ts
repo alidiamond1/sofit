@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
-import { assignPricedPackage, BillingError } from "@/lib/payments/billing";
+import { assignPricedPackage, BillingError, syncUnpaidPackageInvoice } from "@/lib/payments/billing";
 import { PACKAGE_BILLING_INTERVALS, PACKAGE_CATEGORIES } from "@/lib/package-tiers";
 
 export type PackageActionState = { error?: string; success?: string };
@@ -42,7 +42,9 @@ function packageInput(formData: FormData) {
 function refreshPackageViews() {
   revalidatePath("/coach/packages");
   revalidatePath("/coach/clients");
-  revalidatePath("/client");
+  revalidatePath("/client", "layout");
+  revalidatePath("/coach/assignments");
+  revalidatePath("/coach/payments");
 }
 
 async function assertGroupsExist(dietGroupId: number | undefined, workoutGroupId: number | undefined) {
@@ -101,16 +103,24 @@ export async function updatePackageAction(
   const record = await db("packages").select("id").where({ id: id.data }).first();
   if (!record) return { error: "The package no longer exists." };
 
-  await db("packages").where({ id: id.data }).update({
-    name: parsed.data.name,
-    category: parsed.data.category,
-    description: parsed.data.description || null,
-    price: parsed.data.price,
-    billing_interval: parsed.data.billingInterval,
-    is_active: parsed.data.isActive === "true",
-    diet_group_id: parsed.data.dietGroupId ?? null,
-    workout_group_id: parsed.data.workoutGroupId ?? null,
-    updated_at: db.fn.now(),
+  await db.transaction(async (trx) => {
+    const clients = await trx("clients").where({ package_id: id.data }).orderBy("id").forUpdate();
+    await trx("packages").where({ id: id.data }).update({
+      name: parsed.data.name,
+      category: parsed.data.category,
+      description: parsed.data.description || null,
+      price: parsed.data.price,
+      billing_interval: parsed.data.billingInterval,
+      is_active: parsed.data.isActive === "true",
+      diet_group_id: parsed.data.dietGroupId ?? null,
+      workout_group_id: parsed.data.workoutGroupId ?? null,
+      updated_at: db.fn.now(),
+    });
+    const pkg = await trx("packages").where({ id: id.data }).first();
+    for (const client of clients) {
+      const invoice = client.current_invoice_id && await trx("invoices").where({ id: client.current_invoice_id, package_id: id.data }).forUpdate().first();
+      if (invoice?.package_snapshot) await syncUnpaidPackageInvoice(trx, invoice, pkg);
+    }
   });
   refreshPackageViews();
   return { success: `${parsed.data.name} was updated.` };

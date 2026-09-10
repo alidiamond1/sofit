@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
-import { activateInvoice, BillingError, snapshotOf } from "@/lib/payments/billing";
+import { activateInvoice, BillingError, snapshotOf, syncUnpaidPackageInvoice } from "@/lib/payments/billing";
 import { accessEnd, retryablePaymentFailure, verifiedTransaction } from "@/lib/payments/rules";
 import { checkoutUrl, paymentReturnUrl, sifaloConfigured, sifaloRequest } from "@/lib/payments/sifalo";
 
-export type PaymentResult = { error?: string; message?: string; url?: string; paid?: boolean; retryable?: boolean };
+export type PaymentResult = { error?: string; message?: string; url?: string; paid?: boolean; retryable?: boolean; refresh?: boolean };
 const invoiceIdSchema = z.number().int().positive();
 const orderIdSchema = z.uuid();
 function paymentError(error: unknown): PaymentResult {
@@ -28,9 +28,19 @@ export async function startCheckoutAction(invoiceId: number): Promise<PaymentRes
   try {
     const reserve = () => database().transaction(async (trx) => {
       const client = await trx("clients").where({ user_id: session.id, status: "active" }).forUpdate().first();
-      if (!client || Number(client.current_invoice_id) !== invoiceId) throw new BillingError("This is not your current package invoice.");
+      if (!client) throw new BillingError("This is not your current package invoice.");
+      if (Number(client.current_invoice_id) !== invoiceId) {
+        const previous = await trx("invoices").select("id").where({ id: invoiceId, client_id: client.id }).first();
+        if (previous) return { previousOrder: null, orderId: null, amount: "", priceChanged: true };
+        throw new BillingError("This is not your current package invoice.");
+      }
       const invoice = await trx("invoices").where({ id: invoiceId, client_id: client.id }).forUpdate().first();
       if (!invoice?.package_snapshot || !["unpaid", "overdue"].includes(invoice.status)) throw new BillingError("This invoice is not awaiting payment.");
+      const pkg = await trx("packages").where({ id: invoice.package_id }).first();
+      if (pkg && (String(invoice.amount) !== String(pkg.price) || snapshotOf(invoice.package_snapshot).interval !== pkg.billing_interval)) {
+        await syncUnpaidPackageInvoice(trx, invoice, pkg);
+        return { previousOrder: null, orderId: null, amount: "", priceChanged: true };
+      }
       const last = await trx("payment_attempts").where({ invoice_id: invoiceId }).whereNot({ status: "failed" }).orderBy("created_at", "desc").first();
       if (last) {
         if (Date.now() - new Date(last.created_at).getTime() < 3_000) throw new BillingError("Checkout was just opened. Please wait a few seconds before trying again.");
@@ -49,12 +59,14 @@ export async function startCheckoutAction(invoiceId: number): Promise<PaymentRes
       return { orderId, amount: String(invoice.amount), previousOrder: null };
     });
     let reserved = await reserve();
+    if (reserved.priceChanged) return { message: "Your coach updated this package. Review the new price, then continue to checkout.", refresh: true };
     if (reserved.previousOrder) {
       // Never redirect to a used/expired token. Reconcile the old unique order
       // before issuing a fresh token; pending or uncertain payments stay blocked.
       const checked = await verifyReservedPayment(session.id, invoiceId, reserved.amount, { id: reserved.previousOrder, status: "ready" });
       if (checked.paid || !checked.retryable) return checked;
       reserved = await reserve();
+      if (reserved.priceChanged) return { message: "Your coach updated this package. Review the new price, then continue to checkout.", refresh: true };
       if (reserved.previousOrder) throw new BillingError("A checkout is already being prepared. Please try again shortly.");
     }
     createdOrder = reserved.orderId!;
@@ -68,6 +80,14 @@ export async function startCheckoutAction(invoiceId: number): Promise<PaymentRes
     if (createdOrder) await database()("payment_attempts").where({ id: createdOrder, status: "creating" }).update({ status: "unknown", updated_at: new Date() });
     return paymentError(error);
   }
+}
+
+export async function markInvoiceViewedAction(invoiceId: number) {
+  const session = await requireRole("client");
+  if (!invoiceIdSchema.safeParse(invoiceId).success) return;
+  await database()("invoices").where({ id: invoiceId }).whereNull("client_viewed_at")
+    .whereIn("client_id", database()("clients").select("id").where({ user_id: session.id, current_invoice_id: invoiceId }))
+    .update({ client_viewed_at: new Date() });
 }
 
 export async function verifyPaymentAction(invoiceId: number, orderId?: string): Promise<PaymentResult> {

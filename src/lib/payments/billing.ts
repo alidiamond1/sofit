@@ -45,7 +45,24 @@ async function createInvoice(trx: Knex.Transaction, clientId: number, packageId:
   return trx("invoices").where({ id }).first();
 }
 
-/** Caller holds the client row lock. Snapshots preserve the price and content agreed at assignment. */
+/** Caller holds the client row lock. Issued checkout amounts and paid history stay immutable. */
+export async function syncUnpaidPackageInvoice(trx: Knex.Transaction, invoice: Record<string, unknown>, pkg: Record<string, unknown>) {
+  if (!["unpaid", "overdue"].includes(String(invoice.status))) return invoice;
+  const previous = snapshotOf(invoice.package_snapshot);
+  if (amountInCents(invoice.amount) === amountInCents(pkg.price) && previous.interval === pkg.billing_interval) return invoice;
+  const snapshot = { ...previous, interval: String(pkg.billing_interval) };
+  const attempt = await trx("payment_attempts").select("id").where({ invoice_id: invoice.id }).first();
+  if (attempt) {
+    // A provider token may still contain the old amount. Keep that invoice for
+    // reconciliation and issue a distinct invoice/order for the new price.
+    return createInvoice(trx, Number(invoice.client_id), Number(pkg.id), String(pkg.price), snapshot);
+  }
+  const change = { amount: String(pkg.price), package_snapshot: JSON.stringify(snapshot), client_viewed_at: null, updated_at: new Date() };
+  await trx("invoices").where({ id: invoice.id }).update(change);
+  return { ...invoice, ...change };
+}
+
+/** Caller holds the client row lock. */
 export async function assignPricedPackage(trx: Knex.Transaction, clientId: number, packageId: number) {
   const client = await trx("clients").where({ id: clientId }).forUpdate().first();
   const user = client && await trx("users").where({ id: client.user_id, role: "client", is_active: true, approval_status: "approved" }).first();
@@ -53,7 +70,10 @@ export async function assignPricedPackage(trx: Knex.Transaction, clientId: numbe
   const pkg = await trx("packages").where({ id: packageId, is_active: true }).first();
   if (!pkg) throw new BillingError("That package is not available.");
   const current = client.current_invoice_id && await trx("invoices").where({ id: client.current_invoice_id }).first();
-  if (Number(client.package_id) === packageId && current && (hasPaidAccess(current) || ["unpaid", "overdue"].includes(current.status))) return current;
+  if (Number(client.package_id) === packageId && current) {
+    if (hasPaidAccess(current)) return current;
+    if (["unpaid", "overdue"].includes(current.status)) return syncUnpaidPackageInvoice(trx, current, pkg);
+  }
   const snapshot = await packageSnapshot(trx, pkg);
   if (!snapshot.dietDays.some((day) => day.meals?.length) && !snapshot.workoutDays.some((day) => day.exercises?.length)) {
     throw new BillingError("Add content to this package's diet or workout group before assigning it.");
@@ -113,8 +133,11 @@ export async function loadBilling(userId: number) {
       if (pkg) invoice = await createInvoice(trx, client.id, pkg.id, String(pkg.price), await packageSnapshot(trx, pkg));
     }
     const now = new Date();
+    const currentPackage = invoice?.package_id ? await trx("packages").where({ id: invoice.package_id }).first() : null;
+    if (invoice?.package_snapshot && currentPackage) invoice = await syncUnpaidPackageInvoice(trx, invoice, currentPackage);
     if (invoice?.status === "paid" && invoice.access_until && new Date(invoice.access_until) <= now && client.status === "active") {
-      invoice = await createInvoice(trx, client.id, invoice.package_id, String(invoice.amount), snapshotOf(invoice.package_snapshot));
+      const snapshot = snapshotOf(invoice.package_snapshot);
+      invoice = await createInvoice(trx, client.id, invoice.package_id, String(currentPackage?.price ?? invoice.amount), { ...snapshot, interval: currentPackage?.billing_interval || snapshot.interval });
     }
     if (invoice?.status === "unpaid" && amountInCents(invoice.amount) === 0 && client.status === "active") {
       await activateInvoice(trx, invoice, now);

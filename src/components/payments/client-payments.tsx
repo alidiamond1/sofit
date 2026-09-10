@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { startCheckoutAction, verifyPaymentAction, type PaymentResult } from "@/app/actions/payments";
+import { startCheckoutAction, verifyPaymentAction, markInvoiceViewedAction, type PaymentResult } from "@/app/actions/payments";
 import { Badge } from "@/components/dashboard/primitives";
 
 export type BillingInvoice = {
@@ -33,6 +33,15 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
   const returnId = returnedOrder?.orderId;
   const returnInvoiceId = returnedOrder?.invoiceId;
   useEffect(() => {
+    if (!currentId) return;
+    const markViewed = () => {
+      if (document.visibilityState === "visible") void markInvoiceViewedAction(currentId).catch(() => {});
+    };
+    markViewed();
+    document.addEventListener("visibilitychange", markViewed);
+    return () => document.removeEventListener("visibilitychange", markViewed);
+  }, [currentId, current?.amount]);
+  useEffect(() => {
     if (!returnId || !returnInvoiceId || checkedOrder.current === returnId) return;
     checkedOrder.current = returnId;
     startTransition(async () => {
@@ -57,7 +66,7 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
       try {
         const response = await startCheckoutAction(current.id);
         if (response.url) window.location.assign(response.url);
-        else { setResult(response); if (response.paid) router.refresh(); }
+        else { setResult(response); if (response.paid || response.refresh) router.refresh(); }
       } catch {
         setResult({ error: t("connectionError") });
       } finally {
@@ -98,6 +107,6 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
         <div className="billing-renewal"><ShieldCheck size={22} /><div><strong>{t("renewalTitle")}</strong><p>{t("renewalBody")}</p></div></div>
       </aside>
     </div>
-    {history.length > 0 && <section className="billing-history"><header><h2>{t("history")}</h2><span>{t("records", { count: history.length })}</span></header><div className="billing-history-grid">{history.map((invoice) => <article key={invoice.id} className="billing-history-card"><div><span className="billing-icon">{invoice.status === "paid" ? <CheckCircle2 size={20} /> : <CreditCard size={20} />}</span><Badge tone={invoice.status === "paid" ? "success" : "neutral"}>{t(`status.${invoice.status}`)}</Badge></div><h3>{invoice.name}</h3><strong>{money(invoice)}</strong><p>{invoice.number}</p><small>{date(invoice.paidAt || invoice.due)}</small>{invoice.packageInvoice && ["unpaid", "overdue"].includes(invoice.status) && <button className="text-button" disabled={pending || !configured} onClick={() => checkPayment(invoice.id)}>{t("checkStatus")}</button>}</article>)}</div></section>}
+    {history.length > 0 && <section className="billing-history"><header><h2>{t("history")}</h2><span>{t("records", { count: history.length })}</span></header><div className="billing-history-grid">{history.map((invoice) => <article key={invoice.id} className="billing-history-card"><div><span className="billing-icon">{invoice.status === "paid" ? <CheckCircle2 size={20} /> : <CreditCard size={20} />}</span><Badge tone={invoice.status === "paid" ? "success" : "neutral"}>{t(`status.${invoice.status}`)}</Badge></div><h3>{invoice.name}</h3><strong>{money(invoice)}</strong><p>{invoice.number}</p><small>{date(invoice.paidAt || invoice.due)}</small>{invoice.packageInvoice && ["unpaid", "overdue", "replaced"].includes(invoice.status) && <button className="text-button" disabled={pending || !configured} onClick={() => checkPayment(invoice.id)}>{t("checkStatus")}</button>}</article>)}</div></section>}
   </div>;
 }
