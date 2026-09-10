@@ -1,6 +1,7 @@
 import { createHmac, randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
+import { loadBilling } from "@/lib/payments/billing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,10 @@ export async function GET() {
   const session = await readSession();
   if (!session || !["coach", "client"].includes(session.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.role === "client") {
+    if (session.approvalStatus !== "approved") return NextResponse.json({ error: "Account approval required." }, { status: 403 });
+    if (!(await loadBilling(session.id)).unlocked) return NextResponse.json({ error: "Complete your package payment first." }, { status: 402 });
   }
 
   const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;

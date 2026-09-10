@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
+import { requirePaidClient } from "@/lib/payments/billing";
 import { database, type UserRole } from "@/lib/db";
 
 export type MessageActionState = {
@@ -54,6 +55,7 @@ export async function sendMessageAction(
   formData: FormData,
 ): Promise<MessageActionState> {
   const session = await requireRole(role);
+  if (role === "client") await requirePaidClient(session.id);
   const parsed = sendSchema.safeParse({
     recipient_id: formData.get("recipient_id"),
     body: formData.get("body"),
@@ -80,6 +82,7 @@ export async function sendMessageAction(
 
 export async function markConversationReadAction(role: UserRole, counterpartId: number) {
   const session = await requireRole(role);
+  if (role === "client") await requirePaidClient(session.id);
   if (!(await canMessage(role, session.id, counterpartId))) return;
 
   await database()("messages")
@@ -93,6 +96,7 @@ export async function markConversationReadAction(role: UserRole, counterpartId: 
 
 export async function markMessageReadAction(role: UserRole, messageId: number) {
   const session = await requireRole(role);
+  if (role === "client") await requirePaidClient(session.id);
   await database()("messages")
     .where({ id: messageId, recipient_id: session.id })
     .whereNull("read_at")

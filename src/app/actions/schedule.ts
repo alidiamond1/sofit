@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
+import { requirePaidClient } from "@/lib/payments/billing";
 import { database } from "@/lib/db";
 import { WEEKDAYS, exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
 
@@ -90,6 +91,7 @@ export async function toggleExerciseDoneAction(
   formData: FormData,
 ): Promise<ScheduleActionState> {
   const session = await requireRole("client");
+  const billing = await requirePaidClient(session.id);
   const parsed = toggleSchema.safeParse({
     exerciseKey: formData.get("exercise_key"),
     done: String(formData.get("done")).toLowerCase() === "true",
@@ -121,7 +123,7 @@ export async function toggleExerciseDoneAction(
     workoutDay = label;
   }
 
-  const plan = await db("workout_plans").select("exercises").where({ id: workoutPlanId, client_id: client.id }).first();
+  const plan = await db("workout_plans").select("exercises").where({ id: workoutPlanId, client_id: client.id, invoice_id: billing.invoice.id }).first();
   if (!plan) return { error: "Today's scheduled workout is unavailable." };
 
   const todays = exercisesForDay(plan.exercises, workoutDay);

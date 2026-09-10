@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
+import { requirePaidClient } from "@/lib/payments/billing";
 import { currentWeekStart } from "@/lib/check-in-week";
 import { database } from "@/lib/db";
 
@@ -31,6 +32,7 @@ const checkInSchema = z.object({
 
 export async function submitClientCheckInAction(formData: FormData) {
   const session = await requireRole("client");
+  await requirePaidClient(session.id);
   const parsed = checkInSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return;
 

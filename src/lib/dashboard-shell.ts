@@ -31,7 +31,7 @@ export async function loadActiveClients(limit = 5): Promise<{ clients: ActiveCli
   };
 }
 
-export async function loadDashboardShell(userId: number) {
+export async function loadDashboardShell(userId: number, hideMessages = false) {
   const [user, saved, notificationRows, unreadNotificationRow, messageRows, unreadMessageRow] = await Promise.all([
     database()("users").select("name", "email", "avatar_path", "role").where({ id: userId }).first(),
     database()("user_settings").select("theme").where({ user_id: userId }).first(),
@@ -42,13 +42,13 @@ export async function loadDashboardShell(userId: number) {
       .orderBy("notifications.created_at", "desc")
       .limit(6),
     database()("notifications").where({ user_id: userId }).whereNull("read_at").count({ total: "*" }).first(),
-    database()("messages")
+    hideMessages ? Promise.resolve([]) : database()("messages")
       .select("messages.id", "messages.body", "messages.read_at", "messages.created_at", "sender.id as sender_id", "sender.name as sender_name")
       .join("users as sender", "sender.id", "messages.sender_id")
       .where({ "messages.recipient_id": userId })
       .orderBy("messages.created_at", "desc")
       .limit(6),
-    database()("messages").where({ recipient_id: userId }).whereNull("read_at").count({ total: "*" }).first(),
+    hideMessages ? Promise.resolve({ total: 0 }) : database()("messages").where({ recipient_id: userId }).whereNull("read_at").count({ total: "*" }).first(),
   ]);
   // A session cookie outlives its user row for up to a week (deleted account,
   // restored database). Reading `.role` off undefined would crash the layout

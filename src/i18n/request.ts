@@ -16,10 +16,15 @@ import { LOCALE_COOKIE, defaultLocale, isSupportedLocale, type AppLocale } from 
 export default getRequestConfig(async () => {
   let locale: AppLocale | undefined;
 
-  const session = await readSession();
-  if (session) {
-    const row = await database()("user_settings").select("language").where({ user_id: session.id }).first();
-    if (isSupportedLocale(row?.language)) locale = row.language;
+  try {
+    const session = await readSession();
+    if (session) {
+      const row = await database()("user_settings").select("language").where({ user_id: session.id }).first();
+      if (isSupportedLocale(row?.language)) locale = row.language;
+    }
+  } catch {
+    // Locale is a preference, not authorization. Keep the translation provider
+    // available when MySQL is unreachable; page/action access still fails closed.
   }
 
   if (!locale) {

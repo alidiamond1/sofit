@@ -20,6 +20,7 @@ import { BookConsultationButton, CoachConsultationsWorkspace, type ConsultationR
 import { BookSessionButton, CoachPersonalTrainingWorkspace, type SessionRow, type SessionClientOption, type SessionServiceOption } from "@/components/dashboard/coach-personal-training";
 import { CoachCheckInsWorkspace, type CheckInRow } from "@/components/dashboard/coach-check-ins";
 import { CoachDietPlansPage, CoachWorkoutPlansPage } from "@/components/plans/coach-plan-pages";
+import { CoachPaymentsPage } from "@/components/payments/coach-payments-page";
 import { CoachPackagesPage } from "@/components/packages/coach-packages";
 import { CoachTransformations } from "@/components/transformations/coach-transformations";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
@@ -430,7 +431,6 @@ async function CoachCheckIns() {
 }
 
 async function CoachListSection({ section }: { section: string }) {
-  const tPayments = await getTranslations("Payments");
   const tPackages = await getTranslations("Packages");
   const tMessages = await getTranslations("MessagesPanel");
   const ts = await getTranslations("Common.status");
@@ -449,11 +449,6 @@ async function CoachListSection({ section }: { section: string }) {
     rows = await db(table).select(`${table}.*`, "users.name as client").join("clients", "clients.id", `${table}.client_id`).join("users", "users.id", "clients.user_id").orderBy(`${table}.updated_at`, "desc");
     columns = [{ key: "title", label: diet ? tPackages("dietPlans.colPlan") : tPackages("workoutPlans.colProgram") }, { key: "client", label: tPackages("dietPlans.colClient") }, { key: "version", label: tPackages("dietPlans.colVersion") }, { key: diet ? "daily_calories" : "weeks", label: diet ? tPackages("dietPlans.colCalories") : tPackages("workoutPlans.colWeeks") }, { key: "status", label: tPackages("dietPlans.colStatus"), format: (v) => <Badge tone={tone(String(v))}>{statusLabel(ts, String(v))}</Badge> }, { key: "starts_on", label: tPackages("dietPlans.colStarts"), format: (v) => v ? dateOnly.format(new Date(String(v))) : "-" }];
     emptyText = diet ? tPackages("dietPlans.noPlansHint") : tPackages("workoutPlans.noPlansHint");
-  } else if (section === "payments") {
-    title = tPayments("title"); description = tPayments("description");
-    rows = await db("invoices").select("invoices.*", "users.name as client", "services.name as service").join("clients", "clients.id", "invoices.client_id").join("users", "users.id", "clients.user_id").leftJoin("services", "services.id", "invoices.service_id").orderBy("due_on", "desc");
-    columns = [{ key: "number", label: tPayments("colInvoice") }, { key: "client", label: tPayments("colClient") }, { key: "service", label: tPayments("colService"), format: (v) => String(v || "-") }, { key: "amount", label: tPayments("colAmount"), format: (v) => money.format(numeric(v)) }, { key: "due_on", label: tPayments("colDue"), format: (v) => dateOnly.format(new Date(String(v))) }, { key: "status", label: tPayments("colStatus"), format: (v) => <Badge tone={tone(String(v))}>{statusLabel(ts, String(v))}</Badge> }];
-    emptyText = tPayments("noRecordsYet");
   } else if (section === "messages") {
     title = tMessages("title"); description = tMessages("description");
     rows = await db("messages").select("messages.*", "sender.name as sender", "recipient.name as recipient").join("users as sender", "sender.id", "messages.sender_id").join("users as recipient", "recipient.id", "messages.recipient_id").orderBy("messages.created_at", "desc").limit(100);
@@ -647,6 +642,7 @@ export async function RealCoachSection({
   if (section === "clients") return <CoachClients selectedClientId={selectedClientId} />;
   if (section === "consultations") return <CoachConsultations />;
   if (section === "packages") return <CoachPackagesPage />;
+  if (section === "payments") return <CoachPaymentsPage />;
   if (section === "transformations") return <CoachTransformations selectedTransformationId={selectedTransformationId} />;
   if (section === "personal-training") return <CoachPersonalTraining />;
   if (section === "check-ins") return <CoachCheckIns />;

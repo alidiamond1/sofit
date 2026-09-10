@@ -3,7 +3,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { jwtVerify, SignJWT } from "jose";
-import type { UserRole } from "@/lib/db";
+import { cache } from "react";
+import { database, type UserRole } from "@/lib/db";
 
 const COOKIE_NAME = "sofit_session";
 const SESSION_LENGTH = 60 * 60 * 24 * 7;
@@ -41,22 +42,25 @@ export async function createSession(user: SessionUser) {
   });
 }
 
-export async function readSession(): Promise<SessionUser | null> {
+export const readSession = cache(async function readSession(): Promise<SessionUser | null> {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   if (!token) return null;
+  let userId: number;
   try {
     const { payload } = await jwtVerify(token, sessionKey(), { algorithms: ["HS256"] });
-    return {
-      id: Number(payload.id),
-      name: String(payload.name),
-      email: String(payload.email),
-      role: payload.role as UserRole,
-      approvalStatus: String(payload.approvalStatus || "approved") as SessionUser["approvalStatus"],
-    };
+    userId = Number(payload.id);
+    if (!Number.isSafeInteger(userId) || userId <= 0) return null;
   } catch {
     return null;
   }
-}
+  // Approval, deactivation, and role changes take effect immediately, even for
+  // a session cookie issued before the coach reviewed the application.
+  const user = await database()("users").select("id", "name", "email", "role", "approval_status")
+    .where({ id: userId, is_active: true }).first();
+  if (!user || !["coach", "client"].includes(user.role)) return null;
+  return { id: Number(user.id), name: String(user.name), email: String(user.email), role: user.role,
+    approvalStatus: user.approval_status as SessionUser["approvalStatus"] };
+});
 
 export async function requireRole(role: UserRole) {
   const session = await readSession();

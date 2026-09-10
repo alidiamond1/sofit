@@ -15,6 +15,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth/session";
+import { getBilling, snapshotOf } from "@/lib/payments/billing";
+import { isOpenClientPath } from "@/lib/payments/rules";
+import { LockedClientHome, LockedProgram, PaymentsPage } from "@/components/payments/payments-page";
 import { currentWeekStart } from "@/lib/check-in-week";
 import { database } from "@/lib/db";
 import { hasAnyProgressPhoto, parseProgressPhotos } from "@/lib/progress-photos";
@@ -135,8 +138,8 @@ async function ClientHome() {
   const ts = await getTranslations("Common.status");
   const now = new Date();
   const [dietPlan, workoutPlan, nextSession, recentCheckIns, openInvoice, packageServices] = await Promise.all([
-    database()("diet_plans").where({ client_id: client.id, status: "active" }).orderBy("updated_at", "desc").first(),
-    database()("workout_plans").where({ client_id: client.id, status: "active" }).orderBy("updated_at", "desc").first(),
+    database()("diet_plans").where({ client_id: client.id, status: "active", invoice_id: client.current_invoice_id }).orderBy("updated_at", "desc").first(),
+    database()("workout_plans").where({ client_id: client.id, status: "active", invoice_id: client.current_invoice_id }).orderBy("updated_at", "desc").first(),
     database()("sessions").where({ client_id: client.id, attendance: "scheduled" }).where("starts_at", ">=", now).orderBy("starts_at").first(),
     database()("check_ins").where({ client_id: client.id }).orderBy("week_of", "desc").limit(8),
     database()("invoices").where({ client_id: client.id }).whereIn("status", ["unpaid", "overdue"]).orderBy("due_on").first(),
@@ -175,14 +178,14 @@ async function ClientHome() {
     if (scheduleSlot) {
       isRestToday = Boolean(scheduleSlot.is_rest);
       if (!scheduleSlot.is_rest && scheduleSlot.workout_plan_id) {
-        plan = await database()("workout_plans").select("title", "exercises").where({ id: scheduleSlot.workout_plan_id, client_id: client.id }).first();
+        plan = await database()("workout_plans").select("title", "exercises").where({ id: scheduleSlot.workout_plan_id, client_id: client.id, invoice_id: client.current_invoice_id }).first();
         dayLabel = scheduleSlot.workout_day ? String(scheduleSlot.workout_day) : null;
       }
     } else {
       // No explicit schedule row — fall back to the active plan's day-tagged
       // split (this is how Packages-assigned plans show up without a coach
       // ever touching the manual /coach/schedule builder).
-      const activeWorkout = await database()("workout_plans").select("title", "exercises").where({ client_id: client.id, status: "active" }).first();
+      const activeWorkout = await database()("workout_plans").select("title", "exercises").where({ client_id: client.id, status: "active", invoice_id: client.current_invoice_id }).first();
       const label = WEEKDAYS[weekday];
       if (activeWorkout && exercisesForDay(activeWorkout.exercises, label).length > 0) {
         plan = activeWorkout;
@@ -410,7 +413,7 @@ async function ClientDietPlans() {
   const t = await getTranslations("ClientDietPlan");
   const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
   const today = todayISO(String(settingsRow?.timezone || "Africa/Nairobi"));
-  const dietPlans = await database()("diet_plans").where({ client_id: client.id }).orderBy("updated_at", "desc");
+  const dietPlans = await database()("diet_plans").where({ client_id: client.id, invoice_id: client.current_invoice_id }).whereNot("status", "draft").orderBy("updated_at", "desc");
   const planIds = dietPlans.map((plan) => Number(plan.id));
   const completions: PlanCompletionRow[] = planIds.length
     ? await database()("plan_completions").select("plan_id", "item_key", "scheduled_on", "details").where({ client_id: client.id, plan_type: "diet" }).whereIn("plan_id", planIds)
@@ -429,7 +432,7 @@ async function ClientWorkoutPlans() {
   const t = await getTranslations("ClientWorkoutPlan");
   const settingsRow = await database()("user_settings").select("timezone").where({ user_id: client.user_id }).first();
   const today = todayISO(String(settingsRow?.timezone || "Africa/Nairobi"));
-  const workoutPlans = await database()("workout_plans").where({ client_id: client.id }).orderBy("updated_at", "desc");
+  const workoutPlans = await database()("workout_plans").where({ client_id: client.id, invoice_id: client.current_invoice_id }).whereNot("status", "draft").orderBy("updated_at", "desc");
   const planIds = workoutPlans.map((plan) => Number(plan.id));
   const completions: PlanCompletionRow[] = planIds.length
     ? await database()("plan_completions").select("plan_id", "item_key", "scheduled_on", "details").where({ client_id: client.id, plan_type: "workout" }).whereIn("plan_id", planIds)
@@ -492,8 +495,8 @@ async function ClientSessions() {
     const workoutIds = [...new Set(slots.filter((slot) => slot.workout_plan_id).map((slot) => Number(slot.workout_plan_id)))];
     const dietIds = [...new Set(slots.filter((slot) => slot.diet_plan_id).map((slot) => Number(slot.diet_plan_id)))];
     const [workoutPlans, dietPlans] = await Promise.all([
-      workoutIds.length ? database()("workout_plans").whereIn("id", workoutIds).where({ client_id: client.id }).select("id", "title", "exercises") : Promise.resolve([]),
-      dietIds.length ? database()("diet_plans").whereIn("id", dietIds).where({ client_id: client.id }).select("id", "title", "meals", "days") : Promise.resolve([]),
+      workoutIds.length ? database()("workout_plans").whereIn("id", workoutIds).where({ client_id: client.id, invoice_id: client.current_invoice_id }).select("id", "title", "exercises") : Promise.resolve([]),
+      dietIds.length ? database()("diet_plans").whereIn("id", dietIds).where({ client_id: client.id, invoice_id: client.current_invoice_id }).select("id", "title", "meals", "days") : Promise.resolve([]),
     ]);
     const workoutById = new Map(workoutPlans.map((plan) => [Number(plan.id), plan]));
     const dietById = new Map(dietPlans.map((plan) => [Number(plan.id), plan]));
@@ -545,8 +548,8 @@ async function ClientSessions() {
   const remainingWeekdays = Array.from({ length: 7 }, (_, weekday) => weekday).filter((weekday) => !scheduledWeekdays.has(weekday));
   if (remainingWeekdays.length) {
     const [activeDiet, activeWorkout] = await Promise.all([
-      database()("diet_plans").select("title", "days", "meals").where({ client_id: client.id, status: "active" }).first(),
-      database()("workout_plans").select("title", "exercises").where({ client_id: client.id, status: "active" }).first(),
+      database()("diet_plans").select("title", "days", "meals").where({ client_id: client.id, status: "active", invoice_id: client.current_invoice_id }).first(),
+      database()("workout_plans").select("title", "exercises").where({ client_id: client.id, status: "active", invoice_id: client.current_invoice_id }).first(),
     ]);
     for (const weekday of remainingWeekdays) {
       const dayLabel = String(WEEKDAYS[weekday]);
@@ -693,13 +696,6 @@ async function ClientMessages() {
   );
 }
 
-async function ClientPayments() {
-  const { client } = await getClientContext();
-  const t = await getTranslations("ClientPayments");
-  const ts = await getTranslations("Common.status");
-  const invoices = await database()("invoices").select("invoices.*", "services.name as service").leftJoin("services", "services.id", "invoices.service_id").where("invoices.client_id", client.id).orderBy("due_on", "desc");
-  return <><PageHeader title={t("title")} description={t("description")} />{invoices.length === 0 ? <EmptyState text={t("emptyHint")} /> : <Card><div className="data-table-wrap"><table className="data-table"><thead><tr><th>{t("colInvoice")}</th><th>{t("colService")}</th><th>{t("colAmount")}</th><th>{t("colDue")}</th><th>{t("colStatus")}</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td>{invoice.number}</td><td>{invoice.service || "-"}</td><td>{money.format(numeric(invoice.amount))}</td><td>{dateOnly.format(new Date(invoice.due_on))}</td><td><Badge tone={tone(invoice.status)}>{statusLabel(ts, invoice.status)}</Badge></td></tr>)}</tbody></table></div></Card>}</>;
-}
 
 async function ClientProfile() {
   return <AccountProfilePage role="client" />;
@@ -707,7 +703,11 @@ async function ClientProfile() {
 
 async function ClientSettings() { return <AccountSettingsPage role="client" />; }
 
-export async function RealClientSection({ section = "home" }: { section?: string }) {
+export async function RealClientSection({ section = "home", orderId }: { section?: string; orderId?: string }) {
+  const session = await requireRole("client");
+  const billing = await getBilling(session.id);
+  if (!billing.unlocked && section === "home") return <LockedClientHome name={session.name} packageName={billing.invoice?.package_snapshot ? snapshotOf(billing.invoice.package_snapshot).name : undefined} />;
+  if (!billing.unlocked && !isOpenClientPath(`/client/${section}`)) return <LockedProgram />;
   if (section === "home") return <ClientHome />;
   if (section === "plans") redirect("/client/diet-plan");
   if (section === "diet-plan") return <ClientDietPlans />;
@@ -716,7 +716,7 @@ export async function RealClientSection({ section = "home" }: { section?: string
   if (section === "check-in") return <ClientCheckIn />;
   if (section === "progress") return <ClientProgress />;
   if (section === "messages") return <ClientMessages />;
-  if (section === "payments") return <ClientPayments />;
+  if (section === "payments") return <PaymentsPage orderId={orderId} />;
   if (section === "settings") return <ClientSettings />;
   return <ClientProfile />;
 }

@@ -9,7 +9,7 @@ async function clients(): Promise<PlanClient[]> {
   const rows = await database()("clients")
     .select("clients.id", "users.name", "users.email")
     .join("users", "users.id", "clients.user_id")
-    .whereNot("clients.status", "churned")
+    .where({ "clients.status": "active", "users.is_active": true, "users.approval_status": "approved" })
     .orderBy("users.name");
   return rows.map((row) => ({ id: Number(row.id), name: row.name, email: row.email }));
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
+import { requirePaidClient } from "@/lib/payments/billing";
 import { database } from "@/lib/db";
 import { todayISO } from "@/lib/schedule";
 
@@ -19,6 +20,7 @@ export async function toggleMealCompletionAction(
   formData: FormData,
 ): Promise<PlanProgressState> {
   const session = await requireRole("client");
+  const billing = await requirePaidClient(session.id);
   const parsed = mealSchema.safeParse({
     dietPlanId: formData.get("diet_plan_id"),
     itemKey: formData.get("item_key"),
@@ -30,7 +32,7 @@ export async function toggleMealCompletionAction(
   const client = await db("clients").select("id").where({ user_id: session.id }).first();
   if (!client) return { error: "Client profile not found." };
 
-  const plan = await db("diet_plans").select("id").where({ id: parsed.data.dietPlanId, client_id: client.id }).first();
+  const plan = await db("diet_plans").select("id").where({ id: parsed.data.dietPlanId, client_id: client.id, invoice_id: billing.invoice.id }).first();
   if (!plan) return { error: "That diet plan is not assigned to you." };
 
   const settingsRow = await db("user_settings").select("timezone").where({ user_id: session.id }).first();
@@ -73,6 +75,7 @@ export async function toggleWorkoutExerciseAction(
   formData: FormData,
 ): Promise<PlanProgressState> {
   const session = await requireRole("client");
+  const billing = await requirePaidClient(session.id);
   const parsed = exerciseSchema.safeParse({
     workoutPlanId: formData.get("workout_plan_id"),
     itemKey: formData.get("item_key"),
@@ -88,7 +91,7 @@ export async function toggleWorkoutExerciseAction(
   const client = await db("clients").select("id").where({ user_id: session.id }).first();
   if (!client) return { error: "Client profile not found." };
 
-  const plan = await db("workout_plans").select("id").where({ id: parsed.data.workoutPlanId, client_id: client.id }).first();
+  const plan = await db("workout_plans").select("id").where({ id: parsed.data.workoutPlanId, client_id: client.id, invoice_id: billing.invoice.id }).first();
   if (!plan) return { error: "That workout plan is not assigned to you." };
 
   const settingsRow = await db("user_settings").select("timezone").where({ user_id: session.id }).first();

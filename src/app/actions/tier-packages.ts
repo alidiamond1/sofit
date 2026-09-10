@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
-import { todayISO } from "@/lib/schedule";
 import { DAY_LABELS, PACKAGE_TIERS } from "@/lib/package-tiers";
 
 export type TierPackageActionState = { error?: string; success?: string };
@@ -130,82 +129,5 @@ export async function assignTierPackageAction(
   });
   if (!parsed.success) return { error: "Choose both a client and a package." };
 
-  const db = database();
-  const [client, tierPackage] = await Promise.all([
-    db("clients").select("id", "user_id").where({ id: parsed.data.clientId }).first(),
-    db("tier_packages").where({ tier: parsed.data.tier, is_active: true }).first(),
-  ]);
-  if (!client) return { error: "The selected client does not exist." };
-  if (!tierPackage || !tierPackage.days) return { error: "That package has not been built yet." };
-
-  const days = tierPackage.days as Array<{ dayIndex: number; dayLabel: string; meals: unknown[]; exercises: Array<Record<string, unknown>> }>;
-  const totalExercises = days.reduce((sum, day) => sum + day.exercises.length, 0);
-
-  await db.transaction(async (trx) => {
-    const settingsRow = await trx("user_settings").select("timezone").where({ user_id: client.user_id }).first();
-    const today = todayISO(String(settingsRow?.timezone || "Africa/Nairobi"));
-
-    await trx("diet_plans").where({ client_id: client.id, status: "active" }).update({ status: "archived" });
-    const latestDiet = await trx("diet_plans").where({ client_id: client.id, title: tierPackage.title }).max({ version: "version" }).first();
-    const [dietPlanId] = await trx("diet_plans").insert({
-      client_id: client.id,
-      title: tierPackage.title,
-      version: Number(latestDiet?.version || 0) + 1,
-      meals: null,
-      days: JSON.stringify(days.map((day) => ({ dayIndex: day.dayIndex, dayLabel: day.dayLabel, meals: day.meals }))),
-      food_swaps: JSON.stringify([]),
-      status: "active",
-      starts_on: today,
-    });
-
-    let workoutPlanId: number | null = null;
-    if (totalExercises > 0) {
-      await trx("workout_plans").where({ client_id: client.id, status: "active" }).update({ status: "archived" });
-      const latestWorkout = await trx("workout_plans").where({ client_id: client.id, title: tierPackage.title }).max({ version: "version" }).first();
-      const exercises = days.flatMap((day) => day.exercises);
-      const weeklySplit = days.filter((day) => day.exercises.length > 0).map((day) => day.dayLabel);
-      [workoutPlanId] = await trx("workout_plans").insert({
-        client_id: client.id,
-        title: tierPackage.title,
-        version: Number(latestWorkout?.version || 0) + 1,
-        weeks: 4,
-        weekly_split: JSON.stringify(weeklySplit),
-        exercises: JSON.stringify(exercises),
-        status: "active",
-        starts_on: today,
-      });
-    }
-
-    const byDayIndex = new Map(days.map((day) => [day.dayIndex, day]));
-    for (let weekday = 0; weekday < 7; weekday += 1) {
-      const day = byDayIndex.get(weekday);
-      const slot = day
-        ? {
-            is_rest: false,
-            diet_plan_id: dietPlanId,
-            workout_plan_id: day.exercises.length > 0 ? workoutPlanId : null,
-            workout_day: day.exercises.length > 0 ? day.dayLabel : null,
-          }
-        : { is_rest: true, diet_plan_id: null, workout_plan_id: null, workout_day: null };
-      await trx("client_week_schedule")
-        .insert({ client_id: client.id, weekday, ...slot })
-        .onConflict(["client_id", "weekday"])
-        .merge(slot);
-    }
-  });
-
-  revalidatePath("/coach/packages");
-  revalidatePath("/coach/diet-plans");
-  revalidatePath("/coach/workout-plans");
-  revalidatePath("/coach/schedule");
-  revalidatePath("/coach/clients");
-  revalidatePath("/client");
-  revalidatePath("/client/diet-plan");
-  revalidatePath("/client/workout-plan");
-  revalidatePath("/client/sessions");
-  return {
-    success: totalExercises > 0
-      ? `${tierPackage.title} was assigned — this week's diet and workout were built automatically.`
-      : `${tierPackage.title} was assigned — this week's diet was built automatically.`,
-  };
+  return { error: "Assign a priced package from the package catalog so the client receives an invoice." };
 }

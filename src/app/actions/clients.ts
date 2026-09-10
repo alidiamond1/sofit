@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
+import { assignPricedPackage, BillingError } from "@/lib/payments/billing";
 
 export type ClientActionState = {
   error?: string;
@@ -57,7 +58,7 @@ export async function updateClientAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Check the client details." };
 
   const db = database();
-  const client = await db("clients").select("id", "user_id").where({ id: id.data }).first();
+  const client = await db("clients").select("id", "user_id", "package_id", "current_invoice_id").where({ id: id.data }).first();
   if (!client) return { error: "The client no longer exists." };
 
   const duplicateEmail = await db("users")
@@ -76,25 +77,34 @@ export async function updateClientAction(
   if (serviceId && !service) return { error: "The selected service is unavailable." };
   if (packageId && !packageRecord) return { error: "The selected package is unavailable." };
 
-  await db.transaction(async (trx) => {
-    await trx("users").where({ id: client.user_id }).update({
-      name: parsed.data.name,
-      email: parsed.data.email,
-      updated_at: trx.fn.now(),
+  try {
+    await db.transaction(async (trx) => {
+      const locked = await trx("clients").where({ id: id.data }).forUpdate().first();
+      await trx("users").where({ id: client.user_id }).update({
+        name: parsed.data.name,
+        email: parsed.data.email,
+        updated_at: trx.fn.now(),
+      });
+      await trx("clients").where({ id: id.data }).update({
+        phone: parsed.data.phone || null,
+        date_of_birth: parsed.data.dateOfBirth || null,
+        status: parsed.data.status,
+        pipeline_stage: parsed.data.pipelineStage,
+        service_id: serviceId,
+        ...(packageId === null ? { package_id: null, current_invoice_id: null } : {}),
+        goals: parsed.data.goals || null,
+        medical_notes: parsed.data.medicalNotes || null,
+        updated_at: trx.fn.now(),
+      });
+      if (packageId !== null && (Number(locked.package_id) !== packageId || !locked.current_invoice_id)) {
+        await assignPricedPackage(trx, id.data, packageId);
+      }
     });
-    await trx("clients").where({ id: id.data }).update({
-      phone: parsed.data.phone || null,
-      date_of_birth: parsed.data.dateOfBirth || null,
-      status: parsed.data.status,
-      pipeline_stage: parsed.data.pipelineStage,
-      service_id: serviceId,
-      package_id: packageId,
-      goals: parsed.data.goals || null,
-      medical_notes: parsed.data.medicalNotes || null,
-      updated_at: trx.fn.now(),
-    });
-  });
+  } catch (error) {
+    return { error: error instanceof BillingError ? error.message : "The client could not be updated. Please try again." };
+  }
 
+  revalidatePath("/client", "layout");
   refreshClientViews();
   return { success: `${parsed.data.name} was updated.` };
 }
