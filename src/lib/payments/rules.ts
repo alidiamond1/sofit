@@ -1,3 +1,11 @@
+// Sifalo's live Verify API returns this for a checkout with no submitted transaction.
+// Only a successfully created checkout may be retried; a creation timeout is ambiguous.
+export function retryablePaymentFailure(result: Record<string, unknown>, attemptStatus: string): boolean {
+  if (!["failure", "failed"].includes(String(result.status)) || result.code !== 600) return false;
+  if (typeof result.sid === "string" && result.sid.trim()) return true;
+  return attemptStatus === "ready" && result.sid == null && result.response === "order_id not found";
+}
+
 export function amountInCents(value: unknown): number {
   const text = String(value);
   if (!/^\d{1,7}(\.\d{1,2})?$/.test(text)) throw new Error("Invalid USD amount.");

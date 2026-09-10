@@ -1576,7 +1576,9 @@
       "overdue": "Overdue",
       "draft": "Draft",
       "void": "Cancelled"
-    }
+    },
+    "openingCheckout": "Opening secure checkout?",
+    "connectionError": "Connection interrupted. Please check payment status before trying again."
   },
   "CoachBilling": {
     "eyebrow": "BUSINESS / BILLING",

@@ -23,6 +23,7 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<PaymentResult>({});
+  const [openingCheckout, setOpeningCheckout] = useState(false);
   const checkedOrder = useRef<string | null>(null);
   const current = invoices.find((invoice) => invoice.id === currentId);
   const history = invoices.filter((invoice) => invoice.id !== currentId);
@@ -50,10 +51,18 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
   }
   function pay() {
     if (!current) return;
+    setOpeningCheckout(true);
+    setResult({});
     startTransition(async () => {
-      const response = await startCheckoutAction(current.id);
-      if (response.url) window.location.assign(response.url);
-      else setResult(response);
+      try {
+        const response = await startCheckoutAction(current.id);
+        if (response.url) window.location.assign(response.url);
+        else { setResult(response); if (response.paid) router.refresh(); }
+      } catch {
+        setResult({ error: t("connectionError") });
+      } finally {
+        setOpeningCheckout(false);
+      }
     });
   }
 
@@ -77,7 +86,7 @@ export function ClientPaymentsWorkspace({ invoices, currentId, unlocked, configu
           <dl className="billing-invoice-details"><div><dt>{t("invoice")}</dt><dd>{current.number}</dd></div><div><dt>{unlocked ? t("accessUntil") : t("due")}</dt><dd>{unlocked ? current.accessUntil ? date(current.accessUntil) : t("noExpiry") : date(current.due)}</dd></div></dl>
           {unlocked ? <Link className="button primary full" href={current.diet ? "/client/diet-plan" : current.workout ? "/client/workout-plan" : "/client/sessions"}>{t("openProgram")}<ArrowUpRight size={18} /></Link> : <>
             {!configured && <p className="billing-notice">{t("setupPending")}</p>}
-            <button className="button primary full" disabled={pending || !configured || !active} onClick={pay}><CreditCard size={18} />{pending ? t("checking") : t("pay", { amount: money(current) })}<ArrowUpRight size={18} /></button>
+            <button className="button primary full" disabled={pending || !configured || !active} onClick={pay}><CreditCard size={18} />{openingCheckout ? t("openingCheckout") : pending ? t("checking") : t("pay", { amount: money(current) })}<ArrowUpRight size={18} /></button>
             <button className="text-button billing-check" disabled={pending || !configured} onClick={() => checkPayment(current.id)}><RefreshCw size={14} />{t("checkStatus")}</button>
           </>}
           <p className="billing-footnote"><LockKeyhole size={13} />{t("paymentDetails")}</p>

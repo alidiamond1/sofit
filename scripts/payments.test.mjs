@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import { filterCoachInvoices, invoiceCsvCell, invoiceStatus } from "../src/lib/payments/coach-invoices.ts";
-import { accessEnd, amountInCents, hasPaidAccess, isOpenClientPath, verifiedTransaction } from "../src/lib/payments/rules.ts";
+import { accessEnd, amountInCents, hasPaidAccess, isOpenClientPath, retryablePaymentFailure, verifiedTransaction } from "../src/lib/payments/rules.ts";
 
 assert.equal(amountInCents("99.01"), 9901);
+const unsubmitted = { status: "failed", code: 600, sid: null, response: "order_id not found" };
+assert.equal(retryablePaymentFailure(unsubmitted, "ready"), true);
+for (const state of ["creating", "unknown"]) assert.equal(retryablePaymentFailure(unsubmitted, state), false);
+for (const change of [{ status: "pending" }, { code: "600" }, { code: 601 }, { response: "unavailable" }]) assert.equal(retryablePaymentFailure({ ...unsubmitted, ...change }, "ready"), false);
+assert.equal(retryablePaymentFailure({ status: "failure", code: 600, sid: "failed-transaction" }, "unknown"), true);
 assert.equal(amountInCents("0"), 0);
 for (const amount of ["-1", "1.001", "1e2", "Infinity", "NaN", "99 USD", null, ""]) assert.throws(() => amountInCents(amount));
 assert.equal(accessEnd(new Date("2026-01-31T12:30:00Z"), "monthly").toISOString(), "2026-02-28T12:30:00.000Z");

@@ -5,11 +5,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
-import { activateInvoice, BillingError, loadBilling, snapshotOf } from "@/lib/payments/billing";
-import { accessEnd, verifiedTransaction } from "@/lib/payments/rules";
+import { activateInvoice, BillingError, snapshotOf } from "@/lib/payments/billing";
+import { accessEnd, retryablePaymentFailure, verifiedTransaction } from "@/lib/payments/rules";
 import { checkoutUrl, paymentReturnUrl, sifaloConfigured, sifaloRequest } from "@/lib/payments/sifalo";
 
-export type PaymentResult = { error?: string; message?: string; url?: string; paid?: boolean };
+export type PaymentResult = { error?: string; message?: string; url?: string; paid?: boolean; retryable?: boolean };
 const invoiceIdSchema = z.number().int().positive();
 const orderIdSchema = z.uuid();
 function paymentError(error: unknown): PaymentResult {
@@ -24,26 +24,39 @@ export async function startCheckoutAction(invoiceId: number): Promise<PaymentRes
   const session = await requireRole("client");
   if (!invoiceIdSchema.safeParse(invoiceId).success) return { error: "Invalid invoice." };
   if (!sifaloConfigured()) return { error: "Online payment is being set up. Please try again later." };
-  await loadBilling(session.id);
   let createdOrder: string | undefined;
   try {
-    const reserved = await database().transaction(async (trx) => {
+    const reserve = () => database().transaction(async (trx) => {
       const client = await trx("clients").where({ user_id: session.id, status: "active" }).forUpdate().first();
       if (!client || Number(client.current_invoice_id) !== invoiceId) throw new BillingError("This is not your current package invoice.");
       const invoice = await trx("invoices").where({ id: invoiceId, client_id: client.id }).forUpdate().first();
       if (!invoice?.package_snapshot || !["unpaid", "overdue"].includes(invoice.status)) throw new BillingError("This invoice is not awaiting payment.");
-      const last = await trx("payment_attempts").where({ invoice_id: invoiceId }).orderBy("created_at", "desc").first();
-      if (last && last.status !== "failed") {
-        if (last.status === "ready" && last.checkout_url) return { url: String(last.checkout_url), orderId: null, amount: "" };
+      const last = await trx("payment_attempts").where({ invoice_id: invoiceId }).whereNot({ status: "failed" }).orderBy("created_at", "desc").first();
+      if (last) {
+        if (Date.now() - new Date(last.created_at).getTime() < 3_000) throw new BillingError("Checkout was just opened. Please wait a few seconds before trying again.");
+        if (last.status === "ready") {
+          if (last.checked_at && Date.now() - new Date(last.checked_at).getTime() < 15_000) throw new BillingError("Please wait a few seconds before checking again.");
+          await trx("payment_attempts").where({ id: last.id }).update({ checked_at: new Date() });
+          return { previousOrder: String(last.id), orderId: null, amount: String(invoice.amount) };
+        }
         throw new BillingError("A payment is already in progress. Use Check payment status before starting another.");
       }
       const orderId = randomUUID();
       // Validate configuration before reserving an attempt.
       paymentReturnUrl(orderId);
-      await trx("payment_attempts").insert({ id: orderId, invoice_id: invoiceId, status: "creating" });
-      return { orderId, amount: String(invoice.amount), url: null };
+      const now = new Date();
+      await trx("payment_attempts").insert({ id: orderId, invoice_id: invoiceId, status: "creating", created_at: now, updated_at: now });
+      return { orderId, amount: String(invoice.amount), previousOrder: null };
     });
-    if (reserved.url) return { url: reserved.url };
+    let reserved = await reserve();
+    if (reserved.previousOrder) {
+      // Never redirect to a used/expired token. Reconcile the old unique order
+      // before issuing a fresh token; pending or uncertain payments stay blocked.
+      const checked = await verifyReservedPayment(session.id, invoiceId, reserved.amount, { id: reserved.previousOrder, status: "ready" });
+      if (checked.paid || !checked.retryable) return checked;
+      reserved = await reserve();
+      if (reserved.previousOrder) throw new BillingError("A checkout is already being prepared. Please try again shortly.");
+    }
     createdOrder = reserved.orderId!;
     const result = await sifaloRequest("", { amount: reserved.amount, gateway: "checkout", currency: "USD", return_url: paymentReturnUrl(createdOrder) });
     const url = checkoutUrl(result);
@@ -70,24 +83,33 @@ export async function verifyPaymentAction(invoiceId: number, orderId?: string): 
       if (!["unpaid", "overdue"].includes(invoice.status)) throw new BillingError("This invoice is not payable.");
       const query = trx("payment_attempts").where({ invoice_id: invoiceId });
       if (orderId) query.where({ id: orderId });
+      else query.whereNot({ status: "failed" });
       const attempt = await query.orderBy("created_at", "desc").forUpdate().first();
       if (!attempt) throw new BillingError("No checkout has been started for this invoice.");
       if (attempt.checked_at && Date.now() - new Date(attempt.checked_at).getTime() < 15_000) throw new BillingError("Please wait a few seconds before checking again.");
       await trx("payment_attempts").where({ id: attempt.id }).update({ checked_at: new Date() });
       return { invoice, attempt };
     });
-    if (!reserved.attempt) return { paid: true, message: "Payment confirmed." };
+    return await verifyReservedPayment(session.id, invoiceId, String(reserved.invoice.amount), reserved.attempt);
+  } catch (error) {
+    return paymentError(error);
+  }
+}
+
+
+async function verifyReservedPayment(userId: number, invoiceId: number, amount: string, attempt: { id: string; status: string } | null): Promise<PaymentResult> {
+    if (!attempt) return { paid: true, message: "Payment confirmed." };
     // Ignore the return URL's sid/status/amount. Query the provider using only
     // the unpredictable order_id we previously stored for this owned invoice.
-    const verified = await sifaloRequest("verify.php", { order_id: String(reserved.attempt.id) });
+    const verified = await sifaloRequest("verify.php", { order_id: String(attempt.id) });
     if (verified.status === "pending") return { message: "Your payment is still pending. Check again shortly; do not pay twice." };
-    if (verified.status === "failure" && typeof verified.sid === "string" && verified.sid && verified.code !== 601) {
-      await database()("payment_attempts").where({ id: reserved.attempt.id }).whereNot({ status: "paid" }).update({ status: "failed", checkout_url: null, updated_at: new Date() });
-      return { error: "Sifalo reports that this payment failed. You can try checkout again." };
+    if (retryablePaymentFailure(verified, attempt.status)) {
+      await database()("payment_attempts").where({ id: attempt.id }).whereNot({ status: "paid" }).update({ status: "failed", checkout_url: null, updated_at: new Date() });
+      return { message: "No completed payment was found. You can open a new secure checkout.", retryable: true };
     }
-    const sid = verifiedTransaction(verified, reserved.invoice.amount);
+    const sid = verifiedTransaction(verified, amount);
     await database().transaction(async (trx) => {
-      const client = await trx("clients").where({ user_id: session.id }).forUpdate().first();
+      const client = await trx("clients").where({ user_id: userId }).forUpdate().first();
       const invoice = await trx("invoices").where({ id: invoiceId, client_id: client.id }).forUpdate().first();
       if (invoice.status === "paid") return;
       if (!["unpaid", "overdue"].includes(invoice.status)) throw new BillingError("This invoice can no longer be settled automatically.");
@@ -100,11 +122,8 @@ export async function verifyPaymentAction(invoiceId: number, orderId?: string): 
       // provider_sid has a unique DB constraint: a replay across accounts or
       // invoices rolls back the entire transaction, including plan activation.
       if (isCurrent) await activateInvoice(trx, invoice, now);
-      await trx("payment_attempts").where({ id: reserved.attempt.id }).update({ status: "paid", checkout_url: null, updated_at: now });
+      await trx("payment_attempts").where({ id: attempt.id }).update({ status: "paid", checkout_url: null, updated_at: now });
     });
     refreshPayments();
     return { paid: true, message: "Payment recorded. Your current package access has been updated where applicable." };
-  } catch (error) {
-    return paymentError(error);
-  }
 }
