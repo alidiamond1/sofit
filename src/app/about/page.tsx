@@ -6,7 +6,7 @@ import { coachingPrinciples, coachingProcess } from "@/lib/marketing/content";
 
 export const metadata: Metadata = {
   title: "About the SOFIT Team",
-  description: "Meet Coach Ali Abdullahi, ISSA Certified Elite Trainer and SOFIT founder, and Shabazz Abdulkadir, international development and capacity building consultant.",
+  description: "Meet the SOFIT team: Coach Ali Abdullahi, Shabazz Abdulkadir, and Dr. Shafi Abdullahi, Chief Scientific & Medication Safety Advisor.",
 };
 
 const principleIcons = [Target, ChartNoAxesCombined, HeartHandshake];
@@ -18,7 +18,7 @@ export default function AboutPage() {
         <div className={styles.aboutHeroTop}><span className={styles.eyebrow}>The people behind your progress</span><span className={styles.aboutEdition}>SOFIT NUTRITION &amp; FITNESS</span></div>
         <div className={styles.aboutHeadline}>
           <h1 id="about-title" className={styles.aboutTitle}>Real coaching.<br /><em>For your real life.</em></h1>
-          <div><p>Your goals deserve more than a template. Meet the people behind SOFIT, with experience in fitness, nutrition, development, and capacity building.</p><TextLink href="#meet-coach">Meet the team</TextLink></div>
+          <div><p>Your goals deserve more than a template. Meet the people behind SOFIT, with expertise in fitness, nutrition, development, capacity building, and pharmaceutical science.</p><TextLink href="#meet-coach">Meet the team</TextLink></div>
         </div>
         <div className={styles.aboutMosaic}>
           <div className={styles.aboutMainPhoto}><Image src="/brand/coach-training-03.jpg" alt="Coach Ali seated in the gym between training sessions." fill priority sizes="(max-width: 767px) 100vw, 62vw" /><span>THE COACH. THE WORK. THE EVERYDAY.</span></div>
@@ -66,6 +66,22 @@ export default function AboutPage() {
             </dl>
             <p>Shabazz Abdulkadir is an international consultant specialising in development and capacity building. She holds a master’s degree from the University of Washington and brings over ten years of experience in the industry.</p>
             <p>Her professional background combines advanced academic training with extensive experience in development and strengthening capacity.</p>
+          </div>
+        </article>
+        <article className={styles.teamProfile} aria-labelledby="shafi-name">
+          <div className={styles.teamPortrait}>
+            <Image src="/brand/dr-shafi-abdullahi.jpg" alt="Portrait of Dr. Shafi Abdullahi, SOFIT Chief Scientific and Medication Safety Advisor." fill sizes="(max-width: 767px) calc(100vw - 32px), (max-width: 1200px) 38vw, 420px" />
+          </div>
+          <div className={styles.teamCopy}>
+            <span className={styles.eyebrow}>Scientific advisory</span>
+            <h3 id="shafi-name">Dr. Shafi Abdullahi</h3>
+            <p className={styles.teamRole}>Chief Scientific &amp; Medication Safety Advisor</p>
+            <dl className={styles.teamCredentials}>
+              <div><dt>Academic qualifications</dt><dd>PharmD · PhD · MBA</dd></div>
+              <div><dt>Founder</dt><dd>Drug Eye Africa<span>Medicines regulation &amp; pharmaceutical policy</span></dd></div>
+            </dl>
+            <p>Dr. Shafi Abdullahi serves as SOFIT’s Chief Scientific &amp; Medication Safety Advisor. He holds a Doctor of Pharmacy (PharmD), a PhD in Pharmacoeconomics, and an MBA in Pharmaceutical Management, bringing a multidisciplinary perspective across pharmaceutical science, health economics, and management.</p>
+            <p>He is the founder of Drug Eye Africa, an independent organization that monitors medicines regulation, regulatory decisions, and pharmaceutical policy developments across Africa.</p>
           </div>
         </article>
       </section>
