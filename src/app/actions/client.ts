@@ -65,6 +65,7 @@ export async function submitClientCheckInAction(formData: FormData) {
   revalidatePath("/client");
   revalidatePath("/client/check-in");
   revalidatePath("/client/progress");
+  revalidatePath("/client/health");
   revalidatePath("/coach/check-ins");
   revalidatePath("/coach/clients");
 }

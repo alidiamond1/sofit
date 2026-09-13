@@ -31,7 +31,7 @@ export function hasPaidAccess(invoice: { status: string; package_snapshot: unkno
 }
 
 export function isOpenClientPath(path: string) {
-  return ["/client", "/client/payments", "/client/profile", "/client/settings"].includes(path.replace(/\/$/, ""));
+  return ["/client", "/client/payments", "/client/health", "/client/profile", "/client/settings"].includes(path.replace(/\/$/, ""));
 }
 
 // Sifalo currently documents USD-only checkout. Verify by our stored order_id,

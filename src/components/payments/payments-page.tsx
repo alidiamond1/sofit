@@ -38,7 +38,7 @@ export async function LockedClientHome({ name, packageName }: { name: string; pa
   const t = await getTranslations("Billing");
   return <div className="billing-locked-home"><header className="billing-heading"><div><span className="eyebrow">SOFIT</span><h1>{t("welcome", { name: name.split(" ")[0] })}</h1><p>{t("welcomeBody")}</p></div></header>
     <section className="billing-package"><span className="billing-icon"><LockKeyhole size={26} /></span><span className="eyebrow">{t("yourPackage")}</span><h2>{packageName || t("noPackage")}</h2><p className="billing-package-description">{packageName ? t("lockDescription") : t("assignmentHint")}</p><Link href="/client/payments" className="button primary">{t("viewPayment")}<ArrowUpRight size={17} /></Link></section>
-    <Link href="/client/profile" className="billing-profile-link"><UserRound size={22} /><div><strong>{t("completeProfile")}</strong><p>{t("profileHint")}</p></div><ArrowUpRight size={20} /></Link>
+    <Link href="/client/health" className="billing-profile-link"><UserRound size={22} /><div><strong>{t("completeProfile")}</strong><p>{t("profileHint")}</p></div><ArrowUpRight size={20} /></Link>
   </div>;
 }
 

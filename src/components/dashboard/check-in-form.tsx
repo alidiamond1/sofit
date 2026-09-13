@@ -5,15 +5,19 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { submitClientCheckInAction } from "@/app/actions/client";
 import { countProgressPhotos, type ProgressPhotos } from "@/lib/progress-photos";
+import { calculateBmi } from "@/lib/body-metrics";
 import { ProgressPhotoUploader } from "./progress-photos";
 
 /** The whole weekly check-in form. A client component (rather than the plain
  *  server-rendered fields it replaces) only because the progress-photo count
  *  needs to gate the submit button — everything else behaves exactly as it
  *  did before. `submitClientCheckInAction` stays the form's action. */
-export function CheckInForm({ initialPhotos }: { initialPhotos: ProgressPhotos | null }) {
+export function CheckInForm({ initialPhotos, heightCm, showBmi, initialWeight }: { initialPhotos: ProgressPhotos | null; heightCm: number | null; showBmi: boolean; initialWeight: string }) {
   const t = useTranslations("ClientCheckIn");
   const tp = useTranslations("ProgressPhotos");
+  const tb = useTranslations("BodyMetrics");
+  const [weight, setWeight] = useState(initialWeight);
+  const bmi = showBmi ? calculateBmi(heightCm, weight) : null;
   const [photoCount, setPhotoCount] = useState(() => countProgressPhotos(initialPhotos));
   const [skipPhotos, setSkipPhotos] = useState(false);
   const photosComplete = photoCount >= 3;
@@ -26,7 +30,8 @@ export function CheckInForm({ initialPhotos }: { initialPhotos: ProgressPhotos |
         <div className="checkin-field-grid">
           <label className="checkin-field">
             <span className="checkin-field-copy"><i className="task-icon sky"><Scale size={16} /></i>{t("currentWeightKg")}</span>
-            <input name="weight_kg" type="number" min="1" max="500" step="0.1" required />
+            <input name="weight_kg" type="number" min="1" max="500" step="0.1" value={weight} onChange={(event) => setWeight(event.target.value)} required />
+            {bmi !== null && <small aria-live="polite">BMI: {bmi.toFixed(1)} · {tb("previewHint")}</small>}
           </label>
           <label className="checkin-field">
             <span className="checkin-field-copy"><i className="task-icon mint"><Utensils size={16} /></i>{t("dietAdherencePct")}</span>

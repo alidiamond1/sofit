@@ -1,4 +1,7 @@
 /* SoFit account center: calm, connected workspaces */
+.body-metrics-editor,.body-metrics-guide,.body-metrics-history{margin-top:20px}
+.body-metrics-guide p,.body-metrics-history>p{color:var(--muted);line-height:1.65}
+.body-metrics-guide a{color:var(--primary);text-decoration:underline;text-underline-offset:3px}
 .avatar{position:relative;overflow:hidden}.avatar img{object-fit:cover}
 .sidebar-user-link{display:flex;align-items:center;gap:9px;min-width:0;flex:1;border-radius:10px}.sidebar-user-link:focus-visible{outline-offset:4px}
 .is-collapsed .sidebar-user-link{justify-content:center}.is-collapsed .sidebar-footer>form{width:100%;display:flex;justify-content:center}

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createSession, requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { LOCALE_COOKIE } from "@/i18n/config";
+import { bodyMetricsSchema } from "@/lib/body-metrics";
 
 export type ProfileActionState = { error?: string; success?: string };
 
@@ -18,17 +19,6 @@ const baseProfileSchema = z.object({
   date_of_birth: z.string().trim().refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), "Enter a valid date.").transform((value) => value || null),
   location: optionalText(160),
   bio: optionalText(1200),
-});
-
-const clientProfileSchema = baseProfileSchema.extend({
-  goals: optionalText(5000),
-  medical_notes: optionalText(5000),
-  height_cm: z.coerce.number()
-    .min(100, "Height must be at least 100 cm. / Dhererku waa inuu ka badan yahay 100 cm.")
-    .max(250, "Height must be under 250 cm. / Dhererku waa inuu ka yaraado 250 cm."),
-  starting_weight_kg: z.coerce.number()
-    .min(30, "Weight must be at least 30 kg. / Miisaanku waa inuu ka badan yahay 30 kg.")
-    .max(300, "Weight must be under 300 kg. / Miisaanku waa inuu ka yaraado 300 kg."),
 });
 
 function refreshAccountPages(role: "coach" | "client") {
@@ -44,21 +34,16 @@ export async function updateProfileAction(
 ): Promise<ProfileActionState> {
   const session = await requireRole(role);
   const payload = Object.fromEntries(formData);
-  const parsed = role === "client" ? clientProfileSchema.safeParse(payload) : baseProfileSchema.safeParse(payload);
+  const parsed = baseProfileSchema.safeParse(payload);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Check your profile details." };
 
   const { name, phone, date_of_birth, location, bio } = parsed.data;
   await database().transaction(async (trx) => {
     await trx("users").where({ id: session.id, role }).update({ name, phone, date_of_birth, location, bio, updated_at: new Date() });
     if (role === "client") {
-      const clientData = parsed.data as z.infer<typeof clientProfileSchema>;
       await trx("clients").where({ user_id: session.id }).update({
         phone,
         date_of_birth,
-        goals: clientData.goals,
-        medical_notes: clientData.medical_notes,
-        height_cm: clientData.height_cm,
-        starting_weight_kg: clientData.starting_weight_kg,
         updated_at: new Date(),
       });
     }
@@ -67,6 +52,25 @@ export async function updateProfileAction(
   await createSession({ ...session, name });
   refreshAccountPages(role);
   return { success: "Profile updated successfully." };
+}
+
+export async function updateBodyMetricsAction(_previous: ProfileActionState, formData: FormData): Promise<ProfileActionState> {
+  const session = await requireRole("client");
+  const parsed = bodyMetricsSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Check your health details." };
+  try {
+    await database().transaction(async (trx) => {
+      const client = await trx("clients").where({ user_id: session.id }).forUpdate().first();
+      if (!client) throw new Error("Client profile not found.");
+      await trx("clients").where({ id: client.id }).update({ ...parsed.data, updated_at: new Date() });
+      await trx("users").where({ id: session.id, role: "client" }).update({ date_of_birth: parsed.data.date_of_birth, updated_at: new Date() });
+    });
+  } catch {
+    return { error: "Your health details could not be saved. Please try again." };
+  }
+  revalidatePath("/client", "layout");
+  revalidatePath("/coach/clients", "layout");
+  return { success: "Health details saved." };
 }
 
 const avatarTypes = {

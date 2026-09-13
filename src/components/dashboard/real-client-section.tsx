@@ -31,10 +31,12 @@ import { TodayWorkout } from "@/components/schedule/today-workout";
 import { MonthCalendar, type DaySchedule } from "@/components/schedule/month-calendar";
 import { WEEKDAYS, exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
+import { BodyMetricsPage } from "@/components/profile/body-metrics-page";
+import { calculateBmi, adultBmiEligible } from "@/lib/body-metrics";
 import { MessagingWorkspace } from "@/components/messages/messaging-workspace";
 import { loadClientMessageThreads } from "@/lib/messages";
 
-export const realClientSections = ["plans", "diet-plan", "workout-plan", "sessions", "check-in", "progress", "messages", "payments", "profile", "settings"];
+export const realClientSections = ["plans", "diet-plan", "workout-plan", "sessions", "check-in", "progress", "messages", "payments", "health", "profile", "settings"];
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const dateTime = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -67,11 +69,8 @@ async function EmptyState({ text }: { text: string }) {
   return <Card className="empty-state"><ClipboardList size={24} /><h3>{t("noRecordsYet")}</h3><p>{text}</p></Card>;
 }
 
-/** "Must complete" nudge shown until a client has a height and starting
- *  weight on file — their coach needs both to confirm the right package
- *  for them. */
-async function ProfileCompletionNudge({ client }: { client: { height_cm: unknown; starting_weight_kg: unknown } }) {
-  if (client.height_cm != null && client.starting_weight_kg != null) return null;
+async function ProfileCompletionNudge({ client }: { client: { height_cm: unknown; starting_weight_kg: unknown; date_of_birth: unknown } }) {
+  if (calculateBmi(client.height_cm, client.starting_weight_kg) !== null && client.date_of_birth) return null;
   const t = await getTranslations("Common.profileNudge");
   return (
     <Card className="profile-nudge-card">
@@ -80,7 +79,7 @@ async function ProfileCompletionNudge({ client }: { client: { height_cm: unknown
         <strong>{t("title")}</strong>
         <p>{t("body")}</p>
       </div>
-      <Link className="button primary" href="/client/profile#profile-information">{t("cta")}</Link>
+      <Link className="button primary" href="/client/health">{t("cta")}</Link>
     </Card>
   );
 }
@@ -617,7 +616,7 @@ async function ClientCheckIn() {
       <ProfileCompletionNudge client={client} />
       <div className="checkin-form-layout">
         <Card className="checkin-form">
-          <CheckInForm initialPhotos={initialPhotos} />
+          <CheckInForm initialPhotos={initialPhotos} heightCm={client.height_cm ? Number(client.height_cm) : null} showBmi={adultBmiEligible(normalizeDate(client.date_of_birth || ""))} initialWeight={String(thisWeek?.weight_kg ?? "")} />
         </Card>
         <Card><CardHead title={t("latestCheckIn")} meta={latest ? dateOnly.format(new Date(latest.week_of)) : t("noSubmission")} />{latest ? <div className="simple-rows"><div><strong>{t("weight")}</strong><Badge>{latest.weight_kg} kg</Badge></div><div><strong>{t("dietAdherence")}</strong><Badge tone="success">{latest.diet_adherence_pct}%</Badge></div><div><strong>{t("workoutCompletion")}</strong><Badge tone="blue">{latest.workout_completion_pct}%</Badge></div><div><strong>{t("status")}</strong><Badge tone={tone(latest.status)}>{statusLabel(ts, latest.status)}</Badge></div></div> : <p>{t("noCheckInStored")}</p>}</Card>
       </div>
@@ -717,6 +716,7 @@ export async function RealClientSection({ section = "home", orderId }: { section
   if (section === "progress") return <ClientProgress />;
   if (section === "messages") return <ClientMessages />;
   if (section === "payments") return <PaymentsPage orderId={orderId} />;
+  if (section === "health") return <BodyMetricsPage />;
   if (section === "settings") return <ClientSettings />;
   return <ClientProfile />;
 }

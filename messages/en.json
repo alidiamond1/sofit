@@ -1,4 +1,37 @@
 {
+  "BodyMetrics": {
+    "eyebrow": "Your starting point",
+    "title": "My health",
+    "description": "Record your starting measurements, then follow changes with your weekly check-ins.",
+    "height": "Height (cm)",
+    "startingWeight": "Starting weight (kg)",
+    "currentWeight": "Current weight",
+    "dateOfBirth": "Date of birth",
+    "goals": "Your goals (optional)",
+    "goalsHint": "What would you like to improve? Strength, fitness, habits or body composition.",
+    "healthNotes": "Health notes for your coach (optional)",
+    "healthNotesHint": "Share relevant conditions, injuries, movement limitations or medicines that affect your training. Include anything you want your coach to consider.",
+    "baselineEyebrow": "Initial assessment",
+    "formTitle": "Tell us where you are today",
+    "formHint": "Complete the required fields marked *. Your existing measurements are kept here.",
+    "baselineHint": "Starting weight is your original baseline. Use weekly check-ins to record new weights; edit this field only to correct your initial measurement.",
+    "ageHint": "Adult BMI is shown for ages 20 and above. Younger clients need an age-specific assessment.",
+    "weeklyCheckIn": "Record weekly check-in",
+    "latestWeek": "Latest check-in: {date}",
+    "usingBaseline": "Starting measurement; no check-in yet",
+    "bmiUpdates": "Updates with your latest check-in weight",
+    "bmiTitle": "Understanding your BMI",
+    "bmiExplanation": "BMI = weight (kg) ÷ height (m)². It is a screening measure, not a diagnosis or body-fat percentage. It cannot distinguish muscle from fat; your coach should consider your health history and other measurements too.",
+    "routineHint": "Use weekly check-ins for weight, sleep, energy, adherence and optional progress photos. Discuss changes and health concerns with your coach.",
+    "source": "About BMI — CDC",
+    "history": "Recent measurements",
+    "historyHint": "Your last 12 check-ins. BMI values use your currently saved height.",
+    "week": "Week of",
+    "previewHint": "Preview; saved when you submit",
+    "save": "Save health details",
+    "saved": "Your health details are saved.",
+    "missingClient": "Your client record could not be found. Contact your coach."
+  },
   "Nav": {
     "coach": {
       "overview": "Overview",
@@ -26,6 +59,7 @@
       "workoutPlan": "Workout plan",
       "mySessions": "My sessions",
       "sessionsShort": "Sessions",
+      "health": "My health",
       "checkIn": "Check-in",
       "progress": "Progress",
       "messages": "Messages",
@@ -161,9 +195,9 @@
       "Sun"
     ],
     "profileNudge": {
-      "title": "Complete your profile",
-      "body": "Add your height and weight so your coach can confirm the right package for you.",
-      "cta": "Complete profile"
+      "title": "Complete your health details",
+      "body": "Add your height, starting weight and date of birth to track your measurements and BMI.",
+      "cta": "Complete health details"
     },
     "media": {
       "addPhoto": "Add a photo",
@@ -1549,7 +1583,7 @@
     "pay": "Pay {amount}",
     "checkStatus": "Already paid? Check payment status",
     "paymentDetails": "Your payment details are entered on Sifalo Pay.",
-    "completeProfile": "Complete your profile",
+    "completeProfile": "Complete your health details",
     "nextStep": "A simple next step",
     "readyTitle": "You are ready to get started.",
     "guideTitle": "Your program is one payment away.",
@@ -1565,7 +1599,7 @@
     "records": "{count} records",
     "welcome": "Welcome, {name}.",
     "welcomeBody": "Your account is ready. Let's take the next step in your coaching journey.",
-    "profileHint": "Add your goals and personal details for your coach.",
+    "profileHint": "Add your height, starting weight and health details for your coach.",
     "inactive": "Your coaching account is paused or inactive. Your coach must reactivate it before you can pay or access a program.",
     "interval": {
       "one_time": "one-time payment",

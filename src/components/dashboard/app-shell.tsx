@@ -78,6 +78,7 @@ const clientNavConfig: NavItemConfig[] = [
   { key: "progress", href: "/client/progress", icon: BarChart3, sectionKey: "myCoaching" },
   { key: "messages", href: "/client/messages", icon: MessageCircle, sectionKey: "support" },
   { key: "payments", href: "/client/payments", icon: CreditCard, sectionKey: "support" },
+  { key: "health", href: "/client/health", icon: Activity, sectionKey: "account" },
   { key: "profile", href: "/client/profile", icon: UserRound, sectionKey: "account" },
   { key: "settings", href: "/client/settings", icon: Settings, sectionKey: "account" },
 ];

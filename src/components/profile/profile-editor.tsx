@@ -15,11 +15,7 @@ type ProfileEditorProps = {
     dateOfBirth: string;
     location: string;
     bio: string;
-    goals: string;
-    medicalNotes: string;
     avatarPath: string | null;
-    heightCm: string;
-    weightKg: string;
   };
 };
 
@@ -78,15 +74,6 @@ export function ProfileEditor({ role, profile }: ProfileEditorProps) {
           <label><span>{t("dateOfBirth")}</span><input name="date_of_birth" defaultValue={profile.dateOfBirth} type="date" /></label>
           <label className="full"><span>{t("locationLabel")}</span><input name="location" defaultValue={profile.location} autoComplete="address-level2" placeholder={t("locationPlaceholder")} /></label>
           <label className="full"><span>{t("shortBio")}</span><textarea name="bio" defaultValue={profile.bio} rows={4} placeholder={role === "coach" ? t("bioPlaceholderCoach") : t("bioPlaceholderClient")} /></label>
-          {role === "client" ? (
-            <>
-              <label><span>Height (cm) · Dhererka (cm) <em className="required-mark">*</em></span><input name="height_cm" type="number" step="0.1" min="100" max="250" defaultValue={profile.heightCm} placeholder="e.g. 175" required /></label>
-              <label><span>Weight (kg) · Miisaanka (kg) <em className="required-mark">*</em></span><input name="starting_weight_kg" type="number" step="0.1" min="30" max="300" defaultValue={profile.weightKg} placeholder="e.g. 70" required /></label>
-              <p className="full field-hint">Required so your coach can confirm the right package for you. · Waa lagama maarmaan si coach-kaagu ugu ogaado package-ka kuu habboon.</p>
-              <label className="full"><span>{t("currentGoals")}</span><textarea name="goals" defaultValue={profile.goals} rows={4} /></label>
-              <label className="full"><span>{t("medicalNotes")}</span><textarea name="medical_notes" defaultValue={profile.medicalNotes} rows={3} placeholder={t("medicalNotesPlaceholder")} /></label>
-            </>
-          ) : null}
           <div className="account-form-footer full">
             <FormMessage error={profileState.error} success={profileState.success} />
             <button className="button primary" disabled={profilePending} type="submit"><Save size={15} /> {profilePending ? tc("saving") : t("saveProfile")}</button>

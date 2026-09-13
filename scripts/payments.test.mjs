@@ -24,7 +24,7 @@ assert.equal(hasPaidAccess({ ...invoice, status: "unpaid" }, now), false);
 assert.equal(hasPaidAccess({ ...invoice, package_snapshot: null }, now), false);
 assert.equal(hasPaidAccess(null, now), false);
 assert.equal(hasPaidAccess({ ...invoice, access_until: null }, now), true);
-for (const path of ["/client", "/client/", "/client/payments", "/client/profile", "/client/settings"]) assert.equal(isOpenClientPath(path), true);
+for (const path of ["/client", "/client/", "/client/payments", "/client/health", "/client/health/", "/client/profile", "/client/settings"]) assert.equal(isOpenClientPath(path), true);
 for (const path of ["/client/diet-plan", "/client/workout-plan", "/client/sessions", "/client/messages", "/client/check-in", "/client/progress", "/client/settings/anything"]) assert.equal(isOpenClientPath(path), false);
 const success = { sid: "test-123", amount: "99.00", status: "success", code: 601 };
 assert.equal(verifiedTransaction(success, "99"), "test-123");

@@ -54,7 +54,7 @@ export async function AccountProfilePage({ role }: { role: "coach" | "client" })
   const record = await database()("users")
     .select(
       "users.id", "users.name", "users.email", "users.avatar_path", "users.phone", "users.date_of_birth", "users.location", "users.bio", "users.created_at",
-      "clients.status", "clients.pipeline_stage", "clients.goals", "clients.medical_notes", "clients.joined_at", "clients.height_cm", "clients.starting_weight_kg",
+      "clients.status", "clients.pipeline_stage", "clients.joined_at",
       "services.name as service_name", "packages.name as package_name", "packages.category as package_category", "invites.intake_answers",
     )
     .leftJoin("clients", "clients.user_id", "users.id")
@@ -73,15 +73,9 @@ export async function AccountProfilePage({ role }: { role: "coach" | "client" })
     dateOfBirth: dateInput(record.date_of_birth),
     location: String(record.location || ""),
     bio: String(record.bio || ""),
-    goals: String(record.goals || answers.goals || ""),
-    medicalNotes: String(record.medical_notes || ""),
     avatarPath: record.avatar_path ? String(record.avatar_path) : null,
-    heightCm: record.height_cm != null ? String(record.height_cm) : "",
-    weightKg: record.starting_weight_kg != null ? String(record.starting_weight_kg) : "",
   };
-  const completionFields = role === "client"
-    ? [profile.name, profile.email, profile.phone, profile.dateOfBirth, profile.location, profile.avatarPath, profile.heightCm, profile.weightKg]
-    : [profile.name, profile.email, profile.phone, profile.dateOfBirth, profile.location, profile.avatarPath];
+  const completionFields = [profile.name, profile.email, profile.phone, profile.dateOfBirth, profile.location, profile.avatarPath];
   const completion = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
 
   return (

@@ -1,4 +1,37 @@
 {
+  "BodyMetrics": {
+    "eyebrow": "Halka aad ka bilaabayso",
+    "title": "Xaaladdayda",
+    "description": "Geli cabbirrada bilowga, kadibna isbeddellada kula soco check-in-ka toddobaadlaha ah.",
+    "height": "Dhererka (cm)",
+    "startingWeight": "Miisaanka bilowga (kg)",
+    "currentWeight": "Miisaanka hadda",
+    "dateOfBirth": "Taariikhda dhalashada",
+    "goals": "Yoolalkaaga (ikhtiyaari)",
+    "goalsHint": "Maxaad rabtaa inaad hagaajiso? Xoogga, jimicsiga, caadooyinka ama qaab-dhismeedka jirka.",
+    "healthNotes": "Xogta caafimaadka ee coach-ka (ikhtiyaari)",
+    "healthNotesHint": "Sheeg xaalado, dhaawacyo, xaddidaad dhaqdhaqaaq ama daawooyin saameeya tababarkaaga. Ku dar wax kasta oo aad rabto in coach-ku tixgeliyo.",
+    "baselineEyebrow": "Qiimeynta bilowga",
+    "formTitle": "Noo sheeg xaaladdaada hadda",
+    "formHint": "Buuxi meelaha waajibka ah ee leh *. Cabbirradii aad hore u gelisay halkan ayay ku jiraan.",
+    "baselineHint": "Miisaanka bilowgu waa cabbirkaagii hore. Miisaanka cusub ku geli check-in-ka toddobaadlaha ah; halkan wax ka beddel keliya si aad u saxdo cabbirkii bilowga.",
+    "ageHint": "BMI-ga dadka waaweyn waxaa la tusaa da'da 20 iyo ka weyn. Dadka ka yar waxay u baahan yihiin qiimeyn da'dooda ku habboon.",
+    "weeklyCheckIn": "Geli check-in toddobaadle ah",
+    "latestWeek": "Check-in-kii ugu dambeeyay: {date}",
+    "usingBaseline": "Cabbirka bilowga; weli check-in ma jiro",
+    "bmiUpdates": "Wuxuu la cusboonaysiiyaa miisaanka check-in-ka ugu dambeeya",
+    "bmiTitle": "Fahamka BMI-gaaga",
+    "bmiExplanation": "BMI = miisaanka (kg) ÷ dhererka (m)². Waa cabbir hordhac ah, mana aha ogaansho cudur ama boqolkiiba baruurta jirka. Ma kala saaro murqaha iyo baruurta; coach-ku waa inuu tixgeliyaa taariikhda caafimaadkaaga iyo cabbirro kale.",
+    "routineHint": "Check-in-ka toddobaadlaha ah ku geli miisaanka, hurdada, tamarta, raacitaanka qorshaha iyo sawirrada horumarka ee ikhtiyaariga ah. Isbeddellada iyo walaacyada caafimaadka kala hadal coach-kaaga.",
+    "source": "Macluumaadka BMI — CDC",
+    "history": "Cabbirradii dhowaa",
+    "historyHint": "12-kii check-in ee ugu dambeeyay. BMI waxaa laga xisaabiyaa dhererkaaga hadda kaydsan.",
+    "week": "Toddobaadka",
+    "previewHint": "Hordhac; wuxuu kaydsamaa markaad dirto",
+    "save": "Kaydi xogta xaaladdayda",
+    "saved": "Xogta xaaladdaada waa la kaydiyay.",
+    "missingClient": "Diiwaankaaga lama helin. La xiriir coach-kaaga."
+  },
   "Nav": {
     "coach": {
       "overview": "Guudmarka",
@@ -26,6 +59,7 @@
       "workoutPlan": "Qorshaha Jimicsiga",
       "mySessions": "Fadhiyadayda",
       "sessionsShort": "Fadhiyada",
+      "health": "Xaaladdayda",
       "checkIn": "Check in ka",
       "progress": "Horumarka",
       "messages": "Fariimaha",
@@ -161,9 +195,9 @@
       "Axd"
     ],
     "profileNudge": {
-      "title": "Dhammaystir profiilkaaga",
-      "body": "Geli dhererkaaga iyo miisaankaaga si tababaraahaagu ugu ogaado xirmada kuu habboon.",
-      "cta": "Dhammaystir profiilka"
+      "title": "Dhammaystir xogta xaaladdaada",
+      "body": "Geli dhererkaaga, miisaanka bilowga iyo taariikhda dhalashada si aad ula socoto cabbirradaada iyo BMI.",
+      "cta": "Buuxi xaaladdayda"
     },
     "media": {
       "addPhoto": "Ku dar sawir",
@@ -1549,7 +1583,7 @@
     "pay": "Bixi {amount}",
     "checkStatus": "Ma bixisay? Hubi lacag-bixinta",
     "paymentDetails": "Xogta lacag-bixinta waxaad gelinaysaa Sifalo Pay.",
-    "completeProfile": "Dhammaystir profile-kaaga",
+    "completeProfile": "Dhammaystir xogta xaaladdaada",
     "nextStep": "Tallaabada xigta",
     "readyTitle": "Waxaad diyaar u tahay inaad bilowdo.",
     "guideTitle": "Bixi lacagta si barnaamijkaagu u furmo.",
@@ -1565,7 +1599,7 @@
     "records": "{count} diiwaan",
     "welcome": "Soo dhawoow, {name}.",
     "welcomeBody": "Account-kaagu waa diyaar. Qaad tallaabada xigta ee tababarkaaga.",
-    "profileHint": "Ku dar yoolalkaaga iyo xogtaada si coach-ku kuu caawiyo.",
+    "profileHint": "Ku dar dhererkaaga, miisaanka bilowga iyo xogta caafimaadka si coach-ku kuu caawiyo.",
     "inactive": "Account-ka tababarkaagu ma firfircoona. Coach-kaagu waa inuu dib u hawlgeliyaa ka hor lacag-bixinta iyo furitaanka barnaamijka.",
     "interval": {
       "one_time": "hal mar",
