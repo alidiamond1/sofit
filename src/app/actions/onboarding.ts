@@ -10,6 +10,7 @@ import { createSession, readSession, requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { getInviteByToken, hashInviteToken } from "@/lib/onboarding/invites";
 import { intakeFields, intakeSections } from "@/lib/onboarding/intake-fields";
+import { assignPricedPackage, BillingError } from "@/lib/payments/billing";
 
 export type ActionState = {
   error?: string;
@@ -131,73 +132,85 @@ export async function createInvitedAccountAction(token: string, _previous: Actio
   redirect("/application-pending");
 }
 
-export async function approveApplicationAction(formData: FormData) {
+export async function approveApplicationAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const coach = await requireRole("coach");
-  const inviteId = Number(formData.get("invite_id"));
-  const serviceId = Number(formData.get("service_id"));
-  if (!inviteId) return;
+  const parsed = z.object({
+    inviteId: z.coerce.number().int().positive(),
+    packageId: z.coerce.number().int().positive(),
+  }).safeParse({ inviteId: formData.get("invite_id"), packageId: formData.get("package_id") });
+  if (!parsed.success) return { error: "Choose a package before approving this application." };
+  const { inviteId, packageId } = parsed.data;
 
-  await database().transaction(async (trx) => {
-    const invite = await trx("invites").where({ id: inviteId }).forUpdate().first();
-    if (!invite?.user_id) throw new Error("Application is not ready for approval.");
-    if (!["submitted", "approved"].includes(invite.status)) throw new Error("Application is not ready for approval.");
-    const clientUser = await trx("users")
-      .select("id", "name")
-      .where({ id: invite.user_id, role: "client" })
-      .first();
-    if (!clientUser) throw new Error("The client account could not be found.");
+  try {
+    await database().transaction(async (trx) => {
+      const invite = await trx("invites").where({ id: inviteId }).forUpdate().first();
+      if (!invite?.user_id) throw new BillingError("Application is not ready for approval.");
+      if (!["submitted", "approved"].includes(invite.status)) throw new BillingError("Application is not ready for approval.");
+      const clientUser = await trx("users")
+        .select("id", "name")
+        .where({ id: invite.user_id, role: "client" })
+        .first();
+      if (!clientUser) throw new BillingError("The client account could not be found.");
+      const client = await trx("clients").where({ user_id: invite.user_id }).forUpdate().first();
+      if (!client) throw new BillingError("The client profile could not be found.");
 
-    const now = new Date();
+      const now = new Date();
 
-    if (invite.status === "approved") {
-      await trx("clients").where({ user_id: invite.user_id }).update({ service_id: serviceId || null, updated_at: now });
-      await trx("invites").where({ id: inviteId }).update({ selected_service_id: serviceId || null, updated_at: now });
-      return;
-    }
+      if (invite.status === "approved") {
+        await assignPricedPackage(trx, Number(client.id), packageId);
+        return;
+      }
 
-    const clientName = String(clientUser.name || "").trim();
-    const firstName = clientName.split(/\s+/)[0] || "there";
-    const welcomeMessage = `Hi ${firstName}, welcome to SoFit! I am glad to have you here. If you need any help or have questions about your plan, training, nutrition, sessions, or progress, send me a message here anytime. I will get back to you as quickly as possible.`;
+      const clientName = String(clientUser.name || "").trim();
+      const firstName = clientName.split(/\s+/)[0] || "there";
+      const welcomeMessage = `Hi ${firstName}, welcome to SoFit! I am glad to have you here. If you need any help or have questions about your plan, training, nutrition, sessions, or progress, send me a message here anytime. I will get back to you as quickly as possible.`;
 
-    await trx("users").where({ id: clientUser.id }).update({ approval_status: "approved", updated_at: now });
-    await trx("clients").where({ user_id: invite.user_id }).update({
-      service_id: serviceId || null,
-      status: "active",
-      pipeline_stage: "onboarding",
-      joined_at: now,
-      updated_at: now,
+      await trx("users").where({ id: clientUser.id }).update({ approval_status: "approved", updated_at: now });
+      await trx("clients").where({ user_id: invite.user_id }).update({
+        status: "active",
+        pipeline_stage: "onboarding",
+        joined_at: now,
+        updated_at: now,
+      });
+      await assignPricedPackage(trx, Number(client.id), packageId);
+      await trx("invites").where({ id: inviteId }).update({
+        status: "approved",
+        reviewed_by: coach.id,
+        approved_at: now,
+        updated_at: now,
+      });
+      await trx("messages").insert({
+        sender_id: coach.id,
+        recipient_id: clientUser.id,
+        body: welcomeMessage,
+        created_at: now,
+        updated_at: now,
+      });
+      await trx("notifications").insert({
+        user_id: clientUser.id,
+        sender_id: coach.id,
+        title: `Welcome to SoFit, ${firstName}!`,
+        message: "Your coaching portal is ready. If you need help or have any questions, message your coach here and you will receive a reply as quickly as possible.",
+        type: "client_welcome",
+        created_at: now,
+        updated_at: now,
+      });
     });
-    await trx("invites").where({ id: inviteId }).update({
-      status: "approved",
-      selected_service_id: serviceId || null,
-      reviewed_by: coach.id,
-      approved_at: now,
-      updated_at: now,
-    });
-    await trx("messages").insert({
-      sender_id: coach.id,
-      recipient_id: clientUser.id,
-      body: welcomeMessage,
-      created_at: now,
-      updated_at: now,
-    });
-    await trx("notifications").insert({
-      user_id: clientUser.id,
-      sender_id: coach.id,
-      title: `Welcome to SoFit, ${firstName}!`,
-      message: "Your coaching portal is ready. If you need help or have any questions, message your coach here and you will receive a reply as quickly as possible.",
-      type: "client_welcome",
-      created_at: now,
-      updated_at: now,
-    });
-  });
+  } catch (error) {
+    return { error: error instanceof BillingError ? error.message : "The application could not be approved. Please try again." };
+  }
   revalidatePath("/coach/invites");
+  revalidatePath("/coach/clients");
+  revalidatePath("/coach/packages");
+  revalidatePath("/coach/payments");
+  revalidatePath("/coach/assignments");
   revalidatePath("/coach");
   revalidatePath("/coach/messages");
   revalidatePath("/client", "layout");
   revalidatePath("/client/messages");
   revalidatePath("/client/settings");
   revalidatePath(`/coach/invites/${inviteId}`);
+  return { success: "Package assigned and invoice ready." };
 }
 
 export async function rejectApplicationAction(formData: FormData) {
