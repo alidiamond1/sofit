@@ -152,6 +152,19 @@ async function run() {
   assert.equal((await loadBilling(user.id)).unlocked, true);
   const planCount = (await db("diet_plans").where({ invoice_id: invoiceId })).length;
   assert.equal(planCount, 1);
+  // A saved page must render while another transaction holds this client's row.
+  const blocker = await db.transaction();
+  try {
+    await blocker("clients").where({ id: clients[0].id }).forUpdate().first();
+    const connection = await db.client.acquireConnection();
+    try { await db.raw("SET SESSION innodb_lock_wait_timeout = 1").connection(connection); }
+    finally { await db.client.releaseConnection(connection); }
+    const before = Date.now();
+    assert.equal((await loadBilling(user.id)).unlocked, true, "Paid access reads must not wait for a client write lock.");
+    assert.ok(Date.now() - before < 5000, "Reading saved billing should complete without waiting for the blocker.");
+  } finally {
+    await blocker.rollback();
+  }
   assert.equal((await verifyPaymentAction(invoiceId, attempt.id)).paid, true);
   assert.equal((await db("diet_plans").where({ invoice_id: invoiceId })).length, planCount, "Repeated return must not duplicate plans.");
   await db("clients").where({ id: clients[0].id }).update({ status: "paused" });

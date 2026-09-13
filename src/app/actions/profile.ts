@@ -39,6 +39,11 @@ export async function updateProfileAction(
 
   const { name, phone, date_of_birth, location, bio } = parsed.data;
   await database().transaction(async (trx) => {
+    // Match health/profile and billing writers: client first, then user.
+    if (role === "client") {
+      const client = await trx("clients").where({ user_id: session.id }).forUpdate().first();
+      if (!client) throw new Error("Client profile not found.");
+    }
     await trx("users").where({ id: session.id, role }).update({ name, phone, date_of_birth, location, bio, updated_at: new Date() });
     if (role === "client") {
       await trx("clients").where({ user_id: session.id }).update({

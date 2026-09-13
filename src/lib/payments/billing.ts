@@ -122,6 +122,27 @@ export async function activateInvoice(trx: Knex.Transaction, invoice: Record<str
 }
 
 export async function loadBilling(userId: number) {
+  // Rendering must not queue behind a profile edit or payment transaction.
+  // Read one consistent snapshot; acquire the client lock only for billing writes.
+  const saved = await database().transaction(async (trx) => {
+    const client = await trx("clients").where({ user_id: userId }).first();
+    if (!client) throw new BillingError("Client profile not found.");
+    const invoice = client.current_invoice_id ? await trx("invoices").where({ id: client.current_invoice_id, client_id: client.id }).first() : null;
+    const now = new Date();
+    if (client.status === "active" && (
+      (!invoice && client.package_id) ||
+      (invoice?.status === "paid" && invoice.access_until && new Date(invoice.access_until) <= now) ||
+      (invoice?.status === "unpaid" && amountInCents(invoice.amount) === 0)
+    )) return null;
+    if (invoice?.package_snapshot && ["unpaid", "overdue"].includes(invoice.status)) {
+      const pkg = await trx("packages").where({ id: invoice.package_id }).first();
+      if (pkg && (amountInCents(invoice.amount) !== amountInCents(pkg.price) || snapshotOf(invoice.package_snapshot).interval !== pkg.billing_interval)) return null;
+    }
+    return { client, invoice, unlocked: client.status === "active" && hasPaidAccess(invoice, now) };
+  }, { isolationLevel: "repeatable read" });
+  if (saved) return saved;
+
+  // Re-read under the lock: another request may already have renewed or paid.
   return database().transaction(async (trx) => {
     const client = await trx("clients").where({ user_id: userId }).forUpdate().first();
     if (!client) throw new BillingError("Client profile not found.");
