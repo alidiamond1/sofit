@@ -5,6 +5,7 @@ import { database } from "@/lib/db";
 import { jsonArray, todayISO } from "@/lib/schedule";
 import type { PlanHistoryRecord } from "@/lib/plan-history";
 import { PlanHistory } from "./plan-history";
+import { CoachWalking } from "./walking-pages";
 import { Badge, Card, PageHeader } from "@/components/dashboard/primitives";
 import { SectionTabs } from "@/components/dashboard/section-tabs";
 import { DietPlanBuilder, WorkoutPlanBuilder, type ExerciseOption, type MealOption, type PlanClient } from "./plan-builders";
@@ -116,9 +117,10 @@ export async function CoachDietPlansPage() {
   );
 }
 
-export async function CoachWorkoutPlansPage() {
+export async function CoachWorkoutPlansPage({ selectedClientId }: { selectedClientId?: number | null } = {}) {
   await requireRole("coach");
   const t = await getTranslations("Packages.workoutPlans");
+  const walking = await getTranslations("Walking");
   const db = database();
   const [clientRows, exerciseRows, plans, workoutGroupRows] = await Promise.all([
     clients(),
@@ -155,7 +157,9 @@ export async function CoachWorkoutPlansPage() {
         tabs={[
           { id: "builder", label: t("tabBuilder"), content: builderContent },
           { id: "groups", label: t("tabGroups"), content: <WorkoutGroupsWorkspace exercises={exercises} groups={workoutGroups} /> },
+          { id: "walking", label: walking("title"), content: <CoachWalking selectedClientId={selectedClientId} /> },
         ]}
+        defaultTabId={selectedClientId ? "walking" : undefined}
       />
     </>
   );

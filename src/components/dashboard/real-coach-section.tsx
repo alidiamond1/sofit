@@ -649,7 +649,7 @@ export async function RealCoachSection({
   if (section === "personal-training") return <CoachPersonalTraining />;
   if (section === "check-ins") return <CoachCheckIns />;
   if (section === "diet-plans") return <CoachDietPlansPage />;
-  if (section === "workout-plans") return <CoachWorkoutPlansPage />;
+  if (section === "workout-plans") return <CoachWorkoutPlansPage selectedClientId={selectedClientId} />;
   if (section === "schedule") return <CoachSchedule selectedClientId={selectedClientId} />;
   if (section === "messages") return <CoachMessages coachId={session.id} initialClientId={selectedClientId} />;
   if (section === "analytics") return <CoachAnalytics />;

@@ -35,8 +35,9 @@ import { BodyMetricsPage } from "@/components/profile/body-metrics-page";
 import { calculateBmi, adultBmiEligible } from "@/lib/body-metrics";
 import { MessagingWorkspace } from "@/components/messages/messaging-workspace";
 import { loadClientMessageThreads } from "@/lib/messages";
+import { ClientWalking, ClientWalkingHome } from "@/components/plans/walking-pages";
 
-export const realClientSections = ["plans", "diet-plan", "workout-plan", "sessions", "check-in", "progress", "messages", "payments", "health", "profile", "settings"];
+export const realClientSections = ["plans", "diet-plan", "workout-plan", "walking", "sessions", "check-in", "progress", "messages", "payments", "health", "profile", "settings"];
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const dateTime = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
@@ -233,6 +234,7 @@ async function ClientHome() {
         description={t("description")}
       />
       <ProfileCompletionNudge client={client} />
+      <ClientWalkingHome clientId={Number(client.id)} userId={Number(client.user_id)} />
       {client.package_name ? (
         <Card className="client-package-summary">
           <div>
@@ -711,6 +713,7 @@ export async function RealClientSection({ section = "home", orderId }: { section
   if (section === "plans") redirect("/client/diet-plan");
   if (section === "diet-plan") return <ClientDietPlans />;
   if (section === "workout-plan") return <ClientWorkoutPlans />;
+  if (section === "walking") return <ClientWalking />;
   if (section === "sessions") return <ClientSessions />;
   if (section === "check-in") return <ClientCheckIn />;
   if (section === "progress") return <ClientProgress />;
