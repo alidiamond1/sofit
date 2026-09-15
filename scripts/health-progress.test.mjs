@@ -12,6 +12,7 @@ const require = createRequire(import.meta.url);
 const messages = JSON.parse(readFileSync(new URL("../messages/en.json", import.meta.url), "utf8"));
 const somali = JSON.parse(readFileSync(new URL("../messages/so.json", import.meta.url), "utf8"));
 assert.deepEqual(Object.keys(messages.HealthProgress).sort(), Object.keys(somali.HealthProgress).sort());
+assert.deepEqual(Object.keys(messages.CoachingAnalytics).sort(), Object.keys(somali.CoachingAnalytics).sort());
 function load(file, dependencies = {}) {
   const exports = {};
   const code = ts.transpileModule(readFileSync(new URL(file, import.meta.url), "utf8"), {

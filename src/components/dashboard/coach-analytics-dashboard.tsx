@@ -1,5 +1,7 @@
 import { Activity, Dumbbell, ReceiptText, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
+import { CoachActivityAnalytics } from "./coach-activity-analytics";
 import { statusLabel } from "@/lib/status-labels";
 import { HorizontalBars, RingChart, TrendLineChart } from "./charts";
 import { Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
@@ -56,6 +58,7 @@ export async function CoachAnalyticsDashboard({ data }: { data: CoachAnalyticsDa
   const ts = await getTranslations("Common.status");
   const tt = await getTranslations("Common.tiers");
   const tServiceType = await getTranslations("Services");
+  const activity = await getTranslations("CoachingAnalytics");
 
   const revenueDelta = revenueChange(data.currentRevenue, data.previousRevenue, t);
   const activeRate = data.totalClients ? Math.round((data.activeClients / data.totalClients) * 100) : 0;
@@ -74,6 +77,14 @@ export async function CoachAnalyticsDashboard({ data }: { data: CoachAnalyticsDa
   ];
   return <div className="coach-analytics-dashboard">
     <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+    <nav className="analytics-section-nav" aria-label={activity("sections")}>
+      <Link href="#analytics-business">{activity("business")}</Link>
+      <Link href="#analytics-plans">{activity("plansTitle")}</Link>
+      <Link href="#analytics-walking">{activity("walkingTitle")}</Link>
+      <Link href="#analytics-sessions">{activity("sessionsTitle")}</Link>
+      <Link href="#analytics-transformations">{activity("transformationsTitle")}</Link>
+    </nav>
+    <div id="analytics-business" />
     <div className="analytics-kpi-grid">
       <StatCard label={t("statRevenue")} value={money.format(data.currentRevenue)} change={revenueDelta.change} trend={revenueDelta.trend} note={t("lifetimePaidNote", { amount: money.format(data.lifetimeRevenue) })} icon={<TrendingUp size={18} />} accent="green" points={data.revenueTrend.map((point) => point.value)} />
       <StatCard label={t("statActiveClients")} value={String(data.activeClients)} change={t("activeRateChange", { rate: activeRate })} note={t("clientRecordsNote", { count: data.totalClients })} icon={<Users size={18} />} points={data.clientGrowth.map((point) => point.value)} />
@@ -93,6 +104,7 @@ export async function CoachAnalyticsDashboard({ data }: { data: CoachAnalyticsDa
       <Card className="analytics-service-table-card"><CardHead title={t("servicePerformance")} meta={t("servicePerformanceMeta")} /><div className="data-table-wrap analytics-table-wrap"><table className="data-table analytics-table"><thead><tr><th>{t("colService")}</th><th>{t("colType")}</th><th>{t("colClients")}</th><th>{t("colPaidRevenue")}</th><th>{t("colAttendedSessions")}</th></tr></thead><tbody>{data.services.map((service) => <tr key={service.id}><td><strong>{service.name}</strong></td><td><Badge tone="blue">{tierLabel(service.tier || service.type)}</Badge></td><td>{service.clients}</td><td>{money.format(service.paidRevenue)}</td><td>{service.attendedSessions}</td></tr>)}</tbody></table></div></Card>
       <Card className="analytics-client-health-card"><CardHead title={t("clientHealth")} meta={t("clientHealthMeta")} /><RingChart segments={data.statusSegments} centerValue={String(data.activeClients)} centerLabel={t("activeClientsCenter")} /></Card>
     </div>
+    <CoachActivityAnalytics />
     <Card className="analytics-invoice-card"><CardHead title={t("latestInvoices")} meta={t("latestInvoicesMeta")} />{data.invoices.length ? <div className="data-table-wrap analytics-table-wrap"><table className="data-table analytics-table"><thead><tr><th>{t("colInvoice")}</th><th>{t("colClient")}</th><th>{t("colService")}</th><th>{t("colAmount")}</th><th>{t("colDue")}</th><th>{t("colStatus")}</th></tr></thead><tbody>{data.invoices.map((invoice) => <tr key={invoice.id}><td><strong>{invoice.number}</strong></td><td>{invoice.client}</td><td>{invoice.service || t("unassigned")}</td><td>{money.format(invoice.amount)}</td><td>{dateOnly.format(new Date(invoice.dueOn))}</td><td><Badge tone={invoiceTone(invoice.status)}>{statusLabel(ts, invoice.status)}</Badge></td></tr>)}</tbody></table></div> : <p className="chart-empty">{t("noInvoicesYet")}</p>}</Card>
   </div>;
 }

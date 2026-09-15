@@ -120,3 +120,20 @@ await assert.rejects(log(1, 5000), /Payment required/);
 assert.equal(saved.amount, 5000);
 assert.ok(refreshed.includes("/client/health"));
 console.log("Walking action: ownership, paid access, add/correct, stale writes, replay and bounds passed.");
+
+const summary = walking.summarizeWalking([
+  { today: "2026-09-16", targets: [{ ...steps, startsOn: "2026-09-14", dailyTargets: [10000, 10000] }], logs: [{ date: "2026-09-14", amount: 12000, notes: "" }, { date: "2026-09-15", amount: 0, notes: "" }] },
+  { today: "2026-09-15", targets: [{ ...km, startsOn: "2026-09-14", dailyTargets: [3, 3] }], logs: [{ date: "2026-09-15", amount: 5, notes: "" }] },
+  { today: "2026-09-15", targets: [{ ...steps, startsOn: "2026-09-14", dailyTargets: [5000] }], logs: [{ date: "2026-09-14", amount: 1000, notes: "" }] },
+  { today: "2026-09-16", targets: [{ ...pause, startsOn: "2026-09-01" }], logs: [] },
+]);
+assert.deepEqual(summary.outcomes, { met: 1, below: 2, missing: 1 });
+assert.equal(summary.completedDays, 4, "Use each client's local today and exclude rest/paused days");
+assert.equal(summary.adherence, 25);
+assert.equal(summary.participatingClients, 3);
+assert.deepEqual(summary.steps[0], { date: "2026-09-14", actual: 13000, target: 15000 });
+assert.equal(summary.steps[1].actual, 0, "Recorded zero is real data");
+assert.equal(summary.km[0].actual, null, "Missing logs must not become recorded zeros");
+assert.equal(summary.km[1].actual, 5, "Do not mix kilometres into steps");
+assert.equal(walking.summarizeWalking([]).adherence, null);
+console.log("Coach walking aggregates: local-day cutoffs, outcomes, units, missing data and totals passed.");

@@ -5,11 +5,11 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 
 export type HealthChartPoint = { date: string; [key: string]: string | number | null };
 
-export function HealthChart({ data, series, unit = "", max }: { data: HealthChartPoint[]; series: { key: string; label: string }[]; unit?: string; max?: number }) {
+export function HealthChart({ data, series, unit = "", max, emptyLabel }: { data: HealthChartPoint[]; series: { key: string; label: string }[]; unit?: string; max?: number; emptyLabel?: string }) {
   const t = useTranslations("HealthProgress");
   const locale = useLocale();
   const date = (value: string) => new Date(`${value}T12:00:00Z`).toLocaleDateString(locale, { month: "short", day: "numeric", timeZone: "UTC" });
-  if (!data.some((row) => series.some(({ key }) => typeof row[key] === "number"))) return <p className="chart-empty">{t("noData")}</p>;
+  if (!data.some((row) => series.some(({ key }) => typeof row[key] === "number"))) return <p className="chart-empty">{emptyLabel || t("noData")}</p>;
   return <>
     <div className="health-chart">
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>

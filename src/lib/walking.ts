@@ -82,3 +82,25 @@ export function walkingDays(targets: WalkingTarget[], logs: WalkingLog[], today:
   }
   return days;
 }
+
+export function summarizeWalking(clients: Array<{ targets: WalkingTarget[]; logs: WalkingLog[]; today: string }>) {
+  const outcomes = { met: 0, below: 0, missing: 0 };
+  const units = { steps: new Map<string, { date: string; actual: number | null; target: number }>(), km: new Map<string, { date: string; actual: number | null; target: number }>() };
+  let participatingClients = 0;
+  for (const client of clients) {
+    const days = walkingDays(client.targets, client.logs, client.today);
+    if (days.length) participatingClients++;
+    for (const day of days) {
+      const series = units[day.target.unit];
+      const point = series.get(day.date) || { date: day.date, actual: null, target: 0 };
+      point.target = Math.round((point.target + day.target.amount) * 100) / 100;
+      if (day.log) point.actual = Math.round(((point.actual ?? 0) + day.log.amount) * 100) / 100;
+      series.set(day.date, point);
+      if (day.date < client.today && day.status !== "pending") outcomes[day.status]++;
+    }
+  }
+  const completedDays = outcomes.met + outcomes.below + outcomes.missing;
+  return { outcomes, participatingClients, completedDays, adherence: completedDays ? Math.round(outcomes.met / completedDays * 100) : null,
+    steps: [...units.steps.values()].sort((a, b) => a.date.localeCompare(b.date)),
+    km: [...units.km.values()].sort((a, b) => a.date.localeCompare(b.date)) };
+}

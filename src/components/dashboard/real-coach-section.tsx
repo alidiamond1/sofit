@@ -496,7 +496,7 @@ async function CoachAnalytics() {
       .whereRaw("COALESCE(joined_at, created_at) >= ?", [firstMonth])
       .groupByRaw("DATE_FORMAT(COALESCE(joined_at, created_at), '%Y-%m')")
       .orderBy("month"),
-    db("check_ins").avg({ diet: "diet_adherence_pct", workout: "workout_completion_pct", energy: "energy_score", sleep: "sleep_score" }).first(),
+    db("check_ins").whereIn("status", ["submitted", "reviewed"]).avg({ diet: "diet_adherence_pct", workout: "workout_completion_pct", energy: "energy_score", sleep: "sleep_score" }).first(),
     db("services")
       .select("services.id", "services.name", "services.type", "services.tier")
       .select(db.raw("(SELECT COUNT(*) FROM clients WHERE clients.service_id = services.id) as client_count"))
