@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { walkingDays, walkingTargetOn, walkingTargetForDay, walkingTargetFromRow, shiftWalkingDate, validWalkingAmount, walkingTargetSchema, walkingLogSchema } from "../src/lib/walking.ts";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
+import ts from "typescript";
+import * as walking from "../src/lib/walking.ts";
+import { walkingDays, walkingTargetOn, walkingTargetForDay, walkingTargetFromRow, shiftWalkingDate, validWalkingAmount, walkingTargetSchema, walkingLogSchema, walkingLogTotal } from "../src/lib/walking.ts";
 
 const steps = { id: 1, unit: "steps", amount: 10000, startsOn: "2026-09-01", active: true, notes: "" };
 const km = { ...steps, id: 2, unit: "km", amount: 5, startsOn: "2026-09-12" };
@@ -16,7 +20,7 @@ const days = walkingDays(targets, [
   { date: "2026-09-11", amount: 10000, notes: "" },
 ], "2026-09-14");
 assert.deepEqual(days.slice(0, 5).map(({ status, percent }) => [status, percent]), [
-  ["pending", 50], ["below", 0], ["met", 100], ["met", 100], ["missing", 0],
+  ["pending", 50], ["below", 0], ["met", 120], ["met", 100], ["missing", 0],
 ]);
 assert.equal(days[3].target.amount, 10000, "Changing units must preserve historical targets");
 assert.equal(walkingDays(targets, [], "2026-09-16")[0].date, "2026-09-14", "Paused days must not count as missing");
@@ -33,7 +37,7 @@ assert.ok(walkingTargetSchema.safeParse(input).success);
 for (const patch of [{ amount: 0 }, { amount: "" }, { unit: "miles" }, { startsOn: "2026-02-30" }, { clientId: -1 }]) {
   assert.equal(walkingTargetSchema.safeParse({ ...input, ...patch }).success, false);
 }
-assert.ok(walkingLogSchema.safeParse({ date: "2026-09-14", amount: "0", targetId: 1, notes: "" }).success);
+assert.ok(walkingLogSchema.safeParse({ date: "2026-09-14", amount: "0", targetId: 1, notes: "", mode: "add", expectedAmount: 0 }).success);
 assert.equal(walkingLogSchema.safeParse({ date: "2026-09-14", amount: "", targetId: 1, notes: "" }).success, false);
 const weekly = { ...steps, id: 10, startsOn: input.startsOn, dailyTargets: input.dailyTargets };
 assert.equal(walkingTargetForDay([steps, weekly], "2026-09-14").amount, 10000);
@@ -49,3 +53,70 @@ assert.ok(walkingTargetSchema.safeParse({ ...input, unit: "km", amount: 5, daily
 assert.equal(walkingTargetFromRow({ id: 10, unit: "steps", amount: "10000.00", starts_on: new Date(2026, 8, 14), active: 1, daily_targets: JSON.stringify(input.dailyTargets) }).startsOn, "2026-09-14");
 assert.deepEqual(walkingTargetFromRow({ id: 10, starts_on: "2026-09-14", daily_targets: input.dailyTargets }).dailyTargets, input.dailyTargets);
 console.log("Walking validation, daily accounting, unit changes, pauses and dates passed.");
+assert.equal(walkingLogTotal(2000, 3000, "add", "steps"), 5000);
+assert.equal(walkingLogTotal(5000, 6000, "add", "steps"), 11000, "Walking may exceed the prescribed target");
+assert.equal(walkingLogTotal(11000, 4000, "replace", "steps"), 4000, "Correction replaces instead of adding");
+assert.equal(walkingLogTotal(4000, 0, "replace", "steps"), 0);
+assert.equal(walkingLogTotal(0.1, 0.2, "add", "km"), 0.3);
+assert.equal(walkingLogTotal(99000, 2000, "add", "steps"), null);
+assert.equal(walkingLogTotal(99, 2, "add", "km"), null);
+assert.equal(walkingLogTotal(2000, -10, "add", "steps"), null);
+assert.equal(walkingLogTotal(2000, 0.5, "add", "steps"), null);
+assert.equal(walkingLogSchema.safeParse({ date: "2026-09-14", amount: "2000", targetId: 1, notes: "", mode: "delete", expectedAmount: 0 }).success, false);
+console.log("Additive walks, corrections, over-target totals, and daily limits passed.");
+
+// Exercise the actual server action with an isolated store, never the client's records.
+let saved;
+let paid = true;
+const refreshed = [];
+function table(name) {
+  const filters = {};
+  return {
+    where(key, operator, value) { if (typeof key === "object") Object.assign(filters, key); else if (operator !== "<=") filters[key] = value; return this; },
+    select() { return this; }, forUpdate() { return this; }, orderBy() { return this; },
+    async first() {
+      if (name === "clients") { assert.equal(filters.user_id, 7); return { id: 9 }; }
+      if (name === "user_settings") return { timezone: "Africa/Nairobi" };
+      assert.equal(filters.client_id, 9, "Always scope walking records to the authenticated client");
+      if (name === "walking_targets") return { id: 1, starts_on: "2026-09-01", amount: 10000, unit: "steps", active: 1 };
+      return saved;
+    },
+    insert(value) { return { onConflict() { return { async merge() { saved = value; } }; } }; },
+  };
+}
+table.fn = { now: () => new Date() };
+let queue = Promise.resolve();
+const db = { transaction(fn) { const next = queue.then(() => fn(table)); queue = next.catch(() => {}); return next; } };
+const exports = {};
+const dependencies = {
+  "next/cache": { revalidatePath: (path) => refreshed.push(path) },
+  "@/lib/auth/session": { requireRole: async (role) => { assert.equal(role, "client"); return { id: 7 }; } },
+  "@/lib/payments/billing": { requirePaidClient: async () => { if (!paid) throw new Error("Payment required"); } },
+  "@/lib/db": { database: () => db }, "@/lib/schedule": { todayISO: () => "2026-09-15" }, "@/lib/walking": walking,
+};
+runInNewContext(ts.transpileModule(readFileSync(new URL("../src/app/actions/walking.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText,
+  { exports, require: (name) => { assert.ok(name in dependencies, name); return dependencies[name]; } });
+function log(amount, expected = 0, mode = "add", patch = {}) {
+  const form = new FormData();
+  Object.entries({ amount, expected_amount: expected, mode, date: "2026-09-15", target_id: 1, notes: "", ...patch }).forEach(([key, value]) => form.set(key, String(value)));
+  return exports.saveWalkingLogAction({}, form);
+}
+assert.equal((await log(2000)).total, 2000);
+assert.equal((await log(3000, 2000)).total, 5000);
+assert.equal((await log(3000, 2000)).error, "logChanged", "A repeated submission cannot add the same walk twice");
+assert.equal((await log(6000, 5000)).total, 11000);
+assert.equal((await log(4000, 11000, "replace")).total, 4000);
+const results = await Promise.all([log(1000, 4000), log(2000, 4000)]);
+assert.equal(results.filter((result) => result.success).length, 1);
+assert.equal(results.filter((result) => result.error === "logChanged").length, 1);
+assert.equal(saved.amount, 5000, "A stale tab must not lose another walk");
+assert.equal((await log(-1, 5000)).error, "invalidLog");
+assert.equal((await log(1, 5000, "add", { target_id: 999 })).error, "targetChanged");
+assert.equal((await log(1, 5000, "add", { date: "2026-09-16" })).error, "invalidDate");
+assert.equal((await log(1, 5000, "add", { date: "2026-08-01" })).error, "invalidDate");
+assert.equal((await log(96000, 5000)).error, "invalidLog");
+paid = false;
+await assert.rejects(log(1, 5000), /Payment required/);
+assert.equal(saved.amount, 5000);
+assert.ok(refreshed.includes("/client/health"));
+console.log("Walking action: ownership, paid access, add/correct, stale writes, replay and bounds passed.");

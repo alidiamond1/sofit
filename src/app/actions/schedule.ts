@@ -172,5 +172,6 @@ export async function toggleExerciseDoneAction(
 
   revalidatePath("/client");
   revalidatePath("/client/workout-plan");
+  revalidatePath("/client/health");
   return { success: parsed.data.done ? "Marked done." : "Marked not done." };
 }

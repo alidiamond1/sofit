@@ -8,7 +8,7 @@ import { shiftWalkingDate, walkingDays, walkingTargetOn, walkingTargetForDay, wa
 import { Card, PageHeader } from "@/components/dashboard/primitives";
 import { WalkingClientScope, WalkingProgress, WalkingSchedule, WalkingTargetForm } from "./walking-workspace";
 
-async function walkingData(clientId: number, userId: number) {
+export async function walkingData(clientId: number, userId: number) {
   const db = database();
   const settings = await db("user_settings").select("timezone").where({ user_id: userId }).first();
   const timezone = String(settings?.timezone || "Africa/Nairobi");
@@ -64,8 +64,8 @@ export async function ClientWalking() {
     <PageHeader eyebrow={t("dailyHabit")} title={t("title")} description={t("clientHint")} />
     <p className="walking-muted">{t("timezone", { timezone: data.timezone })}</p>
     {!todayTarget && <Card className="empty-state"><Footprints size={32} /><h2>{t(data.targets.length ? current?.active === false ? "paused" : "noWalking" : "noActiveTarget")}</h2><p>{t(data.targets.length ? "seeSchedule" : "emptyHint")}</p></Card>}
-    <WalkingSchedule targets={data.targets} today={data.today} />
     <WalkingProgress days={data.days} today={data.today} />
+    <WalkingSchedule targets={data.targets} today={data.today} />
   </div>;
 }
 

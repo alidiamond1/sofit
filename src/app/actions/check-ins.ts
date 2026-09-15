@@ -28,6 +28,7 @@ export async function reviewCheckInAction(
 
   revalidatePath("/coach/check-ins");
   revalidatePath("/coach");
+  revalidatePath("/client/health");
   revalidatePath("/client");
   return { success: "Feedback saved." };
 }

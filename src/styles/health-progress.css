@@ -1,0 +1,25 @@
+.health-workspace{display:grid;gap:24px;min-width:0}
+.health-workspace .page-header{margin-bottom:0}
+.health-actions{display:flex;flex-wrap:wrap;gap:10px}
+.health-section{min-width:0;padding-top:16px;border-top:1px solid var(--line)}
+.health-section>h2{font-size:24px;margin-bottom:6px}
+.health-section>p,.health-workspace .card>p{color:var(--muted);font-size:13px;line-height:1.6;margin:8px 0 20px}
+.health-workspace .card{min-width:0}
+.health-workspace .card>h3{font-size:18px}
+.health-chart{height:280px;width:100%;min-width:0}
+.health-chart-data,.health-bmi-guide{margin-top:18px;color:var(--muted);font-size:13px}
+.health-chart-data summary,.health-bmi-guide summary{cursor:pointer;padding:10px 0;color:var(--text)}
+.health-chart-data table{margin-top:12px}
+.health-form-dialog{position:fixed;inset:0;margin:auto;width:min(720px,calc(100% - 24px));max-height:calc(100dvh - 32px);padding:28px;border:1px solid var(--line);border-radius:20px;background:var(--surface);color:var(--text);overflow-y:auto;box-shadow:0 24px 80px #0005}
+.health-form-dialog::backdrop{background:#0009;backdrop-filter:blur(4px)}
+.health-form-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+.health-form-dialog h2{font-size:26px;letter-spacing:-.035em}
+.health-form-dialog header .icon-button{flex-shrink:0}
+.health-form-dialog .account-form-grid{margin-top:20px}
+.health-form-dialog .walking-note{margin:0}
+.health-form-dialog .button,.walking-row-actions button{min-height:44px}
+.walking-row-actions{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.walking-celebration{padding:16px;background:var(--primary-soft);border-radius:12px;color:var(--primary);font-weight:600}
+.walking-heading>.button{flex-shrink:0}
+.health-workspace .stats-grid{margin-bottom:0}
+@media(max-width:600px){.health-actions .button{flex:1 1 45%;text-align:center}.health-form-dialog{padding:20px}.health-form-dialog .walking-form{grid-template-columns:1fr}.health-chart{height:240px}.walking-heading{flex-wrap:wrap}.health-section>h2{font-size:21px}}

@@ -5,13 +5,15 @@ import { requireRole } from "@/lib/auth/session";
 import { database } from "@/lib/db";
 import { requirePaidClient } from "@/lib/payments/billing";
 import { todayISO } from "@/lib/schedule";
-import { shiftWalkingDate, validWalkingAmount, walkingLogSchema, walkingTargetSchema, walkingTargetForDay, walkingTargetFromRow } from "@/lib/walking";
+import { shiftWalkingDate, walkingLogTotal, walkingLogSchema, walkingTargetSchema, walkingTargetForDay, walkingTargetFromRow } from "@/lib/walking";
 
-export type WalkingState = { error?: string; success?: boolean };
+export type WalkingState = { error?: string; success?: boolean; total?: number; target?: number };
 
 function refreshWalking() {
   revalidatePath("/coach/workout-plans");
   revalidatePath("/client/walking");
+  revalidatePath("/client/health");
+  revalidatePath("/client/progress");
   revalidatePath("/client");
 }
 
@@ -51,7 +53,7 @@ export async function saveWalkingTargetAction(_previous: WalkingState, form: For
 export async function saveWalkingLogAction(_previous: WalkingState, form: FormData): Promise<WalkingState> {
   const session = await requireRole("client");
   await requirePaidClient(session.id);
-  const parsed = walkingLogSchema.safeParse({ date: form.get("date"), amount: form.get("amount"), targetId: form.get("target_id"), notes: form.get("notes") || "" });
+  const parsed = walkingLogSchema.safeParse({ date: form.get("date"), amount: form.get("amount"), targetId: form.get("target_id"), notes: form.get("notes") || "", mode: form.get("mode"), expectedAmount: form.get("expected_amount") });
   if (!parsed.success) return { error: "invalidLog" };
   const value = parsed.data;
   try {
@@ -64,10 +66,17 @@ export async function saveWalkingLogAction(_previous: WalkingState, form: FormDa
       const row = await trx("walking_targets").where({ client_id: client.id }).where("starts_on", "<=", value.date).orderBy("starts_on", "desc").first();
       const target = row && walkingTargetForDay([walkingTargetFromRow(row)], value.date);
       if (!target?.active || Number(target.id) !== value.targetId) return { error: "targetChanged" };
-      if (!validWalkingAmount(value.amount, target.unit)) return { error: "invalidLog" };
-      await trx("walking_logs").insert({ client_id: client.id, target_id: target.id, logged_on: value.date, amount: value.amount, notes: value.notes })
-        .onConflict(["client_id", "logged_on"]).merge({ amount: value.amount, notes: value.notes, updated_at: trx.fn.now() });
-      return { success: true };
+      const previous = await trx("walking_logs").where({ client_id: client.id, logged_on: value.date }).first();
+      const current = Number(previous?.amount || 0);
+      // Reject forms based on a total that has changed, including duplicate pending submissions.
+      if (current !== value.expectedAmount) return { error: "logChanged" };
+      const total = walkingLogTotal(current, value.amount, value.mode, target.unit);
+      if (total === null) return { error: "invalidLog" };
+      const notes = value.mode === "add" ? [previous?.notes, value.notes].filter(Boolean).join("\n") : value.notes;
+      if (notes.length > 500) return { error: "notesFull" };
+      await trx("walking_logs").insert({ client_id: client.id, target_id: target.id, logged_on: value.date, amount: total, notes })
+        .onConflict(["client_id", "logged_on"]).merge({ amount: total, notes, updated_at: trx.fn.now() });
+      return { success: true, total, target: target.amount };
     });
     if (result.success) refreshWalking();
     return result;

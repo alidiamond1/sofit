@@ -8,10 +8,8 @@ import {
   Mail,
   Moon,
   Scale,
-  UserRound,
   Utensils,
 } from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth/session";
@@ -20,19 +18,19 @@ import { isOpenClientPath } from "@/lib/payments/rules";
 import { LockedClientHome, LockedProgram, PaymentsPage } from "@/components/payments/payments-page";
 import { currentWeekStart } from "@/lib/check-in-week";
 import { database } from "@/lib/db";
-import { hasAnyProgressPhoto, parseProgressPhotos } from "@/lib/progress-photos";
+import { parseProgressPhotos } from "@/lib/progress-photos";
 import { statusLabel } from "@/lib/status-labels";
 import { HorizontalBars, TrendLineChart } from "./charts";
 import { CheckInForm } from "./check-in-form";
-import { ProgressPhotoTimeline } from "./progress-photos";
 import { Badge, Card, CardHead, PageHeader, StatCard } from "./primitives";
 import { WorkoutExerciseLogList, DietMealLogList, PlanCardShell } from "@/components/plans/client-plan-views";
 import { TodayWorkout } from "@/components/schedule/today-workout";
 import { MonthCalendar, type DaySchedule } from "@/components/schedule/month-calendar";
 import { WEEKDAYS, exercisesForDay, todayISO, weekdayIndex } from "@/lib/schedule";
 import { AccountProfilePage, AccountSettingsPage } from "@/components/profile/account-pages";
+import { BodyMetricsEditor } from "@/components/profile/body-metrics-form";
 import { BodyMetricsPage } from "@/components/profile/body-metrics-page";
-import { calculateBmi, adultBmiEligible } from "@/lib/body-metrics";
+import { adultBmiEligible } from "@/lib/body-metrics";
 import { MessagingWorkspace } from "@/components/messages/messaging-workspace";
 import { loadClientMessageThreads } from "@/lib/messages";
 import { ClientWalking, ClientWalkingHome } from "@/components/plans/walking-pages";
@@ -70,19 +68,8 @@ async function EmptyState({ text }: { text: string }) {
   return <Card className="empty-state"><ClipboardList size={24} /><h3>{t("noRecordsYet")}</h3><p>{text}</p></Card>;
 }
 
-async function ProfileCompletionNudge({ client }: { client: { height_cm: unknown; starting_weight_kg: unknown; date_of_birth: unknown } }) {
-  if (calculateBmi(client.height_cm, client.starting_weight_kg) !== null && client.date_of_birth) return null;
-  const t = await getTranslations("Common.profileNudge");
-  return (
-    <Card className="profile-nudge-card">
-      <span className="profile-nudge-icon"><UserRound size={20} /></span>
-      <div>
-        <strong>{t("title")}</strong>
-        <p>{t("body")}</p>
-      </div>
-      <Link className="button primary" href="/client/health">{t("cta")}</Link>
-    </Card>
-  );
+async function ProfileCompletionNudge({ client }: { client: Record<string, unknown> }) {
+  return <BodyMetricsEditor nudge height={String(client.height_cm ?? "")} startingWeight={String(client.starting_weight_kg ?? "")} dateOfBirth={normalizeDate(client.date_of_birth || client.user_date_of_birth || "")} goals={String(client.goals || "")} medicalNotes={String(client.medical_notes || "")} />;
 }
 
 /** MySQL DATE columns come back as local-midnight Date objects; re-read the
@@ -106,6 +93,7 @@ async function getClientContext() {
       "clients.*",
       "users.name",
       "users.email",
+      "users.date_of_birth as user_date_of_birth",
       "users.created_at as account_created_at",
       "services.name as service_name",
       "services.type as service_type",
@@ -626,59 +614,6 @@ async function ClientCheckIn() {
   );
 }
 
-async function ClientProgress() {
-  const { client } = await getClientContext();
-  const t = await getTranslations("ClientProgress");
-  const tc = await getTranslations("Common");
-  const ts = await getTranslations("Common.status");
-  const checkIns = await database()("check_ins").where({ client_id: client.id }).orderBy("week_of", "desc");
-  const latest = checkIns[0];
-  const chronological = [...checkIns].reverse();
-  const weightTrend = chronological
-    .filter((item) => item.weight_kg != null)
-    .map((item) => ({ label: new Date(item.week_of).toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: numeric(item.weight_kg) }));
-  const adherenceTrend = chronological.map((item) => ({
-    label: new Date(item.week_of).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    value: Math.round((numeric(item.diet_adherence_pct) + numeric(item.workout_completion_pct)) / 2),
-  }));
-  const photoWeeks = checkIns
-    .map((item) => ({ key: String(item.id), weekLabel: dateOnly.format(new Date(item.week_of)), photos: parseProgressPhotos(item.progress_photos) }))
-    .filter((entry) => hasAnyProgressPhoto(entry.photos));
-  return (
-    <>
-      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
-      <div className="stats-grid compact">
-        <StatCard label={t("currentWeight")} value={latest?.weight_kg ? `${latest.weight_kg} kg` : "-"} icon={<Scale size={18} />} points={weightTrend.map((point) => point.value)} />
-        <StatCard label={t("dietAdherence")} value={latest?.diet_adherence_pct != null ? `${latest.diet_adherence_pct}%` : "-"} icon={<Utensils size={18} />} accent="green" />
-        <StatCard label={t("workoutCompletion")} value={latest?.workout_completion_pct != null ? `${latest.workout_completion_pct}%` : "-"} icon={<Activity size={18} />} />
-        <StatCard label={t("checkIns")} value={String(checkIns.length)} icon={<CheckCircle2 size={18} />} accent="green" />
-      </div>
-      {checkIns.length === 0 ? (
-        <EmptyState text={t("emptyHint")} />
-      ) : (
-        <>
-          <div className="progress-chart-grid">
-            <Card className="chart-card"><CardHead title={t("weightTrend")} meta={t("weightTrendMeta")} /><TrendLineChart data={weightTrend} valueLabel={t("weightLabel")} formatValue={(value) => `${value} kg`} highestLabel={tc("chartHighest")} latestLabel={tc("chartLatest")} emptyLabel={tc("chartNoTrend")} /></Card>
-            <Card className="chart-card"><CardHead title={t("adherenceTrend")} meta={t("adherenceTrendMeta")} /><TrendLineChart data={adherenceTrend} valueLabel={t("adherenceLabel")} formatValue={(value) => `${value}%`} highestLabel={tc("chartHighest")} latestLabel={tc("chartLatest")} emptyLabel={tc("chartNoTrend")} /></Card>
-          </div>
-          {photoWeeks.length > 0 ? (
-            <Card className="chart-card">
-              <CardHead title={t("photoTimelineTitle")} meta={t("photoTimelineMeta", { count: photoWeeks.length })} />
-              <ProgressPhotoTimeline entries={photoWeeks} altPrefix={t("photoTimelineAltPrefix")} />
-            </Card>
-          ) : (
-            <EmptyState text={t("photoTimelineEmptyHint")} />
-          )}
-          <Card>
-            <CardHead title={t("checkInHistory")} meta={t("recordsCount", { count: checkIns.length })} />
-            <div className="data-table-wrap"><table className="data-table"><thead><tr><th>{t("colWeek")}</th><th>{t("colWeight")}</th><th>{t("colDiet")}</th><th>{t("colWorkout")}</th><th>{t("colEnergy")}</th><th>{t("colSleep")}</th><th>{t("colStatus")}</th></tr></thead><tbody>{checkIns.map((item) => <tr key={item.id}><td>{dateOnly.format(new Date(item.week_of))}</td><td>{item.weight_kg || "-"} kg</td><td>{item.diet_adherence_pct ?? "-"}%</td><td>{item.workout_completion_pct ?? "-"}%</td><td>{item.energy_score ?? "-"}/10</td><td>{item.sleep_score ?? "-"}/10</td><td><Badge tone={tone(item.status)}>{statusLabel(ts, item.status)}</Badge></td></tr>)}</tbody></table></div>
-          </Card>
-        </>
-      )}
-    </>
-  );
-}
-
 async function ClientMessages() {
   const { session } = await getClientContext();
   const t = await getTranslations("MessagesPanel");
@@ -706,8 +641,9 @@ async function ClientSettings() { return <AccountSettingsPage role="client" />; 
 
 export async function RealClientSection({ section = "home", orderId }: { section?: string; orderId?: string }) {
   const session = await requireRole("client");
+  if (section === "progress") redirect("/client/health");
   const billing = await getBilling(session.id);
-  if (!billing.unlocked && section === "home") return <LockedClientHome name={session.name} packageName={billing.invoice?.package_snapshot ? snapshotOf(billing.invoice.package_snapshot).name : undefined} />;
+  if (!billing.unlocked && section === "home") return <><ProfileCompletionNudge client={billing.client} /><LockedClientHome name={session.name} packageName={billing.invoice?.package_snapshot ? snapshotOf(billing.invoice.package_snapshot).name : undefined} /></>;
   if (!billing.unlocked && !isOpenClientPath(`/client/${section}`)) return <LockedProgram />;
   if (section === "home") return <ClientHome />;
   if (section === "plans") redirect("/client/diet-plan");
@@ -716,7 +652,6 @@ export async function RealClientSection({ section = "home", orderId }: { section
   if (section === "walking") return <ClientWalking />;
   if (section === "sessions") return <ClientSessions />;
   if (section === "check-in") return <ClientCheckIn />;
-  if (section === "progress") return <ClientProgress />;
   if (section === "messages") return <ClientMessages />;
   if (section === "payments") return <PaymentsPage orderId={orderId} />;
   if (section === "health") return <BodyMetricsPage />;

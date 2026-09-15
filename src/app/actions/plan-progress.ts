@@ -56,6 +56,7 @@ export async function toggleMealCompletionAction(
       .del();
   }
 
+  revalidatePath("/client/health");
   revalidatePath("/client/diet-plan");
   return { success: parsed.data.done ? "Marked done." : "Marked doing." };
 }
@@ -123,5 +124,6 @@ export async function toggleWorkoutExerciseAction(
   }
 
   revalidatePath("/client/workout-plan");
+  revalidatePath("/client/health");
   return { success: parsed.data.done ? "Logged." : "Marked doing." };
 }

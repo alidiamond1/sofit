@@ -28,7 +28,15 @@ export const walkingLogSchema = z.object({
   amount: z.string().trim().min(1).transform(Number).pipe(z.number().nonnegative()),
   targetId: z.coerce.number().int().positive(),
   notes: z.string().trim().max(500),
+  mode: z.enum(["add", "replace"]),
+  expectedAmount: z.coerce.number().nonnegative(),
 });
+
+export function walkingLogTotal(current: number, amount: number, mode: "add" | "replace", unit: WalkingTarget["unit"]) {
+  if (!validWalkingAmount(amount, unit)) return null;
+  const total = mode === "add" ? Math.round((current + amount) * 100) / 100 : amount;
+  return validWalkingAmount(total, unit) ? total : null;
+}
 
 export function shiftWalkingDate(date: string, days: number) {
   const value = new Date(`${date}T12:00:00Z`);
@@ -68,7 +76,7 @@ export function walkingDays(targets: WalkingTarget[], logs: WalkingLog[], today:
     const target = walkingTargetForDay(targets, date);
     if (!target?.active) continue;
     const log = byDate.get(date);
-    const percent = Math.min(100, Math.floor((log?.amount ?? 0) / target.amount * 100));
+    const percent = Math.floor((log?.amount ?? 0) / target.amount * 100);
     const status = log && log.amount >= target.amount ? "met" : date === today ? "pending" : log ? "below" : "missing";
     days.push({ date, target, log, percent, status });
   }

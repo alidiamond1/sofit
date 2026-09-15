@@ -3,10 +3,11 @@
 import { useActionState, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Check, Footprints, Save, Target } from "lucide-react";
+import { Check, Footprints, Plus, Save, Target } from "lucide-react";
 import { saveWalkingLogAction, saveWalkingTargetAction, type WalkingState } from "@/app/actions/walking";
 import { shiftWalkingDate, walkingTargetForDay, type WalkingDay, type WalkingTarget } from "@/lib/walking";
 import { Badge, Card } from "@/components/dashboard/primitives";
+import { FormDialog } from "@/components/dashboard/form-dialog";
 
 function Feedback({ state }: { state: WalkingState }) {
   const t = useTranslations("Walking");
@@ -83,15 +84,26 @@ export function WalkingSchedule({ targets, today }: { targets: WalkingTarget[]; 
   </Card>;
 }
 
-function WalkingLogForm({ day }: { day: WalkingDay }) {
+function WalkingLogForm({ day, mode }: { day: WalkingDay; mode: "add" | "replace" }) {
   const t = useTranslations("Walking");
-  const [state, action, pending] = useActionState(saveWalkingLogAction, {});
+  const router = useRouter();
+  const [amount, setAmount] = useState(mode === "replace" ? String(day.log?.amount ?? 0) : "");
+  const [expected, setExpected] = useState(day.log?.amount ?? 0);
+  const [notes, setNotes] = useState(mode === "replace" ? day.log?.notes || "" : "");
+  const [state, action, pending] = useActionState(async (previous: WalkingState, form: FormData) => {
+    const result = await saveWalkingLogAction(previous, form);
+    if (result.success) { setExpected(result.total!); setAmount(mode === "add" ? "" : String(result.total)); if (mode === "add") setNotes(""); }
+    if (result.error === "logChanged") router.refresh();
+    return result;
+  }, {});
   return <form action={action} className="form-grid walking-form">
     <input type="hidden" name="date" value={day.date} /><input type="hidden" name="target_id" value={day.target.id} />
-    <label className="walking-full"><span>{t("dailyTotal", { unit: t(day.target.unit) })}</span><input name="amount" type="number" inputMode={day.target.unit === "steps" ? "numeric" : "decimal"} min={0} max={day.target.unit === "steps" ? 100000 : 100} step={day.target.unit === "steps" ? 1 : 0.01} defaultValue={day.log?.amount ?? ""} placeholder={day.target.unit === "steps" ? "10000" : "5.00"} required aria-describedby="walking-total-hint" /></label>
-    <p id="walking-total-hint" className="walking-full walking-muted">{t("totalHint")}</p>
-    <label className="walking-full"><span>{t("clientNotes")}</span><textarea name="notes" rows={2} maxLength={500} defaultValue={day.log?.notes || ""} /></label>
-    <div className="walking-full"><Feedback state={state} /><button type="submit" className="button primary" disabled={pending}><Save size={16} />{t(pending ? "saving" : day.log ? "updateLog" : "saveLog")}</button></div>
+    <input type="hidden" name="mode" value={mode} /><input type="hidden" name="expected_amount" value={expected} />
+    <p className="walking-full walking-note">{t("recordedSoFar", { amount: expected.toLocaleString(), unit: t(day.target.unit) })} · {t("targetLabel", { amount: day.target.amount.toLocaleString(), unit: t(day.target.unit) })}</p>
+    <label className="walking-full"><span>{t(mode === "add" ? "walkAmount" : "dailyTotal", { unit: t(day.target.unit) })}</span><input name="amount" type="number" inputMode={day.target.unit === "steps" ? "numeric" : "decimal"} min={0} max={day.target.unit === "steps" ? 100000 : 100} step={day.target.unit === "steps" ? 1 : 0.01} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={day.target.unit === "steps" ? "2000" : "1.50"} required aria-describedby="walking-total-hint" disabled={pending} /></label>
+    <p id="walking-total-hint" className="walking-full walking-muted">{t(mode === "add" ? "addHint" : "totalHint")}</p>
+    <label className="walking-full"><span>{t("clientNotes")}</span><textarea name="notes" rows={2} maxLength={500} value={notes} onChange={(event) => setNotes(event.target.value)} disabled={pending} /></label>
+    <div className="walking-full"><Feedback state={state} />{state.success && state.total !== undefined && <p className="walking-note" role="status">{state.total >= (state.target ?? Infinity) ? `🎉 ${t(state.total > state.target! ? "exceededPraise" : "metPraise")} ` : ""}{t("recordedSoFar", { amount: state.total.toLocaleString(), unit: t(day.target.unit) })}</p>}<button type="submit" className="button primary" disabled={pending || state.error === "logChanged"}><Save size={16} />{t(pending ? "saving" : mode === "add" ? "addWalk" : "updateLog")}</button></div>
   </form>;
 }
 
@@ -99,6 +111,7 @@ export function WalkingProgress({ days, today, coach = false }: { days: WalkingD
   const t = useTranslations("Walking");
   const format = useFormatter();
   const [selectedDate, setSelectedDate] = useState(today);
+  const [mode, setMode] = useState<"add" | "replace" | null>(null);
   const selected = days.find((day) => day.date === selectedDate) || days[0];
   const current = days.find((day) => day.date === today);
   const past = days.filter((day) => day.date < today);
@@ -107,26 +120,28 @@ export function WalkingProgress({ days, today, coach = false }: { days: WalkingD
   const number = (value: number) => format.number(value, { maximumFractionDigits: 2 });
   const date = (value: string) => format.dateTime(new Date(`${value}T12:00:00Z`), { month: "short", day: "numeric", timeZone: "UTC" });
   return <>
+    {!coach && selected && <div className="walking-heading"><span className="walking-muted">{t("addHint")}</span><button className="button primary" type="button" onClick={() => { setSelectedDate(current?.date || selected.date); setMode("add"); }}><Plus size={18} />{t("addWalk")}</button></div>}
     {current && <Card className="walking-today">
       <div className="walking-heading"><span className="eyebrow">{t("today")} · {date(today)}</span><Footprints size={24} aria-hidden="true" /></div>
       <div className="walking-total"><strong>{number(current.log?.amount ?? 0)}</strong><span>/ {number(current.target.amount)} {t(current.target.unit)}</span></div>
-      <progress className="walking-meter" max={100} value={current.percent} aria-label={t("dailyProgress")} />
+      <progress className="walking-meter" max={100} value={Math.min(100, current.percent)} aria-label={t("dailyProgress")} />
       <div className="walking-heading"><span>{current.status === "met" ? t("met") : t("remaining", { amount: number(Math.max(0, current.target.amount - (current.log?.amount ?? 0))), unit: t(current.target.unit) })}</span><Badge tone={current.status === "met" ? "success" : "neutral"}>{current.log ? `${current.percent}%` : t("notLogged")}</Badge></div>
       {current.target.notes && <p className="walking-note">{current.target.notes}</p>}
+      {!coach && current.status === "met" && <p className="walking-celebration">🎉 {t((current.log?.amount ?? 0) > current.target.amount ? "exceededPraise" : "metPraise")}</p>}
     </Card>}
     <div className="walking-stats"><Card><Target size={18} aria-hidden="true" /><strong>{met} / {past.length}</strong><span>{t("daysMet")}</span></Card><Card><Check size={18} aria-hidden="true" /><strong>{past.length ? `${Math.round(met / past.length * 100)}%` : "—"}</strong><span>{t("adherence")}</span></Card><Card><Footprints size={18} aria-hidden="true" /><strong>{missing}</strong><span>{t("unloggedDays")}</span></Card></div>
     <p className="walking-muted">{t("statsHint")}</p>
-    {!coach && selected && <Card className="walking-log-card">
-      <h2>{t("logTitle")}</h2><p className="walking-muted">{t("selfReported")}</p>
+    {!coach && selected && mode && <FormDialog title={t(mode === "add" ? "logTitle" : "edit")} onClose={() => setMode(null)}>
+      <p className="walking-muted">{t(mode === "add" ? "selfReported" : "totalHint")}</p>
       <div className="form-grid walking-date-picker"><label><span>{t("date")}</span><select value={selected.date} onChange={(event) => setSelectedDate(event.target.value)}>{days.map((day) => <option value={day.date} key={day.date}>{day.date === today ? t("today") : date(day.date)} · {number(day.target.amount)} {t(day.target.unit)}</option>)}</select></label></div>
-      <WalkingLogForm key={`${selected.date}-${selected.target.id}`} day={selected} />
-    </Card>}
+      <WalkingLogForm key={`${selected.date}-${selected.target.id}-${mode}`} day={selected} mode={mode} />
+    </FormDialog>}
     <Card className="walking-history"><div className="walking-heading"><div><h2>{t("history")}</h2><p>{t("historyHint")}</p></div><Badge>{t("last30")}</Badge></div>
       {days.length === 0 ? <p className="walking-muted">{t("noHistory")}</p> : <ul>{days.map((day) => <li key={day.date}>
         <div><strong>{day.date === today ? t("today") : date(day.date)}</strong><small>{day.date}</small></div>
         <div className="walking-day-total"><strong>{day.log ? number(day.log.amount) : "—"} <small>{t(day.target.unit)}</small></strong><small>{t("targetLabel", { amount: number(day.target.amount), unit: t(day.target.unit) })}</small></div>
         <Badge tone={day.status === "met" ? "success" : day.status === "below" || day.status === "missing" ? "warning" : "neutral"}>{t(day.status)}</Badge>
-        {!coach && <button className="button secondary" type="button" onClick={() => { setSelectedDate(day.date); document.querySelector(".walking-log-card")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{t(day.log ? "edit" : "log")}</button>}
+        {!coach && <div className="walking-row-actions"><button className="button secondary" type="button" onClick={() => { setSelectedDate(day.date); setMode("add"); }}>{t("addWalk")}</button>{day.log && <button className="text-button" type="button" onClick={() => { setSelectedDate(day.date); setMode("replace"); }}>{t("edit")}</button>}</div>}
         {day.log?.notes && <p className="walking-day-note">{day.log.notes}</p>}
       </li>)}</ul>}
     </Card>
